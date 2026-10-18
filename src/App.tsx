@@ -145,6 +145,8 @@ export default function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid3');
   const [showSavedOnly, setShowSavedOnly] = useState(false);
 
+
+
   // Modals & Auth State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isLoggingInWithGoogle, setIsLoggingInWithGoogle] = useState(false);
@@ -929,7 +931,7 @@ export default function App() {
                 <span>پلتفرم اشتراک و کاوش محتوای چندرسانه‌ای</span>
               </div>
               <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white leading-tight">
-                بهترین محتواهای <span className="bg-gradient-to-r from-red-400 via-pink-400 to-indigo-400 bg-clip-text text-transparent">یوتیوب، اینستاگرام و وب</span> در یک قاب
+                اینجا فقط محتواهای گلچین شده و تایید شده اعضا معرفی میشن
               </h1>
               <p className="text-sm sm:text-base text-slate-400 leading-loose">
                 ویدیوها را مستقیماً تماشا کنید، ریلزها را مرور نمایید، مقالات تخصصی را در حالت خوانش اختصاصی مطالعه کنید، لایک کنید و در گفت‌وگوها مشارکت داشته باشید.
