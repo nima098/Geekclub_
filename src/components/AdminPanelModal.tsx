@@ -67,15 +67,15 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   isOpen,
   onClose,
   user,
-  contents,
+  contents = [],
   onToggleSoftDelete,
   onPermanentDelete,
-  feedbackList,
+  feedbackList = [],
   onUpdateFeedbackStatus,
   onSendAdminMessage,
   siteSettings,
   onUpdateSiteSettings,
-  usersList,
+  usersList = [],
   onUpdateUserPermissions,
   onApproveContent,
   onRejectContent
@@ -99,6 +99,35 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [msgSubject, setMsgSubject] = useState('');
   const [msgContent, setMsgContent] = useState('');
   const [broadcastSent, setBroadcastSent] = useState(false);
+
+  // Fullscreen state & effect (MUST BE DECLARED BEFORE ANY RETURN STATEMENT)
+  const [isBrowserFullscreen, setIsBrowserFullscreen] = useState(
+    typeof document !== 'undefined' ? Boolean(document.fullscreenElement) : false
+  );
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsBrowserFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleBrowserFullscreen = () => {
+    try {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+    } catch (e) {
+      console.warn('Fullscreen toggle error:', e);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -174,34 +203,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       setMsgSubject('');
       setMsgContent('');
     }, 2000);
-  };
-
-  const [isBrowserFullscreen, setIsBrowserFullscreen] = useState(
-    typeof document !== 'undefined' ? Boolean(document.fullscreenElement) : false
-  );
-
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsBrowserFullscreen(Boolean(document.fullscreenElement));
-    };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    };
-  }, []);
-
-  const toggleBrowserFullscreen = () => {
-    try {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen().catch(() => {});
-        }
-      }
-    } catch (e) {
-      console.warn('Fullscreen toggle error:', e);
-    }
   };
 
   return (

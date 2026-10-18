@@ -66,6 +66,7 @@ import {
   DEFAULT_SITE_SETTINGS,
   INITIAL_REGISTERED_USERS
 } from './data/initialData';
+import { logoutGoogle } from './lib/firebase';
 import { 
   Sparkles, 
   Compass, 
@@ -618,6 +619,7 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    logoutGoogle().catch(() => {});
     setUser(null);
     addToast('info', 'از حساب کاربری خود خارج شدید.');
   };
