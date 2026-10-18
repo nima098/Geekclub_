@@ -1,0 +1,158 @@
+{
+  "contents": [
+    {
+      "id": "yt-1",
+      "title": "معرفی جامع مدل‌های نسل جدید هوش مصنوعی و کاربرد آنها در برنامه‌نویسی",
+      "description": "در این ویدیو به بررسی عمیق ابزارهای هوش مصنوعی توسعه‌یافته در سال اخیر و نحوه ادغام آنها در پایپ‌لاین‌های توسعه نرم‌افزار پرداخته شده است.",
+      "url": "https://www.youtube.com/watch?v=bMknfKXIFA8",
+      "platform": "youtube",
+      "embedUrl": "https://www.youtube.com/embed/bMknfKXIFA8",
+      "thumbnail": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80",
+      "author": {
+        "name": "آکادمی کد و فناوری",
+        "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
+        "handle": "@codetech_fa",
+        "isVerified": true
+      },
+      "category": "ai",
+      "tags": ["هوش مصنوعی", "برنامه‌نویسی", "تکنولوژی", "LLM"],
+      "publishedAt": "۲ ساعت پیش",
+      "readingOrWatchTime": "۱۸ دقیقه",
+      "likesCount": 142,
+      "dislikesCount": 6,
+      "commentsCount": 19,
+      "userReaction": null,
+      "sourceDomain": "youtube.com"
+    },
+    {
+      "id": "art-1",
+      "title": "اصول طراحی رابط کاربری مدرن در سال ۲۰۲۶: فراتر از مینیمالیسم",
+      "description": "چرا طراحی‌های بیش از حد ساده در حال منسوخ شدن هستند و چگونه ترکیب بافت، تایپوگرافی معنادار و ریزانیمیشن‌ها تجربه کاربری را متحول می‌کند.",
+      "url": "https://virgool.io/@ux_design/modern-ui-principles",
+      "platform": "article",
+      "embedUrl": "https://virgool.io/@ux_design/modern-ui-principles",
+      "thumbnail": "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=800&q=80",
+      "author": {
+        "name": "نیما ارجمند",
+        "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80",
+        "handle": "طراح ارشد محصول",
+        "isVerified": true
+      },
+      "category": "design",
+      "tags": ["طراحی رابط کاربری", "UI/UX", "طراحی محصول", "ترندهای دیزاین"],
+      "publishedAt": "۵ ساعت پیش",
+      "readingOrWatchTime": "۷ دقیقه مطالعه",
+      "likesCount": 89,
+      "dislikesCount": 2,
+      "commentsCount": 12,
+      "userReaction": "like",
+      "sourceDomain": "virgool.io",
+      "articleContent": "در چند سال اخیر شاهد دوره‌ای بودیم که همه اپلیکیشن‌ها به سمت خاکستری‌های بی‌روح و دکمه‌های هم‌شکل حرکت کردند. اما اکنون کاربران به دنبال شخصیت و هویت بصری هستند.\n\nاصول کلیدی که امروزه برای هر محصول حیاتی است:\n۱. سلسله‌مراتب تایپوگرافی قدرتمند با فونت‌های رسا و خوانا\n۲. کنتراست رنگی هدفمند که مسیر چشم مخاطب را هدایت می‌کند\n۳. میکروانیمیشن‌هایی که بازخورد فوری از کنش‌های کاربر ارائه می‌دهند\n۴. طراحی واکنش‌گرا و دسترس‌پذیری برای تمامی نمایشگرها\n\nتوصیه مهم برای طراحان این است که همیشه پیش از شروع ساخت کامپوننت‌ها، سیستم طراحی (Design System) یکپارچه و مقیاس‌پذیر بسازند تا تجربه تعاملی کاربران در تمام مراحل پیوسته باقی بماند."
+    },
+    {
+      "id": "ig-1",
+      "title": "۵ ترفند فوق‌العاده در جاوااسکریپت که کدنویسی را ۳ برابر سریع‌تر می‌کند",
+      "description": "ترفندهای کاربردی ES2024 و میانبرهای آرایه‌ها و آبجکت‌ها که خوانایی و عملکرد کدهای جاوااسکریپت و تایپ‌اسکریپت شما را بالا می‌برد.",
+      "url": "https://www.instagram.com/reel/C8kP2qXyZa1/",
+      "platform": "instagram",
+      "embedUrl": "https://www.instagram.com/reel/C8kP2qXyZa1/embed",
+      "thumbnail": "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=800&q=80",
+      "author": {
+        "name": "کد با سارا",
+        "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
+        "handle": "@codewith_sara",
+        "isVerified": true
+      },
+      "category": "programming",
+      "tags": ["جاوااسکریپت", "ترفند کدنویسی", "فرانت‌اند", "تایپ‌اسکریپت"],
+      "publishedAt": "دیروز",
+      "readingOrWatchTime": "۶۰ ثانیه ریلز",
+      "likesCount": 310,
+      "dislikesCount": 4,
+      "commentsCount": 45,
+      "userReaction": null,
+      "sourceDomain": "instagram.com"
+    },
+    {
+      "id": "yt-2",
+      "title": "آموزش ساخت اپلیکیشن فول‌استک با ری‌اکت و تیلویند (صفر تا صد)",
+      "description": "در این آموزش جامع، یک پروژه واقعی از صفر را با معماری استاندارد و کامپوننت‌های مدرن پیاده‌سازی و روی بستر ابری مستقر می‌کنیم.",
+      "url": "https://www.youtube.com/watch?v=LDB4uaJ87e0",
+      "platform": "youtube",
+      "embedUrl": "https://www.youtube.com/embed/LDB4uaJ87e0",
+      "thumbnail": "https://images.unsplash.com/photo-1587620962725-abab7fe55159?auto=format&fit=crop&w=800&q=80",
+      "author": {
+        "name": "فرهاد نصیری",
+        "avatar": "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=150&q=80",
+        "handle": "@farhad_dev",
+        "isVerified": true
+      },
+      "category": "programming",
+      "tags": ["ری‌اکت", "Tailwind CSS", "فول استک", "آموزش پروژه محور"],
+      "publishedAt": "۲ روز پیش",
+      "readingOrWatchTime": "۳۵ دقیقه",
+      "likesCount": 224,
+      "dislikesCount": 5,
+      "commentsCount": 28,
+      "userReaction": null,
+      "sourceDomain": "youtube.com"
+    },
+    {
+      "id": "art-2",
+      "title": "بررسی راهکارهای بهینه‌سازی دیتابیس برای سرویس‌های با ترافیک بالا",
+      "description": "بررسی تکنیک‌های کش‌گذاری چندلایه با Redis، ایندکس‌گذاری بهینه و استراتژی‌های پارتیشن‌بندی اطلاعات در سیستم‌های توزیع‌شده.",
+      "url": "https://medium.com/@techlead/high-scale-database-strategies",
+      "platform": "article",
+      "embedUrl": "https://medium.com/@techlead/high-scale-database-strategies",
+      "thumbnail": "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=800&q=80",
+      "author": {
+        "name": "مهندس آرش شریفی",
+        "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80",
+        "handle": "معمار نرم‌افزار",
+        "isVerified": true
+      },
+      "category": "tech",
+      "tags": ["پایگاه داده", "مقیاس‌پذیری", "Redis", "معماری سیستم"],
+      "publishedAt": "۳ روز پیش",
+      "readingOrWatchTime": "۱۲ دقیقه مطالعه",
+      "likesCount": 165,
+      "dislikesCount": 3,
+      "commentsCount": 14,
+      "userReaction": null,
+      "sourceDomain": "medium.com",
+      "articleContent": "وقتی تعداد درخواست‌های همزمان به هزاران کوئری در ثانیه می‌رسد، دیتابیس‌های سنتی اولین نقطه‌ای هستند که دچار گلوگاه می‌شوند.\n\nراهکارهای اساسی برای حفظ پایداری:\n۱. استفاده از لایه Cache-Aside با Redis جهت کاهش کوئری‌های تکراری\n۲. بازبینی و حذف ایندکس‌های بلااستفاده و بهینه‌سازی کلاسترد ایندکس‌ها\n۳. جداسازی کوئری‌های خواندن و نوشتن از طریق Read Replicas\n۴. استفاده از Connection Pool کارآمد به جای ایجاد کانکشن در هر درخواست"
+    }
+  ],
+  "comments": {
+    "yt-1": [
+      {
+        "id": "c-101",
+        "contentId": "yt-1",
+        "author": {
+          "name": "رضا کمالی",
+          "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80",
+          "email": "reza@example.com"
+        },
+        "text": "خیلی ویدیوی مفیدی بود! به خصوص بخش مربوط به ادغام ابزارهای هوش مصنوعی در محیط توسعه عالی توضیح داده شد.",
+        "createdAt": "۱ ساعت پیش",
+        "likes": 12,
+        "userLiked": false
+      }
+    ],
+    "art-1": [
+      {
+        "id": "c-201",
+        "contentId": "art-1",
+        "author": {
+          "name": "پویا سلیمی",
+          "avatar": "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=150&q=80",
+          "email": "pouya@example.com"
+        },
+        "text": "کاملاً موافقم. دوران وب‌سایت‌های تخت و کپی‌پیستی به سر آمده و جزئیات ریز است که تفاوت ایجاد می‌کند.",
+        "createdAt": "۲ ساعت پیش",
+        "likes": 8,
+        "userLiked": false
+      }
+    ]
+  }
+}
