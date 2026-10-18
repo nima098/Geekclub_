@@ -23,8 +23,11 @@ import {
   AddContentModal 
 } from './components/AddContentModal';
 import { 
-  GoogleAuthModal 
-} from './components/GoogleAuthModal';
+  UsernameSetupModal 
+} from './components/UsernameSetupModal';
+import { 
+  DomainAuthHelpModal 
+} from './components/DomainAuthHelpModal';
 import { 
   ProfileModal 
 } from './components/ProfileModal';
@@ -66,7 +69,7 @@ import {
   DEFAULT_SITE_SETTINGS,
   INITIAL_REGISTERED_USERS
 } from './data/initialData';
-import { logoutGoogle } from './lib/firebase';
+import { logoutGoogle, loginWithGooglePopup } from './lib/firebase';
 import { 
   Sparkles, 
   Compass, 
@@ -142,9 +145,17 @@ export default function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid3');
   const [showSavedOnly, setShowSavedOnly] = useState(false);
 
-  // Modals
+  // Modals & Auth State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isLoggingInWithGoogle, setIsLoggingInWithGoogle] = useState(false);
+  const [tempGoogleUser, setTempGoogleUser] = useState<{
+    uid: string;
+    displayName: string;
+    email: string;
+    photoURL: string;
+  } | null>(null);
+  const [isUsernameModalOpen, setIsUsernameModalOpen] = useState(false);
+  const [isDomainHelpModalOpen, setIsDomainHelpModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [activeCommentsItem, setActiveCommentsItem] = useState<ContentItem | null>(null);
   const [activeArticleItem, setActiveArticleItem] = useState<ContentItem | null>(null);
@@ -365,7 +376,7 @@ export default function App() {
   // --- Like & Dislike Handlers ---
   const handleLike = (id: string) => {
     if (!user) {
-      setIsAuthModalOpen(true);
+      handleDirectGoogleLogin();
       addToast('info', 'برای ثبت واکنش، لطفاً ابتدا با حساب گوگل خود وارد شوید.');
       return;
     }
@@ -408,7 +419,7 @@ export default function App() {
 
   const handleDislike = (id: string) => {
     if (!user) {
-      setIsAuthModalOpen(true);
+      handleDirectGoogleLogin();
       addToast('info', 'برای ثبت واکنش، لطفاً ابتدا با حساب گوگل خود وارد شوید.');
       return;
     }
@@ -480,7 +491,7 @@ export default function App() {
   // --- Add Comment Handler ---
   const handleAddComment = (contentId: string, text: string) => {
     if (!user) {
-      setIsAuthModalOpen(true);
+      handleDirectGoogleLogin();
       return;
     }
 
@@ -624,6 +635,45 @@ export default function App() {
     addToast('info', 'از حساب کاربری خود خارج شدید.');
   };
 
+  const handleDirectGoogleLogin = async () => {
+    setIsLoggingInWithGoogle(true);
+    try {
+      const verified = await loginWithGooglePopup();
+      // Ask user for their username immediately after successful Google authentication
+      setTempGoogleUser(verified);
+      setIsUsernameModalOpen(true);
+    } catch (err: any) {
+      console.error('Direct Google login error:', err);
+      if (err?.code === 'auth/unauthorized-domain') {
+        setIsDomainHelpModalOpen(true);
+      } else if (err?.code === 'auth/popup-blocked') {
+        addToast('error', 'پنجره ورود گوگل توسط مرورگر مسدود شد. لطفاً پاپ‌آپ را در مرورگر فعال نمایید.');
+      } else if (err?.code === 'auth/popup-closed-by-user') {
+        addToast('info', 'فرآیند ورود لغو شد.');
+      } else {
+        addToast('error', err?.message || 'خطا در ارتباط با سرورهای گوگل.');
+      }
+    } finally {
+      setIsLoggingInWithGoogle(false);
+    }
+  };
+
+  const handleCompleteUsernameSetup = (profile: UserProfile) => {
+    handleLogin(profile);
+    setIsUsernameModalOpen(false);
+    setTempGoogleUser(null);
+  };
+
+  const handleBypassWithEmail = (email: string, name: string) => {
+    setTempGoogleUser({
+      uid: `usr-${Date.now()}`,
+      displayName: name,
+      email: email,
+      photoURL: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name)}`
+    });
+    setIsUsernameModalOpen(true);
+  };
+
   // --- Profile, Inbox & Guestbook Handlers ---
   const handleUpdateUser = (updatedUser: UserProfile) => {
     setUser(updatedUser);
@@ -679,7 +729,7 @@ export default function App() {
 
   const handleAddProfileComment = (text: string) => {
     if (!user) {
-      setIsAuthModalOpen(true);
+      handleDirectGoogleLogin();
       return;
     }
 
@@ -856,7 +906,8 @@ export default function App() {
       <Navbar
         user={user}
         onOpenAddModal={() => setIsAddModalOpen(true)}
-        onOpenAuthModal={() => setIsAuthModalOpen(true)}
+        onStartGoogleLogin={handleDirectGoogleLogin}
+        isLoggingIn={isLoggingInWithGoogle}
         onOpenProfileModal={() => setIsProfileModalOpen(true)}
         onOpenFeedbackModal={() => setIsFeedbackModalOpen(true)}
         onOpenAdminModal={() => setIsAdminModalOpen(true)}
@@ -1032,9 +1083,9 @@ export default function App() {
         onClose={() => setActiveCommentsItem(null)}
         onAddComment={handleAddComment}
         onLikeComment={handleLikeComment}
-        onOpenAuthModal={() => {
+        onStartGoogleLogin={() => {
           setActiveCommentsItem(null);
-          setIsAuthModalOpen(true);
+          handleDirectGoogleLogin();
         }}
       />
 
@@ -1064,12 +1115,23 @@ export default function App() {
         siteSettings={siteSettings}
       />
 
-      <GoogleAuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        currentUser={user}
-        onLogin={handleLogin}
-        onLogout={handleLogout}
+      {/* Username Setup Modal - Asked immediately after successful Google login */}
+      <UsernameSetupModal
+        isOpen={isUsernameModalOpen}
+        googleUser={tempGoogleUser}
+        existingUsers={usersList}
+        onComplete={handleCompleteUsernameSetup}
+        onCancel={() => {
+          setIsUsernameModalOpen(false);
+          setTempGoogleUser(null);
+        }}
+      />
+
+      {/* Domain Auth Help Modal for preview / Cloud Run domain setup */}
+      <DomainAuthHelpModal
+        isOpen={isDomainHelpModalOpen}
+        onClose={() => setIsDomainHelpModalOpen(false)}
+        onBypassWithEmail={handleBypassWithEmail}
       />
 
       {user && (

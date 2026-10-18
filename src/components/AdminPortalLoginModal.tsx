@@ -36,8 +36,13 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
   const [isCopied, setIsCopied] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isUnauthorizedDomain, setIsUnauthorizedDomain] = useState(false);
+  const [copiedDomain, setCopiedDomain] = useState(false);
 
   if (!isOpen) return null;
+
+  const currentDomain = typeof window !== 'undefined' ? window.location.hostname : '';
+  const firebaseSettingsUrl = 'https://console.firebase.google.com/project/gen-lang-client-0491599189/authentication/settings';
 
   const isAlreadyAdmin = Boolean(
     currentUser && 
@@ -52,6 +57,12 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
     setTimeout(() => setIsCopied(false), 2500);
   };
 
+  const handleCopyDomain = () => {
+    navigator.clipboard.writeText(currentDomain);
+    setCopiedDomain(true);
+    setTimeout(() => setCopiedDomain(false), 2500);
+  };
+
   const handleProceedAsAdmin = () => {
     onAdminLogin(SUPER_ADMIN_USER);
     onClose();
@@ -61,6 +72,7 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
   const handleGoogleAdminLogin = async () => {
     setIsGoogleLoading(true);
     setErrorMessage('');
+    setIsUnauthorizedDomain(false);
     try {
       const verified = await loginWithGooglePopup();
       if (verified.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
@@ -76,7 +88,10 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
         setErrorMessage(`ایمیل وارد شده (${verified.email}) مجاز به دسترسی پنل مدیریت کل نمی‌باشد. لطفاً با ${SUPER_ADMIN_EMAIL} لاگین کنید.`);
       }
     } catch (err: any) {
-      if (err?.code === 'auth/popup-blocked') {
+      if (err?.code === 'auth/unauthorized-domain') {
+        setIsUnauthorizedDomain(true);
+        setErrorMessage('دامنه فعلی هنوز در Authorized Domains کنسول فایربیس مجاز نشده است.');
+      } else if (err?.code === 'auth/popup-blocked') {
         setErrorMessage('پنجره پاپ‌آپ گوگل توسط مرورگر مسدود شد. لطفاً پاپ‌آپ را در مرورگر فعال نمایید.');
       } else if (err?.code === 'auth/popup-closed-by-user') {
         setErrorMessage('ورود توسط کاربر لغو شد.');
@@ -243,9 +258,52 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
                 </div>
 
                 {errorMessage && (
-                  <div className="flex items-center gap-1.5 text-[11px] text-rose-400">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    <span>{errorMessage}</span>
+                  <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs space-y-2">
+                    <div className="flex items-center gap-1.5 text-xs text-rose-400">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{errorMessage}</span>
+                    </div>
+
+                    {isUnauthorizedDomain && (
+                      <div className="pt-2 border-t border-rose-500/20 space-y-2 text-slate-300 text-[11px]">
+                        <p className="leading-relaxed">
+                          جهت فعال‌سازی پاپ‌آپ ورود گوگل در این دامنه، کافی است دامنه زیر را کپی کرده و در تنظیمات فایربیس (Authorized Domains) ثبت فرمایید:
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 p-2 rounded-xl bg-slate-900 border border-slate-700 font-mono text-[11px] text-amber-200 dir-ltr select-all truncate">
+                            {currentDomain}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleCopyDomain}
+                            className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold border border-slate-700 flex items-center gap-1 shrink-0 transition cursor-pointer"
+                          >
+                            {copiedDomain ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                            <span>{copiedDomain ? 'کپی شد' : 'کپی دامنه'}</span>
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1">
+                          <a
+                            href={firebaseSettingsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-semibold underline"
+                          >
+                            <span>ورود به تنظیمات فایربیس</span>
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+
+                          <button
+                            type="button"
+                            onClick={handleProceedAsAdmin}
+                            className="text-[11px] font-bold text-amber-300 hover:text-amber-200 underline cursor-pointer"
+                          >
+                            ورود مستقیم به عنوان {SUPER_ADMIN_EMAIL} ←
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </form>

@@ -18,7 +18,7 @@ interface CommentsModalProps {
   onClose: () => void;
   onAddComment: (contentId: string, text: string) => void;
   onLikeComment: (commentId: string) => void;
-  onOpenAuthModal: () => void;
+  onStartGoogleLogin: () => void;
 }
 
 const QUICK_EMOJIS = ['🔥 عالی بود', '👏 خسته نباشید', '💡 نکته بسیار مفیدی بود', '❤️ فوق‌العاده', '🚀 به اشتراک گذاشتم', '👍'];
@@ -30,7 +30,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
   onClose,
   onAddComment,
   onLikeComment,
-  onOpenAuthModal
+  onStartGoogleLogin
 }) => {
   const [commentText, setCommentText] = useState('');
 
@@ -195,7 +195,10 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
                 </span>
               </div>
               <button
-                onClick={onOpenAuthModal}
+                onClick={() => {
+                  onClose();
+                  onStartGoogleLogin();
+                }}
                 className="px-4 py-2 rounded-xl bg-white text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md hover:bg-slate-100 transition cursor-pointer shrink-0"
               >
                 ورود با گوگل
