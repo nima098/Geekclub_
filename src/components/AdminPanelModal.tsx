@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   ShieldCheck, 
@@ -31,7 +31,11 @@ import {
   Youtube,
   Instagram,
   Newspaper,
-  Video
+  Video,
+  Maximize2,
+  Minimize2,
+  Home,
+  ArrowLeft
 } from 'lucide-react';
 import { 
   ContentItem, 
@@ -172,48 +176,107 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     }, 2000);
   };
 
+  const [isBrowserFullscreen, setIsBrowserFullscreen] = useState(
+    typeof document !== 'undefined' ? Boolean(document.fullscreenElement) : false
+  );
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsBrowserFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleBrowserFullscreen = () => {
+    try {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+    } catch (e) {
+      console.warn('Fullscreen toggle error:', e);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 w-screen h-screen bg-slate-950 flex flex-col overflow-hidden animate-in fade-in duration-200">
       <div 
-        className="w-full max-w-5xl bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden animate-in zoom-in-95 duration-200"
+        className="w-full h-full bg-slate-900 flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
+        {/* Fullscreen Top Header */}
+        <div className="px-4 sm:px-6 lg:px-8 py-3.5 sm:py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/95 backdrop-blur-md shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-500 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-orange-500/20">
-              <ShieldCheck className="w-6 h-6" />
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-500 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-orange-500/20 ring-2 ring-amber-400/30 shrink-0">
+              <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-black text-slate-100">
-                  پنل مدیریت و ادمین گیک کلاب
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm sm:text-lg font-black text-slate-100">
+                  پنل مدیریت و نظارت کل گیک کلاب
                 </h3>
                 <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
                   <Crown className="w-3 h-3 text-amber-400" />
-                  مدیر سیستم
+                  مدیر سیستم (فول اسکرین)
+                </span>
+                <span className="text-[10px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded-md hidden md:inline">
+                  3dsaz1990@gmail.com
                 </span>
               </div>
-              <p className="text-xs text-slate-400">
-                مدیریت انتشار محتوا، تایید پست‌ها، سطح دسترسی کاربران و سطل بازیافت
+              <p className="text-xs text-slate-400 hidden sm:block">
+                مدیریت انتشار، نظارت بر پست‌های معلق، سطوح دسترسی کاربران، تنظیمات و سطل بازیافت
               </p>
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Toggle Browser Fullscreen Button */}
+            <button
+              type="button"
+              onClick={toggleBrowserFullscreen}
+              className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+              title={isBrowserFullscreen ? 'خروج از حالت تمام‌صفحه مرورگر' : 'ورود به حالت تمام‌صفحه مرورگر'}
+            >
+              {isBrowserFullscreen ? (
+                <>
+                  <Minimize2 className="w-4 h-4 text-amber-400" />
+                  <span className="hidden md:inline">کوچک‌نمایی</span>
+                </>
+              ) : (
+                <>
+                  <Maximize2 className="w-4 h-4 text-amber-400" />
+                  <span className="hidden md:inline">تمام‌صفحه مرورگر</span>
+                </>
+              )}
+            </button>
+
+            {/* Back to Site Button */}
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-indigo-600/25 transition cursor-pointer active:scale-95"
+              title="بستن پنل و بازگشت به صفحه اصلی سایت"
+            >
+              <Home className="w-4 h-4" />
+              <span>بازگشت به سایت</span>
+              <X className="w-4 h-4 ml-0.5" />
+            </button>
+          </div>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-2 px-5 pt-3 border-b border-slate-800 bg-slate-900/50 text-xs font-semibold overflow-x-auto">
-          <button
-            onClick={() => setActiveTab('dashboard')}
-            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
-              activeTab === 'dashboard'
+        <div className="px-4 sm:px-6 lg:px-8 border-b border-slate-800 bg-slate-900/60 shrink-0">
+          <div className="flex items-center gap-2 pt-3 text-xs font-semibold overflow-x-auto no-scrollbar">
+            <button
+              onClick={() => setActiveTab('dashboard')}
+              className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'dashboard'
                 ? 'border-indigo-500 text-indigo-400 font-bold'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
@@ -301,9 +364,11 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             پیام همگانی
           </button>
         </div>
+      </div>
 
-        {/* Tab Body */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6">
+      {/* Tab Body */}
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-950/40">
+        <div className="max-w-7xl mx-auto w-full">
           {/* 1. Dashboard Tab */}
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
@@ -1188,5 +1253,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 };
