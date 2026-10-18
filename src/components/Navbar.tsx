@@ -122,20 +122,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="hidden lg:inline">انتقادات و پیشنهادات</span>
           </button>
 
-          {/* Admin Panel Button */}
-          <button
-            onClick={onOpenAdminModal}
-            className={`px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 transition cursor-pointer ${
-              user?.isAdmin
-                ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 font-bold shadow-sm'
-                : 'bg-slate-800/80 hover:bg-slate-750 text-amber-400 hover:text-amber-300 border border-slate-700/60 font-semibold'
-            }`}
-            title="ورود به پنل مدیریت سایت (داشبورد، سطل بازیافت، انتقادات و پیام همگانی)"
-          >
-            <Crown className="w-4 h-4 text-amber-400" />
-            <span className="hidden sm:inline">پنل ادمین</span>
-          </button>
-
           {/* PWA Install Button */}
           <PWAInstallButton />
 

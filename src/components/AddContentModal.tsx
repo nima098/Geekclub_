@@ -13,7 +13,8 @@ import {
   Wand2,
   ChevronDown,
   Layers,
-  Clock
+  Clock,
+  Video
 } from 'lucide-react';
 import { 
   Platform, 
@@ -200,6 +201,10 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
         alert('خطا: انتشار و ورود محتوا از پلتفرم اینستاگرام در حال حاضر توسط مدیریت غیرفعال شده است.');
         return;
       }
+      if (finalPlatform === 'aparat' && !siteSettings.allowAparat) {
+        alert('خطا: انتشار و ورود محتوا از پلتفرم آپارات در حال حاضر توسط مدیریت غیرفعال شده است.');
+        return;
+      }
       if (finalPlatform === 'article' && !siteSettings.allowArticles) {
         alert('خطا: انتشار و ورود محتوا از مقالات وب در حال حاضر توسط مدیریت غیرفعال شده است.');
         return;
@@ -212,6 +217,8 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
         ? 'ویدیوی یوتیوب'
         : finalPlatform === 'instagram'
         ? 'پست اینستاگرام'
+        : finalPlatform === 'aparat'
+        ? 'ویدیوی آپارات'
         : `مقاله در ${parsed.sourceDomain}`
     );
 
@@ -221,6 +228,8 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
         ? 'ویدیوی به اشتراک گذاشته شده از یوتیوب.'
         : finalPlatform === 'instagram'
         ? 'پست یا ریلز به اشتراک گذاشته شده از اینستاگرام.'
+        : finalPlatform === 'aparat'
+        ? 'ویدیوی به اشتراک گذاشته شده از آپارات.'
         : `مقاله تخصصی در ${parsed.sourceDomain}.`
     );
 
@@ -230,6 +239,8 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
         ? `https://img.youtube.com/vi/${parsed.detectedId}/hqdefault.jpg`
         : finalPlatform === 'instagram'
         ? 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=800&q=80'
+        : finalPlatform === 'aparat'
+        ? 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=800&q=80'
         : 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=800&q=80'
     );
 
@@ -240,7 +251,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
 
     const finalTags = rawTags.length > 0 ? rawTags : (fetchedMeta?.tags || ['محتوا', 'گیک_کلاب']);
     const finalDuration = readingOrWatchTime.trim() || fetchedMeta?.readingOrWatchTime || (
-      finalPlatform === 'youtube' ? '۱۰ دقیقه ویدیو' : finalPlatform === 'instagram' ? '۶۰ ثانیه ریلز' : '۵ دقیقه مطالعه'
+      finalPlatform === 'youtube' ? '۱۰ دقیقه ویدیو' : finalPlatform === 'instagram' ? '۶۰ ثانیه ریلز' : finalPlatform === 'aparat' ? '۱۵ دقیقه ویدیو' : '۵ دقیقه مطالعه'
     );
 
     // Resolve final Category:
@@ -291,7 +302,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
   };
 
   // Helper samples for instant testing
-  const handleAutoFillSample = (sampleType: 'yt' | 'ig' | 'art') => {
+  const handleAutoFillSample = (sampleType: 'yt' | 'ig' | 'aparat' | 'art') => {
     if (sampleType === 'yt') {
       setUrl('https://www.youtube.com/watch?v=fJ9rUzIMcZQ');
       setTitle('');
@@ -300,6 +311,12 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
       setCategoryInput('');
     } else if (sampleType === 'ig') {
       setUrl('https://www.instagram.com/reel/C7pM8wQxY12/');
+      setTitle('');
+      setDescription('');
+      setSelectedCategory('auto');
+      setCategoryInput('');
+    } else if (sampleType === 'aparat') {
+      setUrl('https://www.aparat.com/v/m435165');
       setTitle('');
       setDescription('');
       setSelectedCategory('auto');
@@ -333,7 +350,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
                 </span>
               </h3>
               <p className="text-xs text-slate-400">
-                فقط لینک را قرار دهید؛ پلتفرم، دسته‌بندی، عنوان و کاور به طور خودکار استخراج می‌شوند.
+                فقط لینک را قرار دهید؛ پلتفرم (یوتیوب، آپارات، اینستاگرام، مقاله)، دسته‌بندی و عنوان استخراج می‌شوند.
               </p>
             </div>
           </div>
@@ -349,14 +366,22 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
         {/* Quick Sample Buttons */}
         <div className="px-5 py-2 bg-slate-800/40 border-b border-slate-800/80 flex items-center justify-between text-xs text-slate-400 flex-wrap gap-2">
           <span>تست سریع با لینک‌های نمونه:</span>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <button
               type="button"
               onClick={() => handleAutoFillSample('yt')}
               className="px-2.5 py-1 rounded-lg bg-red-600/20 text-red-300 border border-red-500/30 hover:bg-red-600/30 transition text-[11px] font-semibold flex items-center gap-1"
             >
               <Youtube className="w-3 h-3 text-red-400" />
-              لینک یوتیوب
+              یوتیوب
+            </button>
+            <button
+              type="button"
+              onClick={() => handleAutoFillSample('aparat')}
+              className="px-2.5 py-1 rounded-lg bg-rose-600/20 text-rose-300 border border-rose-500/30 hover:bg-rose-600/30 transition text-[11px] font-semibold flex items-center gap-1"
+            >
+              <Video className="w-3 h-3 text-rose-400" />
+              آپارات
             </button>
             <button
               type="button"
@@ -364,7 +389,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
               className="px-2.5 py-1 rounded-lg bg-pink-600/20 text-pink-300 border border-pink-500/30 hover:bg-pink-600/30 transition text-[11px] font-semibold flex items-center gap-1"
             >
               <Instagram className="w-3 h-3 text-pink-400" />
-              لینک اینستاگرام
+              اینستاگرام
             </button>
             <button
               type="button"
@@ -372,7 +397,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
               className="px-2.5 py-1 rounded-lg bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-600/30 transition text-[11px] font-semibold flex items-center gap-1"
             >
               <Newspaper className="w-3 h-3 text-emerald-400" />
-              لینک مقاله وب
+              مقاله وب
             </button>
           </div>
         </div>
@@ -667,6 +692,17 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
                       <iframe
                         src={embedUrl}
                         title="پیش‌نمایش یوتیوب"
+                        className="w-full h-full border-0"
+                        allowFullScreen
+                      />
+                    </div>
+                  )}
+
+                  {detectedPlatform === 'aparat' && (
+                    <div className="aspect-video w-full rounded-xl overflow-hidden bg-black">
+                      <iframe
+                        src={embedUrl}
+                        title="پیش‌نمایش آپارات"
                         className="w-full h-full border-0"
                         allowFullScreen
                       />

@@ -35,6 +35,9 @@ import {
   AdminPanelModal 
 } from './components/AdminPanelModal';
 import { 
+  AdminPortalLoginModal 
+} from './components/AdminPortalLoginModal';
+import { 
   Toast, 
   ToastMessage 
 } from './components/Toast';
@@ -55,6 +58,8 @@ import {
   INITIAL_CONTENT, 
   INITIAL_COMMENTS, 
   DEFAULT_USER,
+  SUPER_ADMIN_USER,
+  SUPER_ADMIN_EMAIL,
   INITIAL_INBOX,
   INITIAL_PROFILE_COMMENTS,
   INITIAL_FEEDBACK,
@@ -111,9 +116,14 @@ export default function App() {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.USER);
       if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && parsed.isAdmin === undefined) {
+        const parsed: UserProfile = JSON.parse(saved);
+        // Only grant isAdmin if email matches the super admin email
+        if (parsed.email && parsed.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
           parsed.isAdmin = true;
+          parsed.autoApproveContent = true;
+          parsed.role = 'مدیر کل سایت (Super Admin)';
+        } else {
+          parsed.isAdmin = false;
         }
         return parsed;
       }
@@ -160,6 +170,32 @@ export default function App() {
 
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [isAdminPortalModalOpen, setIsAdminPortalModalOpen] = useState(false);
+
+  // Check URL query parameters (?admin=true, ?admin=login) and hash (#admin)
+  useEffect(() => {
+    const handleUrlAdminCheck = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const hasAdminParam = urlParams.has('admin');
+      const hasAdminHash = window.location.hash.toLowerCase() === '#admin' || window.location.pathname.endsWith('/admin');
+
+      if (hasAdminParam || hasAdminHash) {
+        if (user && (user.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase() || user.isAdmin)) {
+          setIsAdminModalOpen(true);
+        } else {
+          setIsAdminPortalModalOpen(true);
+        }
+      }
+    };
+
+    handleUrlAdminCheck();
+    window.addEventListener('popstate', handleUrlAdminCheck);
+    window.addEventListener('hashchange', handleUrlAdminCheck);
+    return () => {
+      window.removeEventListener('popstate', handleUrlAdminCheck);
+      window.removeEventListener('hashchange', handleUrlAdminCheck);
+    };
+  }, [user]);
 
   // Feedback list state
   const [feedbackList, setFeedbackList] = useState<FeedbackItem[]>(() => {
@@ -546,21 +582,39 @@ export default function App() {
 
   // --- User Auth Handlers ---
   const handleLogin = (newUser: UserProfile) => {
-    const existing = usersList.find((u) => u.uid === newUser.uid || u.email === newUser.email);
-    const resolvedUser: UserProfile = existing
-      ? { ...newUser, ...existing, photoURL: newUser.photoURL || existing.photoURL }
-      : { ...newUser, autoApproveContent: newUser.isAdmin || false };
+    const isSuperAdmin = Boolean(
+      newUser.email && newUser.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()
+    );
+
+    const existing = usersList.find(
+      (u) => u.uid === newUser.uid || (u.email && newUser.email && u.email.toLowerCase() === newUser.email.toLowerCase())
+    );
+
+    const resolvedUser: UserProfile = {
+      ...(existing || {}),
+      ...newUser,
+      photoURL: newUser.photoURL || existing?.photoURL || (isSuperAdmin ? SUPER_ADMIN_USER.photoURL : ''),
+      isAdmin: isSuperAdmin ? true : Boolean(existing?.isAdmin),
+      autoApproveContent: isSuperAdmin ? true : (existing?.autoApproveContent ?? Boolean(newUser.autoApproveContent)),
+      role: isSuperAdmin ? 'مدیر کل سایت (Super Admin)' : (existing?.role || newUser.role || 'کاربر عضو')
+    };
 
     setUser(resolvedUser);
     setUsersList((prev) => {
-      const idx = prev.findIndex((u) => u.uid === resolvedUser.uid || u.email === resolvedUser.email);
+      const idx = prev.findIndex(
+        (u) => u.uid === resolvedUser.uid || (u.email && resolvedUser.email && u.email.toLowerCase() === resolvedUser.email.toLowerCase())
+      );
       if (idx >= 0) {
         return prev.map((u, i) => (i === idx ? resolvedUser : u));
       }
       return [resolvedUser, ...prev];
     });
 
-    addToast('success', `خوش آمدید، ${resolvedUser.displayName}! با موفقیت وارد شدید.`);
+    if (isSuperAdmin) {
+      addToast('success', '👑 خوش آمدید مدیریت ارشد! پنل مدیریت با تمام اختیارات برای شما فعال گردید.');
+    } else {
+      addToast('success', `خوش آمدید، ${resolvedUser.displayName}! با موفقیت وارد شدید.`);
+    }
   };
 
   const handleLogout = () => {
@@ -946,14 +1000,16 @@ export default function App() {
               انتقادات و پیشنهادات
             </button>
 
-            <button
-              onClick={() => setIsAdminModalOpen(true)}
-              className="flex items-center gap-1.5 text-amber-400 hover:text-amber-300 font-bold transition cursor-pointer bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1 rounded-lg border border-amber-500/20"
-              title="ورود به پنل مدیریت سایت و بازیابی محتوا"
-            >
-              <Crown className="w-3.5 h-3.5 text-amber-400" />
-              پنل مدیریت سایت
-            </button>
+            {user?.isAdmin && (
+              <button
+                onClick={() => setIsAdminModalOpen(true)}
+                className="flex items-center gap-1.5 text-amber-400 hover:text-amber-300 font-bold transition cursor-pointer bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1 rounded-lg border border-amber-500/20"
+                title="ورود به پنل مدیریت سایت و بازیابی محتوا"
+              >
+                <Crown className="w-3.5 h-3.5 text-amber-400" />
+                پنل مدیریت سایت
+              </button>
+            )}
 
             <button
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -1052,6 +1108,15 @@ export default function App() {
         onUpdateUserPermissions={handleUpdateUserPermissions}
         onApproveContent={handleApproveContent}
         onRejectContent={handleRejectContent}
+      />
+
+      {/* Dedicated Admin Portal Login Modal */}
+      <AdminPortalLoginModal
+        isOpen={isAdminPortalModalOpen}
+        onClose={() => setIsAdminPortalModalOpen(false)}
+        currentUser={user}
+        onAdminLogin={handleLogin}
+        onOpenAdminPanel={() => setIsAdminModalOpen(true)}
       />
 
       {/* Toast Notifications */}

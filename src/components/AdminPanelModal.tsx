@@ -30,7 +30,8 @@ import {
   UserX,
   Youtube,
   Instagram,
-  Newspaper
+  Newspaper,
+  Video
 } from 'lucide-react';
 import { 
   ContentItem, 
@@ -930,6 +931,36 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     }`}
                   >
                     {siteSettings.allowInstagram ? <ToggleRight className="w-9 h-9" /> : <ToggleLeft className="w-9 h-9" />}
+                  </button>
+                </div>
+
+                {/* Aparat Toggle */}
+                <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
+                      <Video className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-xs sm:text-sm font-bold text-slate-200 block">
+                        پلتفرم آپارات (Aparat.com)
+                      </span>
+                      <span className="text-[11px] text-slate-400">
+                        {siteSettings.allowAparat ? 'فعال - کاربران می‌توانند ویدیوهای آپارات را ثبت و به اشتراک بگذارند' : 'غیرفعال - ورود لینک آپارات مسدود است'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => onUpdateSiteSettings({
+                      ...siteSettings,
+                      allowAparat: !siteSettings.allowAparat
+                    })}
+                    className={`p-1 text-2xl transition cursor-pointer ${
+                      siteSettings.allowAparat ? 'text-rose-400' : 'text-slate-500'
+                    }`}
+                  >
+                    {siteSettings.allowAparat ? <ToggleRight className="w-9 h-9" /> : <ToggleLeft className="w-9 h-9" />}
                   </button>
                 </div>
 

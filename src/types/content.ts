@@ -1,4 +1,4 @@
-export type Platform = 'youtube' | 'instagram' | 'article';
+export type Platform = 'youtube' | 'instagram' | 'article' | 'aparat';
 
 export type Category = 
   | 'all'
@@ -105,6 +105,7 @@ export interface SiteAdminSettings {
   allowYouTube: boolean;
   allowInstagram: boolean;
   allowArticles: boolean;
+  allowAparat: boolean;
   enableCaptcha: boolean;
 }
 

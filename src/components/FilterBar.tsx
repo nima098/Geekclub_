@@ -14,7 +14,8 @@ import {
   MessageSquare, 
   ThumbsUp, 
   Clock,
-  Sparkles
+  Sparkles,
+  Video
 } from 'lucide-react';
 import { Platform, Category, SortOption, ViewMode } from '../types/content';
 
@@ -202,6 +203,19 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         >
           <Youtube className={`w-4 h-4 ${selectedPlatform === 'youtube' ? 'text-white' : 'text-red-500'}`} />
           <span>ویدیوهای یوتیوب</span>
+        </button>
+
+        {/* Aparat */}
+        <button
+          onClick={() => onPlatformChange('aparat')}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+            selectedPlatform === 'aparat'
+              ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30'
+              : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 border border-slate-700/60 hover:text-white'
+          }`}
+        >
+          <Video className={`w-4 h-4 ${selectedPlatform === 'aparat' ? 'text-white' : 'text-rose-500'}`} />
+          <span>ویدیوهای آپارات</span>
         </button>
 
         {/* Instagram */}

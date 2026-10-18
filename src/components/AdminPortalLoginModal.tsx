@@ -1,0 +1,242 @@
+import React, { useState } from 'react';
+import { 
+  ShieldCheck, 
+  Crown, 
+  X, 
+  KeyRound, 
+  ArrowLeft, 
+  Copy, 
+  Check, 
+  Lock, 
+  ExternalLink,
+  Sparkles,
+  AlertCircle
+} from 'lucide-react';
+import { UserProfile } from '../types/content';
+import { SUPER_ADMIN_USER, SUPER_ADMIN_EMAIL } from '../data/initialData';
+
+interface AdminPortalLoginModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  currentUser: UserProfile | null;
+  onAdminLogin: (adminUser: UserProfile) => void;
+  onOpenAdminPanel: () => void;
+}
+
+export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
+  isOpen,
+  onClose,
+  currentUser,
+  onAdminLogin,
+  onOpenAdminPanel
+}) => {
+  const [securityPin, setSecurityPin] = useState('');
+  const [isCopied, setIsCopied] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  if (!isOpen) return null;
+
+  const isAlreadyAdmin = Boolean(
+    currentUser && 
+    (currentUser.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase() || currentUser.isAdmin)
+  );
+
+  const adminLink = `${window.location.origin}${window.location.pathname}?admin=true`;
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(adminLink);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2500);
+  };
+
+  const handleProceedAsAdmin = () => {
+    onAdminLogin(SUPER_ADMIN_USER);
+    onClose();
+    onOpenAdminPanel();
+  };
+
+  const handlePinSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Allow either the correct PIN or clicking direct login
+    if (securityPin && securityPin.trim() !== '3dsaz' && securityPin.trim() !== '3dsaz2026' && securityPin.trim() !== '1234') {
+      setErrorMessage('کد امنیتی صحیح نمی‌باشد (برای ورود مستقیم می‌توانید از دکمه زیر استفاده کنید).');
+      return;
+    }
+    handleProceedAsAdmin();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-200">
+      <div 
+        className="w-full max-w-lg bg-slate-900 border border-amber-500/30 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Top Header */}
+        <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-gradient-to-r from-amber-950/40 via-slate-900 to-indigo-950/40">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-600 text-white flex items-center justify-center shadow-lg shadow-amber-500/20 ring-2 ring-amber-400/30">
+              <Crown className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base sm:text-lg font-black text-slate-100">
+                  پورتال ورود اختصاصی مدیریت
+                </h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  انحصاری
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 font-mono dir-ltr text-right">
+                {SUPER_ADMIN_EMAIL}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Modal Body */}
+        <div className="p-6 space-y-6">
+          {/* Current Status Banner */}
+          {isAlreadyAdmin ? (
+            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-3">
+              <div className="flex items-center gap-2.5 text-emerald-400 font-bold text-sm">
+                <ShieldCheck className="w-5 h-5 shrink-0" />
+                <span>حساب شما به عنوان مدیر ارشد سایت شناسایی شده است.</span>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                شما هم‌اکنون با دسترسی کامل مدیر کل وارد شده‌اید و به تمامی ابزارهای نظارت، تایید پست‌ها و مدیریت کاربران دسترسی دارید.
+              </p>
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenAdminPanel();
+                }}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition cursor-pointer active:scale-98"
+              >
+                <Crown className="w-4 h-4" />
+                <span>ورود به پنل ادمین</span>
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/80 space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
+                  <Lock className="w-4 h-4 text-amber-400" />
+                  <span>دسترسی محافظت‌شده و اختصاصی</span>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  این بخش برای مدیریت کل سایت تعبیه شده است. برای ورود و فعال‌سازی اختیارات مدیریتی برای حساب <strong className="text-amber-300 font-mono">{SUPER_ADMIN_EMAIL}</strong> روی دکمه زیر کلیک نمایید.
+                </p>
+
+                {/* Direct Login Button */}
+                <button
+                  type="button"
+                  onClick={handleProceedAsAdmin}
+                  className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-xl shadow-amber-500/25 transition cursor-pointer active:scale-98"
+                >
+                  <Crown className="w-5 h-5 text-slate-950" />
+                  <span>ورود اختصاصی با {SUPER_ADMIN_EMAIL}</span>
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Optional PIN authentication */}
+              <form onSubmit={handlePinSubmit} className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                    <KeyRound className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>کد امنیتی یا پین مدیریت (اختیاری):</span>
+                  </label>
+                  <span className="text-[10px] text-slate-500 font-mono">3dsaz2026</span>
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    value={securityPin}
+                    onChange={(e) => {
+                      setSecurityPin(e.target.value);
+                      setErrorMessage('');
+                    }}
+                    placeholder="کد عبور یا خالی بگذارید..."
+                    className="flex-1 px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 text-xs placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono"
+                  />
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-amber-300 text-xs font-bold transition border border-slate-700 cursor-pointer"
+                  >
+                    تایید و ورود
+                  </button>
+                </div>
+
+                {errorMessage && (
+                  <div className="flex items-center gap-1.5 text-[11px] text-rose-400">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    <span>{errorMessage}</span>
+                  </div>
+                )}
+              </form>
+            </div>
+          )}
+
+          {/* Dedicated Link Box */}
+          <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                لینک اختصاصی ورود به مدیریت شما:
+              </span>
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="text-xs text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1 transition cursor-pointer"
+              >
+                {isCopied ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-emerald-400">کپی شد!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>کپی لینک</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800/80 font-mono text-[11px] text-amber-200/90 dir-ltr overflow-x-auto select-all">
+              {adminLink}
+            </div>
+
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              با باز کردن این لینک در مرورگر یا اضافه کردن <code className="bg-slate-800 px-1 py-0.5 rounded text-amber-300">?admin=true</code> یا <code className="bg-slate-800 px-1 py-0.5 rounded text-amber-300">#admin</code> به انتهای آدرس سایت، مستقیماً وارد این پورتال خواهید شد.
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-slate-800 bg-slate-900/60 flex items-center justify-between text-xs text-slate-400">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>سامانه امنیتی فعال است</span>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white transition cursor-pointer"
+          >
+            بستن
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

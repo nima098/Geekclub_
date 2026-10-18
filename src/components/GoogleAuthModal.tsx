@@ -9,6 +9,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { UserProfile } from '../types/content';
+import { SUPER_ADMIN_USER, SUPER_ADMIN_EMAIL } from '../data/initialData';
 
 interface GoogleAuthModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ interface GoogleAuthModalProps {
 }
 
 const SAMPLE_GOOGLE_ACCOUNTS: UserProfile[] = [
+  SUPER_ADMIN_USER,
   {
     uid: 'google-usr-1',
     displayName: 'احسان محمدی (توسعه‌دهنده)',
@@ -64,16 +66,23 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
     e.preventDefault();
     if (!customName.trim() || !customEmail.trim()) return;
 
-    const baseUsername = customEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') || 'user';
+    const emailTrimmed = customEmail.trim();
+    const isAdminAccount = emailTrimmed.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+    const baseUsername = emailTrimmed.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') || 'user';
 
     onLogin({
-      uid: `google-${Date.now()}`,
-      displayName: customName.trim(),
-      username: baseUsername,
-      email: customEmail.trim(),
+      uid: isAdminAccount ? SUPER_ADMIN_USER.uid : `google-${Date.now()}`,
+      displayName: isAdminAccount ? SUPER_ADMIN_USER.displayName : customName.trim(),
+      username: isAdminAccount ? SUPER_ADMIN_USER.username : baseUsername,
+      email: emailTrimmed,
       hideEmail: false,
       allowProfileComments: true,
-      photoURL: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(customName)}`
+      isAdmin: isAdminAccount,
+      autoApproveContent: isAdminAccount,
+      role: isAdminAccount ? 'مدیر کل سایت (Super Admin)' : 'کاربر عضو',
+      photoURL: isAdminAccount 
+        ? SUPER_ADMIN_USER.photoURL 
+        : `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(customName)}`
     });
     onClose();
   };

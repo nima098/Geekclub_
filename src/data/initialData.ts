@@ -110,6 +110,31 @@ export const INITIAL_CONTENT: ContentItem[] = [
     approvalStatus: 'approved'
   },
   {
+    id: 'aparat-1',
+    title: 'آموزش جامع هوش مصنوعی و یادگیری ماشین به زبان ساده',
+    description: 'در این ویدیو از آپارات، مبانی اساسی شبکه‌های عصبی و یادگیری عمیق همراه با مثال‌های عملی در پایتون توضیح داده شده است.',
+    url: 'https://www.aparat.com/v/m435165',
+    platform: 'aparat',
+    embedUrl: 'https://www.aparat.com/video/video/embed/videohash/m435165/vt/frame',
+    thumbnail: 'https://images.unsplash.com/photo-1677442136019-21780efad99a?auto=format&fit=crop&w=800&q=80',
+    author: {
+      name: 'کانال هوش مصنوعی ایران',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+      handle: '@ai_iran',
+      isVerified: true
+    },
+    category: 'ai',
+    tags: ['آپارات', 'هوش مصنوعی', 'پایتون', 'آموزش'],
+    publishedAt: '۳ ساعت پیش',
+    readingOrWatchTime: '۲۲ دقیقه ویدیو',
+    likesCount: 164,
+    dislikesCount: 5,
+    commentsCount: 23,
+    userReaction: 'like',
+    sourceDomain: 'aparat.com',
+    approvalStatus: 'approved'
+  },
+  {
     id: 'ig-1',
     title: '۵ ترفند فوق‌العاده در جاوااسکریپت که کدنویسی را ۳ برابر سریع‌تر می‌کند',
     description: 'ترفندهای کاربردی ES2024 و میانبرهای آرایه‌ها و آبجکت‌ها که خوانایی و عملکرد کدهای جاوااسکریپت و تایپ‌اسکریپت شما را بالا می‌برد.',
@@ -338,25 +363,44 @@ export const DEFAULT_SITE_SETTINGS: SiteAdminSettings = {
   allowYouTube: true,
   allowInstagram: true,
   allowArticles: true,
+  allowAparat: true,
   enableCaptcha: true
 };
 
-export const DEFAULT_USER: UserProfile = {
-  uid: 'user-google-101',
-  displayName: 'کاربر گیک (شما)',
-  username: 'geek_master',
-  email: 'user.creative@gmail.com',
+export const SUPER_ADMIN_EMAIL = '3dsaz1990@gmail.com';
+
+export const SUPER_ADMIN_USER: UserProfile = {
+  uid: 'admin-super-3dsaz',
+  displayName: 'مدیریت ارشد (3dsaz)',
+  username: 'admin_3dsaz',
+  email: '3dsaz1990@gmail.com',
   hideEmail: false,
   photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-  bio: 'علاقه‌مند به هوش مصنوعی، کدنویسی تمیز و جامعه گیک‌ها 🚀',
+  bio: 'مدیر کل و صاحب امتیاز سامانه 👑',
   allowProfileComments: true,
   joinedAt: 'مهر ۱۴۰۵',
   isAdmin: true,
   autoApproveContent: true,
-  role: 'مدیر ارشد'
+  role: 'مدیر کل سایت (Super Admin)'
+};
+
+export const DEFAULT_USER: UserProfile = {
+  uid: 'user-google-101',
+  displayName: 'کاربر گیک (مهمان)',
+  username: 'geek_guest',
+  email: 'user.creative@gmail.com',
+  hideEmail: false,
+  photoURL: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+  bio: 'علاقه‌مند به تکنولوژی، هوش مصنوعی و جامعه برنامه‌نویسان 🚀',
+  allowProfileComments: true,
+  joinedAt: 'مهر ۱۴۰۵',
+  isAdmin: false,
+  autoApproveContent: false,
+  role: 'کاربر عضو'
 };
 
 export const INITIAL_REGISTERED_USERS: UserProfile[] = [
+  SUPER_ADMIN_USER,
   DEFAULT_USER,
   {
     uid: 'usr-farhad',

@@ -15,7 +15,8 @@ import {
   BookOpen,
   Volume2,
   Maximize2,
-  Trash2
+  Trash2,
+  Video
 } from 'lucide-react';
 import { ContentItem, ViewMode, UserProfile } from '../types/content';
 
@@ -88,6 +89,13 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           label: 'مقاله وب',
           badgeBg: 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/30',
           accentColor: 'hover:border-emerald-500/50'
+        };
+      case 'aparat':
+        return {
+          icon: <Video className="w-3.5 h-3.5 text-white" />,
+          label: 'آپارات',
+          badgeBg: 'bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-sm shadow-rose-600/30',
+          accentColor: 'hover:border-rose-500/50'
         };
     }
   };
@@ -193,6 +201,45 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                       مشاهده در اینستاگرام
                     </a>
                   </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {item.platform === 'aparat' && (
+          <>
+            {isPlayingVideo ? (
+              <iframe
+                src={item.embedUrl}
+                title={item.title}
+                className="w-full h-full border-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            ) : (
+              <div 
+                className="relative w-full h-full cursor-pointer group/media"
+                onClick={() => setIsPlayingVideo(true)}
+              >
+                <img
+                  src={item.thumbnail}
+                  alt={item.title}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover/media:scale-105 opacity-90 group-hover/media:opacity-100"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-black/30" />
+                
+                {/* Play Button Overlay */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-2xl bg-rose-600/90 hover:bg-rose-600 text-white flex items-center justify-center shadow-xl shadow-rose-600/40 group-hover/media:scale-110 transition-all duration-300 backdrop-blur-sm">
+                    <Play className="w-6 h-6 fill-white ml-0.5" />
+                  </div>
+                </div>
+
+                <div className="absolute bottom-3 left-3 bg-slate-900/90 text-white text-[11px] font-medium px-2.5 py-1 rounded-lg backdrop-blur-md flex items-center gap-1.5 border border-slate-700/60">
+                  <Clock className="w-3 h-3 text-rose-400" />
+                  <span>{item.readingOrWatchTime}</span>
                 </div>
               </div>
             )}
