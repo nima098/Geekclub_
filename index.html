@@ -4,6 +4,26 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>گیک کلاب - اشتراک و مرور محتوا</title>
+    <script>
+      window.addEventListener('unhandledrejection', function (event) {
+        if (
+          event.reason &&
+          (String(event.reason.message || '').includes('WebSocket') ||
+           String(event.reason.stack || '').includes('vite') ||
+           String(event.reason || '').includes('WebSocket'))
+        ) {
+          event.preventDefault();
+        }
+      });
+      window.addEventListener('error', function (event) {
+        if (
+          String(event.message || '').includes('WebSocket') ||
+          String(event.filename || '').includes('vite')
+        ) {
+          event.preventDefault();
+        }
+      }, true);
+    </script>
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
