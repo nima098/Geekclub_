@@ -137,7 +137,10 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 
                 {/* Play Button Overlay */}
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-pink-600/90 hover:bg-pink-600 text-white flex items-center justify-center shadow-xl shadow-pink-600/40 group-hover/media:scale-110 transition-all duration-300 backdrop-blur-sm">
+                  <div 
+                    style={{ backgroundColor: 'oklch(0.592 0.249 0.584)' }}
+                    className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl text-white flex items-center justify-center shadow-xl shadow-[oklch(0.592_0.249_0.584)]/40 group-hover/media:scale-110 transition-all duration-300 backdrop-blur-sm"
+                  >
                     <Play className="w-6 h-6 fill-white ml-0.5" />
                   </div>
                 </div>
@@ -170,7 +173,10 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent flex flex-col justify-end p-4">
                   {/* Play Button Overlay */}
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-pink-600/90 hover:bg-pink-600 text-white flex items-center justify-center shadow-xl shadow-pink-600/40 group-hover/ig:scale-110 transition-all duration-300 backdrop-blur-sm">
+                    <div 
+                      style={{ backgroundColor: 'oklch(0.592 0.249 0.584)' }}
+                      className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl text-white flex items-center justify-center shadow-xl shadow-[oklch(0.592_0.249_0.584)]/40 group-hover/ig:scale-110 transition-all duration-300 backdrop-blur-sm"
+                    >
                       <Play className="w-6 h-6 fill-white ml-0.5" />
                     </div>
                   </div>
@@ -205,7 +211,10 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 
                 {/* Play Button Overlay */}
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-rose-600/90 hover:bg-rose-600 text-white flex items-center justify-center shadow-xl shadow-rose-600/40 group-hover/media:scale-110 transition-all duration-300 backdrop-blur-sm">
+                  <div 
+                    style={{ backgroundColor: 'oklch(0.592 0.249 0.584)' }}
+                    className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl text-white flex items-center justify-center shadow-xl shadow-[oklch(0.592_0.249_0.584)]/40 group-hover/media:scale-110 transition-all duration-300 backdrop-blur-sm"
+                  >
                     <Play className="w-6 h-6 fill-white ml-0.5" />
                   </div>
                 </div>

@@ -68,7 +68,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="flex items-center gap-3 cursor-pointer group" 
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           >
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30 group-hover:scale-105 transition-transform duration-200">
+            <div className="w-10 h-10 rounded-2xl bg-[#0077d9] text-white flex items-center justify-center shadow-lg shadow-[#0077d9]/30 group-hover:scale-105 transition-transform duration-200">
               <Share2 className="w-5 h-5 text-white" />
             </div>
             <div className="flex items-center gap-2">
@@ -78,7 +78,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* Theme Mode Toggle Button (Sun / Moon) - Positioned next to title */}
+          {/* Theme Mode Toggle Button (Sun / Moon) */}
           <button
             onClick={onToggleTheme}
             className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-amber-400 border border-slate-700/60 transition cursor-pointer flex items-center justify-center group"
@@ -88,7 +88,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {theme === 'dark' ? (
               <Sun className="w-4 h-4 text-amber-400 transition-transform duration-300 group-hover:rotate-45" />
             ) : (
-              <Moon className="w-4 h-4 text-indigo-400 transition-transform duration-300 group-hover:-rotate-12" />
+              <Moon className="w-4 h-4 text-slate-300 transition-transform duration-300 group-hover:-rotate-12" />
             )}
           </button>
         </div>
@@ -99,10 +99,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Feedback & Suggestions Button */}
           <button
             onClick={onOpenFeedbackModal}
-            className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-pink-300 border border-slate-700/60 font-medium text-xs flex items-center gap-1.5 transition cursor-pointer"
+            className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-sky-300 border border-slate-700/60 font-medium text-xs flex items-center gap-1.5 transition cursor-pointer"
             title="ثبت انتقادات و پیشنهادات"
           >
-            <MessageSquarePlus className="w-4 h-4 text-pink-400" />
+            <MessageSquarePlus className="w-4 h-4 text-[#0077d9]" />
             <span className="hidden lg:inline">انتقادات و پیشنهادات</span>
           </button>
 
@@ -112,10 +112,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Primary Material Add Content Button */}
           <button
             onClick={onOpenAddModal}
-            className="px-3.5 sm:px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
+            className="px-3.5 sm:px-4 py-2 rounded-xl bg-[#0077d9] hover:bg-[#0066bd] active:scale-95 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-lg shadow-[#0077d9]/30 transition-all cursor-pointer"
           >
-            <PlusCircle className="w-4 h-4" />
-            <span className="whitespace-nowrap">اشتراک محتوا</span>
+            <PlusCircle className="w-4 h-4 text-white fill-none" />
+            <span className="whitespace-nowrap text-white">اشتراک محتوا</span>
           </button>
 
           {/* Google Auth / User Profile */}
@@ -129,9 +129,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <div className="text-xs font-bold text-slate-100 truncate max-w-[100px]">
                     {user.displayName}
                   </div>
-                  <div className="text-[10px] text-indigo-400 font-mono dir-ltr text-right">
-                    @{user.username || 'user'}
-                  </div>
                 </div>
                 <div className="relative">
                   <img
@@ -140,7 +137,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     className="w-8 h-8 rounded-xl object-cover ring-2 ring-indigo-500/60 shadow-sm"
                   />
                   {unreadInboxCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-slate-900 animate-pulse">
+                    <span className="absolute -top-1 -right-1 min-w-3.5 h-3.5 px-1 rounded-full bg-slate-800/90 border border-slate-700/60 text-slate-200 text-[9px] font-bold flex items-center justify-center ring-2 ring-slate-900">
                       {unreadInboxCount}
                     </span>
                   )}
@@ -157,11 +154,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <div className="absolute left-0 mt-2 w-72 rounded-2xl bg-slate-900 border border-slate-750 shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
                     <div className="px-4 py-3 border-b border-slate-800 space-y-1">
                       <p className="text-[11px] font-medium text-slate-400">نمایه کاربری گیک کلاب</p>
-                      <p className="text-sm font-bold text-white truncate">{user.displayName}</p>
+                      <p className="text-sm font-bold text-slate-100 truncate">{user.displayName}</p>
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-mono text-indigo-400 dir-ltr">@{user.username || 'user'}</span>
+                        <span className="font-mono text-slate-300 dir-ltr">@{user.username || 'user'}</span>
                         {user.hideEmail ? (
-                          <span className="text-[10px] text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded font-medium">
+                          <span className="text-[10px] text-slate-300 bg-slate-800 px-1.5 py-0.5 rounded font-medium border border-slate-700/60">
                             ایمیل مخفی
                           </span>
                         ) : (
@@ -181,15 +178,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                       >
                         <span className="flex items-center gap-2">
                           {theme === 'dark' ? (
-                            <Sun className="w-4 h-4 text-amber-400" />
+                            <Sun className="w-4 h-4 text-slate-300" />
                           ) : (
-                            <Moon className="w-4 h-4 text-indigo-400" />
+                            <Moon className="w-4 h-4 text-slate-300" />
                           )}
                           پوسته (حالت {theme === 'dark' ? 'روشن' : 'تاریک'})
                         </span>
-                        <span className="text-[10px] text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded font-mono font-bold">
-                          {theme === 'dark' ? 'تاریک' : 'روشن'}
-                        </span>
                       </button>
 
                       <button
@@ -200,12 +194,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                         className="w-full text-right px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-xl flex items-center justify-between transition cursor-pointer"
                       >
                         <span className="flex items-center gap-2">
-                          <UserIcon className="w-4 h-4 text-indigo-400" />
+                          <UserIcon className="w-4 h-4 text-slate-300" />
                           ویرایش نمایه و حریم خصوصی
                         </span>
-                        <span className="text-[10px] text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded">
-                          تنظیمات
-                        </span>
                       </button>
 
                       <button
@@ -216,11 +207,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                         className="w-full text-right px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-xl flex items-center justify-between transition cursor-pointer"
                       >
                         <span className="flex items-center gap-2">
-                          <Inbox className="w-4 h-4 text-pink-400" />
+                          <Inbox className="w-4 h-4 text-slate-300" />
                           صندوق پیام‌ها (این‌باکس)
                         </span>
                         {unreadInboxCount > 0 && (
-                          <span className="text-[10px] bg-red-500 text-white font-bold px-1.5 py-0.2 rounded-full">
+                          <span className="text-[10px] bg-slate-800 text-slate-200 border border-slate-700/60 font-bold px-1.5 py-0.2 rounded-full">
                             {unreadInboxCount} جدید
                           </span>
                         )}
@@ -232,14 +223,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                             setShowProfileMenu(false);
                             onOpenAdminModal();
                           }}
-                          className="w-full text-right px-3 py-2 text-xs text-amber-300 hover:text-white hover:bg-amber-500/20 rounded-xl flex items-center justify-between transition cursor-pointer"
+                          className="w-full text-right px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-xl flex items-center justify-between transition cursor-pointer"
                         >
                           <span className="flex items-center gap-2">
-                            <Crown className="w-4 h-4 text-amber-400" />
+                            <Crown className="w-4 h-4 text-slate-300" />
                             پنل ادمین و مدیریت سایت
-                          </span>
-                          <span className="text-[10px] text-amber-400 bg-amber-500/20 px-1.5 py-0.5 rounded font-bold">
-                            مدیر
                           </span>
                         </button>
                       )}
@@ -249,9 +237,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                           setShowProfileMenu(false);
                           onStartGoogleLogin();
                         }}
-                        className="w-full text-right px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl flex items-center gap-2 transition cursor-pointer"
+                        className="w-full text-right px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-xl flex items-center gap-2 transition cursor-pointer"
                       >
-                        <Share2 className="w-4 h-4 text-slate-400" />
+                        <Share2 className="w-4 h-4 text-slate-300" />
                         تغییر یا مدیریت حساب گوگل
                       </button>
 
@@ -260,9 +248,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                           setShowProfileMenu(false);
                           onLogout();
                         }}
-                        className="w-full text-right px-3 py-2 text-xs text-rose-400 hover:bg-rose-500/10 rounded-xl flex items-center gap-2 transition mt-1 cursor-pointer"
+                        className="w-full text-right px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-xl flex items-center gap-2 transition mt-1 cursor-pointer"
                       >
-                        <LogOut className="w-4 h-4 text-rose-400" />
+                        <LogOut className="w-4 h-4 text-slate-300" />
                         خروج از حساب
                       </button>
                     </div>

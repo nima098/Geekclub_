@@ -1,6 +1,6 @@
 {
-  "summary": "Implementation plan for user profile shared contents list, net reputation score calculation (likes minus dislikes), status/platform filter controls, and compact item metrics.",
-  "updatedAt": "2026-10-19T19:06:09.315025488Z",
+  "summary": "Implementation plan for banned content moderation section in admin panel",
+  "updatedAt": "2026-10-19T22:14:13.032890594Z",
   "requestFeedback": true,
   "userFacing": true
 }

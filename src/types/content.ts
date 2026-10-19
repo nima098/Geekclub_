@@ -82,6 +82,7 @@ export interface ContentItem {
   deletedAt?: string;
   authorUid?: string;
   approvalStatus?: 'approved' | 'pending' | 'rejected';
+  moderationReason?: string;
 }
 
 export interface UserProfile {
@@ -107,6 +108,9 @@ export interface SiteAdminSettings {
   allowArticles: boolean;
   allowAparat: boolean;
   enableCaptcha: boolean;
+  bannedKeywords?: string[];
+  bannedDomains?: string[];
+  enableAutoModeration?: boolean;
 }
 
 export interface FeedbackItem {

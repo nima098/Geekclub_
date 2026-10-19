@@ -109,7 +109,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               onClick={() => onSortChange('newest')}
               className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
                 sortOption === 'newest'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                  ? 'bg-[#0077d9] text-white shadow-md shadow-[#0077d9]/30'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -120,7 +120,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               onClick={() => onSortChange('most_liked')}
               className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
                 sortOption === 'most_liked'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                  ? 'bg-[#0077d9] text-white shadow-md shadow-[#0077d9]/30'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -131,7 +131,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               onClick={() => onSortChange('most_comments')}
               className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
                 sortOption === 'most_comments'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                  ? 'bg-[#0077d9] text-white shadow-md shadow-[#0077d9]/30'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -142,12 +142,12 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               onClick={() => onSortChange('trending')}
               className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
                 sortOption === 'trending'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                  ? 'bg-[#0077d9] text-white shadow-md shadow-[#0077d9]/30'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <Flame className="w-3.5 h-3.5 inline ml-1 text-amber-400" />
-              داغ
+              <Flame className={`w-3.5 h-3.5 inline ml-1 ${sortOption === 'trending' ? 'text-white' : 'text-amber-400'}`} />
+              <span className={sortOption === 'trending' ? 'text-white' : ''}>داغ</span>
             </button>
           </div>
 
@@ -156,29 +156,29 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <button
               onClick={() => onViewModeChange('grid3')}
               className={`p-2 rounded-xl transition cursor-pointer ${
-                viewMode === 'grid3' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                viewMode === 'grid3' ? 'bg-[#0077d9] text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
               title="نمای گرید ۳ تایی"
             >
-              <Grid3X3 className="w-4 h-4" />
+              <Grid3X3 className={`w-4 h-4 ${viewMode === 'grid3' ? 'text-white' : ''}`} />
             </button>
             <button
               onClick={() => onViewModeChange('grid2')}
               className={`p-2 rounded-xl transition cursor-pointer ${
-                viewMode === 'grid2' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                viewMode === 'grid2' ? 'bg-[#0077d9] text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
               title="نمای کارت عریض"
             >
-              <Grid2X2 className="w-4 h-4" />
+              <Grid2X2 className={`w-4 h-4 ${viewMode === 'grid2' ? 'text-white' : ''}`} />
             </button>
             <button
               onClick={() => onViewModeChange('compact')}
               className={`p-2 rounded-xl transition cursor-pointer ${
-                viewMode === 'compact' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                viewMode === 'compact' ? 'bg-[#0077d9] text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
               title="نمای فشرده"
             >
-              <LayoutList className="w-4 h-4" />
+              <LayoutList className={`w-4 h-4 ${viewMode === 'compact' ? 'text-white' : ''}`} />
             </button>
           </div>
         </div>
@@ -193,11 +193,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           onClick={() => onPlatformChange('all')}
           className={`px-3.5 py-1.5 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
             selectedPlatform === 'all'
-              ? 'bg-slate-100 text-slate-900 shadow-md'
+              ? 'bg-[#0077d9] text-white shadow-md shadow-[#0077d9]/30'
               : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 border border-slate-750'
           }`}
         >
-          <span>همه پلتفرم‌ها</span>
+          <span className={selectedPlatform === 'all' ? 'text-white' : ''}>همه پلتفرم‌ها</span>
         </button>
 
         {/* YouTube */}
@@ -258,16 +258,16 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             onClick={onToggleSavedOnly}
             className={`px-3.5 py-1.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
               showSavedOnly
-                ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/30 font-black'
+                ? 'bg-[#0077d9] text-white shadow-lg shadow-[#0077d9]/30 font-black'
                 : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 border border-slate-750 hover:text-white'
             }`}
             title="نمایش فقط مطالب نشان‌شده و ذخیره شده"
           >
-            <Bookmark className={`w-4 h-4 ${showSavedOnly ? 'fill-slate-950 text-slate-950' : 'text-amber-400'}`} />
-            <span>نشان‌شده‌ها (ذخیره‌ها)</span>
+            <Bookmark className={`w-4 h-4 ${showSavedOnly ? 'fill-white text-white' : 'text-amber-400'}`} />
+            <span className={showSavedOnly ? 'text-white' : ''}>نشان‌شده‌ها (ذخیره‌ها)</span>
             {savedCount > 0 && (
               <span className={`px-1.5 py-0.2 rounded-full font-mono text-[10px] font-black ${
-                showSavedOnly ? 'bg-slate-950 text-amber-400' : 'bg-amber-500 text-slate-950'
+                showSavedOnly ? 'bg-white text-[#0077d9]' : 'bg-[#0077d9] text-white'
               }`}>
                 {savedCount}
               </span>
@@ -298,7 +298,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               onClick={() => onCategoryChange(cat.id)}
               className={`px-3.5 py-1.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
                 isSelected
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                  ? 'bg-[#0077d9] text-white shadow-md shadow-[#0077d9]/30'
                   : 'bg-slate-800/60 hover:bg-slate-800 text-slate-300 border border-slate-750'
               }`}
             >

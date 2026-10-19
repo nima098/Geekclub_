@@ -990,62 +990,19 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="p-6 sm:p-8 rounded-[2rem] bg-slate-900/95 backdrop-blur-xl border border-slate-800/80 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             {/* Ambient Background Accent */}
-            <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-indigo-600/10 blur-3xl pointer-events-none" />
+            <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-[#0077d9]/10 blur-3xl pointer-events-none" />
 
             <div className="space-y-3 max-w-2xl relative z-10">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs font-bold">
-                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                <span>پلتفرم تخصصی اشتراک و امبد محتوای چندرسانه‌ای</span>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-2xl bg-slate-800/80 border border-slate-700/60 text-slate-200 text-xs font-bold">
+                <Sparkles className="w-3.5 h-3.5 text-slate-300" />
+                <span>بستر اشتراک محتوای کاربردی گیک ها</span>
               </div>
-              <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white leading-tight sm:leading-tight">
-                مرجع برتر ویدیوها، ریلزها و مقالات تخصصی جامعه گیک‌ها
+              <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-100 leading-tight sm:leading-tight">
+                مرجع برتر محتوای گلچین شده و پیشنهاد شده گیک ها به یکدیگر
               </h1>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed sm:leading-loose">
                 محتواها را مستقیماً تماشا کنید، مقالات را در حالت خوانش بی‌پیرایه بخوانید، امتیاز دهید و دیدگاه خود را با دیگران به اشتراک بگذارید.
               </p>
-            </div>
-
-            {/* M3 Quick Stats Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 w-full md:w-auto shrink-0 relative z-10">
-              <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/60 text-center hover:bg-slate-750 hover:border-slate-600 transition">
-                <div className="flex items-center justify-center text-red-500 mb-1">
-                  <Youtube className="w-4 h-4" />
-                </div>
-                <div className="text-base sm:text-lg font-black text-slate-100 font-mono">
-                  {contents.filter((c) => c.platform === 'youtube').length}
-                </div>
-                <div className="text-[10px] text-slate-400 font-bold">یوتیوب</div>
-              </div>
-
-              <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/60 text-center hover:bg-slate-750 hover:border-slate-600 transition">
-                <div className="flex items-center justify-center text-rose-500 mb-1">
-                  <Video className="w-4 h-4" />
-                </div>
-                <div className="text-base sm:text-lg font-black text-slate-100 font-mono">
-                  {contents.filter((c) => c.platform === 'aparat').length}
-                </div>
-                <div className="text-[10px] text-slate-400 font-bold">آپارات</div>
-              </div>
-
-              <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/60 text-center hover:bg-slate-750 hover:border-slate-600 transition">
-                <div className="flex items-center justify-center text-pink-500 mb-1">
-                  <Instagram className="w-4 h-4" />
-                </div>
-                <div className="text-base sm:text-lg font-black text-slate-100 font-mono">
-                  {contents.filter((c) => c.platform === 'instagram').length}
-                </div>
-                <div className="text-[10px] text-slate-400 font-bold">اینستاگرام</div>
-              </div>
-
-              <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/60 text-center hover:bg-slate-750 hover:border-slate-600 transition">
-                <div className="flex items-center justify-center text-emerald-500 mb-1">
-                  <Newspaper className="w-4 h-4" />
-                </div>
-                <div className="text-base sm:text-lg font-black text-slate-100 font-mono">
-                  {contents.filter((c) => c.platform === 'article').length}
-                </div>
-                <div className="text-[10px] text-slate-400 font-bold">مقالات</div>
-              </div>
             </div>
           </div>
         </div>

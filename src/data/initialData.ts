@@ -357,6 +357,8 @@ export const INITIAL_COMMENTS: Record<string, CommentItem[]> = {
   ]
 };
 
+import { DEFAULT_BANNED_KEYWORDS, DEFAULT_BANNED_DOMAINS } from '../utils/moderation';
+
 export const DEFAULT_SITE_SETTINGS: SiteAdminSettings = {
   requireContentApproval: false, // Direct publishing enabled for all users
   notifyOnPending: true,
@@ -364,7 +366,10 @@ export const DEFAULT_SITE_SETTINGS: SiteAdminSettings = {
   allowInstagram: true,
   allowArticles: true,
   allowAparat: true,
-  enableCaptcha: false
+  enableCaptcha: false,
+  bannedKeywords: DEFAULT_BANNED_KEYWORDS,
+  bannedDomains: DEFAULT_BANNED_DOMAINS,
+  enableAutoModeration: true
 };
 
 export const SUPER_ADMIN_EMAIL = '3dsaz1990@gmail.com';
