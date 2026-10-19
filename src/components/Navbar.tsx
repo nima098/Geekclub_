@@ -167,7 +167,12 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               {/* Profile Dropdown */}
               {showProfileMenu && (
-                <div className="absolute left-0 mt-2 w-72 rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <>
+                  <div
+                    className="fixed inset-0 z-40 cursor-default"
+                    onClick={() => setShowProfileMenu(false)}
+                  />
+                  <div className="absolute left-0 mt-2 w-72 rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
                   <div className="px-4 py-3 border-b border-slate-800">
                     <p className="text-xs text-slate-400">نمایه کاربری گیک کلاب:</p>
                     <p className="text-sm font-bold text-white truncate mt-0.5">{user.displayName}</p>
@@ -261,7 +266,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </button>
                   </div>
                 </div>
-              )}
+              </>
+            )}
             </div>
           ) : (
             <button

@@ -15,6 +15,15 @@ const DB_PATH = path.resolve(__dirname, 'data', 'database.json');
 
 app.use(express.json());
 
+// Disable caching for HTML and assets to ensure instant updates without CTRL+F5
+app.use((_req: Request, res: Response, next) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, proxy-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
+  next();
+});
+
 // Helper to load database
 interface DatabaseSchema {
   contents: any[];
