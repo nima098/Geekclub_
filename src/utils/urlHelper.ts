@@ -271,7 +271,7 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
   readingOrWatchTime = '۶ دقیقه مطالعه';
   authorName = parsed.sourceDomain;
 
-  // 1. Call server proxy route to bypass browser CORS and fetch real meta description, title, image
+  // 1. Call server proxy route (/api/extract-metadata) to bypass browser CORS and fetch real meta description, title, image
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5500);
@@ -281,17 +281,62 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
     clearTimeout(timeoutId);
 
     if (apiRes.ok) {
-      const metaData = await apiRes.json();
-      if (metaData.title) title = metaData.title;
-      if (metaData.description) description = metaData.description;
-      if (metaData.image) thumbnail = metaData.image;
-      if (metaData.author) authorName = metaData.author;
+      const contentType = apiRes.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const metaData = await apiRes.json();
+        if (metaData.title) title = metaData.title;
+        if (metaData.description) description = metaData.description;
+        if (metaData.image) thumbnail = metaData.image;
+        if (metaData.author) authorName = metaData.author;
+      }
     }
   } catch (err) {
     console.warn('Server metadata proxy extraction fallback:', err);
   }
 
-  // 2. Fallback to oEmbed if title or author is still missing
+  // 2. Client-side fallback: if title or description is missing, try allorigins CORS proxy
+  if (!title || !description) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4500);
+      const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(cleanUrl)}`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.contents && typeof data.contents === 'string') {
+          const html = data.contents;
+
+          if (!title) {
+            const tm = html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i) ||
+                       html.match(/<meta\s+content=["']([^"']+)["']\s+property=["']og:title["']/i) ||
+                       html.match(/<title[^>]*>(.*?)<\/title>/i);
+            if (tm && tm[1]) title = tm[1].replace(/<[^>]*>/g, '').trim();
+          }
+
+          if (!description) {
+            const dm = html.match(/<meta\s+property=["']og:description["']\s+content=["']([^"']+)["']/i) ||
+                       html.match(/<meta\s+content=["']([^"']+)["']\s+property=["']og:description["']/i) ||
+                       html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i) ||
+                       html.match(/<meta\s+content=["']([^"']+)["']\s+name=["']description["']/i);
+            if (dm && dm[1]) description = dm[1].trim();
+          }
+
+          if (!thumbnail || thumbnail.includes('unsplash')) {
+            const im = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i) ||
+                       html.match(/<meta\s+content=["']([^"']+)["']\s+property=["']og:image["']/i);
+            if (im && im[1]) thumbnail = im[1].trim();
+          }
+        }
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
+  // 3. Fallback to oEmbed if title or author is still missing
   if (!title || !authorName) {
     try {
       const controller = new AbortController();

@@ -324,10 +324,12 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
       setTagsInput('');
       setAuthorName('');
       setFetchedMeta(null);
+      setCaptchaVerified(false);
+
+      // Close modal on successful submission
+      onClose();
     } catch (err) {
       console.error('Error submitting content:', err);
-    } finally {
-      onClose();
     }
   };
 
