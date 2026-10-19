@@ -206,7 +206,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 w-screen h-screen bg-slate-950 flex flex-col overflow-hidden animate-in fade-in duration-200">
+    <div 
+      className="fixed inset-0 z-50 w-screen h-screen bg-slate-950 flex flex-col overflow-hidden animate-in fade-in duration-200"
+      onClick={onClose}
+    >
       <div 
         className="w-full h-full bg-slate-900 flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}

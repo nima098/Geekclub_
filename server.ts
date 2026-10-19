@@ -1,4 +1,6 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
+import type { Request, Response } from 'express';
+import axios from 'axios';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import fs from 'fs';
@@ -44,6 +46,98 @@ function saveDatabase(db: DatabaseSchema) {
 }
 
 // --- API Routes ---
+
+// 0. GET /api/extract-metadata - Fetch page metadata (title, meta description, image, author) server-side
+app.get('/api/extract-metadata', async (req: Request, res: Response) => {
+  const targetUrl = req.query.url as string;
+  if (!targetUrl) {
+    return res.status(400).json({ error: 'URL query parameter is required' });
+  }
+
+  try {
+    const cleanUrl = targetUrl.trim().startsWith('http') ? targetUrl.trim() : `https://${targetUrl.trim()}`;
+    const response = await axios.get(cleanUrl, {
+      timeout: 6000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'fa-IR,fa;q=0.9,en-US;q=0.8,en;q=0.7'
+      }
+    });
+
+    const html = response.data;
+    if (typeof html !== 'string') {
+      return res.json({ title: '', description: '', image: '', author: '' });
+    }
+
+    // Extract Meta Description (description, og:description, twitter:description)
+    let description = '';
+    const descMatches = [
+      html.match(/<meta\s+property=["']og:description["']\s+content=["']([^"']+)["']/i),
+      html.match(/<meta\s+content=["']([^"']+)["']\s+property=["']og:description["']/i),
+      html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i),
+      html.match(/<meta\s+content=["']([^"']+)["']\s+name=["']description["']/i),
+      html.match(/<meta\s+name=["']twitter:description["']\s+content=["']([^"']+)["']/i),
+      html.match(/<meta\s+content=["']([^"']+)["']\s+name=["']twitter:description["']/i)
+    ];
+    for (const m of descMatches) {
+      if (m && m[1] && m[1].trim()) {
+        description = m[1].trim();
+        break;
+      }
+    }
+
+    // Extract Title (og:title, <title>, twitter:title)
+    let title = '';
+    const titleMatches = [
+      html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i),
+      html.match(/<meta\s+content=["']([^"']+)["']\s+property=["']og:title["']/i),
+      html.match(/<title[^>]*>(.*?)<\/title>/i),
+      html.match(/<meta\s+name=["']twitter:title["']\s+content=["']([^"']+)["']/i)
+    ];
+    for (const tm of titleMatches) {
+      if (tm && tm[1] && tm[1].trim()) {
+        title = tm[1].replace(/<[^>]*>/g, '').trim();
+        break;
+      }
+    }
+
+    // Extract Thumbnail / OG Image
+    let image = '';
+    const imgMatches = [
+      html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i),
+      html.match(/<meta\s+content=["']([^"']+)["']\s+property=["']og:image["']/i)
+    ];
+    for (const im of imgMatches) {
+      if (im && im[1] && im[1].trim()) {
+        image = im[1].trim();
+        break;
+      }
+    }
+
+    // Extract Author
+    let author = '';
+    const authorMatches = [
+      html.match(/<meta\s+name=["']author["']\s+content=["']([^"']+)["']/i),
+      html.match(/<meta\s+property=["']article:author["']\s+content=["']([^"']+)["']/i)
+    ];
+    for (const am of authorMatches) {
+      if (am && am[1] && am[1].trim()) {
+        author = am[1].trim();
+        break;
+      }
+    }
+
+    return res.json({
+      title,
+      description,
+      image,
+      author
+    });
+  } catch (err: any) {
+    console.error('Error in /api/extract-metadata:', err.message);
+    return res.json({ title: '', description: '', image: '', author: '' });
+  }
+});
 
 // 1. GET /api/contents - List all contents with optional filters
 app.get('/api/contents', (req: Request, res: Response) => {
@@ -128,7 +222,8 @@ app.post('/api/contents', (req: Request, res: Response) => {
     likesCount: 1,
     dislikesCount: 0,
     commentsCount: 0,
-    userReaction: 'like',
+    approvalStatus: req.body.approvalStatus || 'approved',
+    authorUid: req.body.authorUid || '',
     articleContent: articleContent || description || '',
     sourceDomain: sourceDomain || 'web'
   };

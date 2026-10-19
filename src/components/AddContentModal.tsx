@@ -127,6 +127,17 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
     };
   }, [url]);
 
+  useEffect(() => {
+    if (fetchedMeta) {
+      if (!title && fetchedMeta.title) {
+        setTitle(fetchedMeta.title);
+      }
+      if (!description && fetchedMeta.description) {
+        setDescription(fetchedMeta.description);
+      }
+    }
+  }, [fetchedMeta]);
+
   if (!isOpen) return null;
 
   // Inferred category label for display when in auto-detect mode
@@ -188,117 +199,136 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
     e.preventDefault();
     if (!url.trim()) return;
 
-    const parsed = parseContentUrl(url.trim());
-    const finalPlatform = detectedPlatform || parsed.platform;
+    try {
+      const parsed = parseContentUrl(url.trim());
+      const finalPlatform = detectedPlatform || parsed.platform;
 
-    // Check if platform is enabled by admin
-    if (siteSettings) {
-      if (finalPlatform === 'youtube' && !siteSettings.allowYouTube) {
+      // Check if platform is enabled by admin (with safe fallback defaults)
+      const allowYT = siteSettings?.allowYouTube ?? true;
+      const allowIG = siteSettings?.allowInstagram ?? true;
+      const allowAparat = siteSettings?.allowAparat ?? true;
+      const allowArt = siteSettings?.allowArticles ?? true;
+
+      if (finalPlatform === 'youtube' && !allowYT) {
         alert('خطا: انتشار و ورود محتوا از پلتفرم یوتیوب در حال حاضر توسط مدیریت غیرفعال شده است.');
         return;
       }
-      if (finalPlatform === 'instagram' && !siteSettings.allowInstagram) {
+      if (finalPlatform === 'instagram' && !allowIG) {
         alert('خطا: انتشار و ورود محتوا از پلتفرم اینستاگرام در حال حاضر توسط مدیریت غیرفعال شده است.');
         return;
       }
-      if (finalPlatform === 'aparat' && !siteSettings.allowAparat) {
+      if (finalPlatform === 'aparat' && !allowAparat) {
         alert('خطا: انتشار و ورود محتوا از پلتفرم آپارات در حال حاضر توسط مدیریت غیرفعال شده است.');
         return;
       }
-      if (finalPlatform === 'article' && !siteSettings.allowArticles) {
+      if (finalPlatform === 'article' && !allowArt) {
         alert('خطا: انتشار و ورود محتوا از مقالات وب در حال حاضر توسط مدیریت غیرفعال شده است.');
         return;
       }
-    }
 
-    // Title fallback
-    const finalTitle = title.trim() || fetchedMeta?.title || (
-      finalPlatform === 'youtube'
-        ? 'ویدیوی یوتیوب'
-        : finalPlatform === 'instagram'
-        ? 'پست اینستاگرام'
-        : finalPlatform === 'aparat'
-        ? 'ویدیوی آپارات'
-        : `مقاله در ${parsed.sourceDomain}`
-    );
-
-    // Description fallback
-    const finalDescription = description.trim() || fetchedMeta?.description || (
-      finalPlatform === 'youtube'
-        ? 'ویدیوی به اشتراک گذاشته شده از یوتیوب.'
-        : finalPlatform === 'instagram'
-        ? 'پست یا ریلز به اشتراک گذاشته شده از اینستاگرام.'
-        : finalPlatform === 'aparat'
-        ? 'ویدیوی به اشتراک گذاشته شده از آپارات.'
-        : `مقاله تخصصی در ${parsed.sourceDomain}.`
-    );
-
-    const finalAuthorName = authorName.trim() || fetchedMeta?.authorName || user?.displayName || 'کاربر گیک کلاب';
-    const finalThumbnail = thumbnail.trim() || fetchedMeta?.thumbnail || (
-      finalPlatform === 'youtube' && parsed.detectedId
-        ? `https://img.youtube.com/vi/${parsed.detectedId}/hqdefault.jpg`
-        : finalPlatform === 'instagram'
-        ? 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=800&q=80'
-        : finalPlatform === 'aparat'
-        ? 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=800&q=80'
-        : 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=800&q=80'
-    );
-
-    const rawTags = tagsInput
-      .split(/[,،\s]+/)
-      .map((t) => t.replace('#', '').trim())
-      .filter(Boolean);
-
-    const finalTags = rawTags.length > 0 ? rawTags : (fetchedMeta?.tags || ['محتوا', 'گیک_کلاب']);
-    const finalDuration = readingOrWatchTime.trim() || fetchedMeta?.readingOrWatchTime || (
-      finalPlatform === 'youtube' ? '۱۰ دقیقه ویدیو' : finalPlatform === 'instagram' ? '۶۰ ثانیه ریلز' : finalPlatform === 'aparat' ? '۱۵ دقیقه ویدیو' : '۵ دقیقه مطالعه'
-    );
-
-    // Resolve final Category:
-    let finalCategory: Category = 'tech';
-    if (selectedCategory !== 'auto') {
-      finalCategory = selectedCategory;
-    } else if (categoryInput.trim()) {
-      // Check if typed text matches any site category
-      const matched = SITE_CATEGORIES.find(
-        (c) =>
-          c.label.toLowerCase() === categoryInput.trim().toLowerCase() ||
-          c.id.toLowerCase() === categoryInput.trim().toLowerCase() ||
-          c.keywords.some((k) => k.toLowerCase() === categoryInput.trim().toLowerCase())
-      );
-      if (matched) {
-        finalCategory = matched.id;
-      } else {
-        // Fall back to inference and add typed category to tags
-        finalCategory = inferCategoryFromContent(categoryInput, finalTitle, finalTags);
-        finalTags.push(categoryInput.trim());
+      if (siteSettings?.enableCaptcha && !captchaVerified) {
+        alert('لطفاً گزینه «من ربات نیستم (reCAPTCHA)» را جهت تأیید امنیتی علامت بزنید.');
+        return;
       }
-    } else {
-      // Automatic detection mode
-      finalCategory = fetchedMeta?.category || inferCategoryFromContent(finalTitle, finalDescription, finalTags);
+
+      // Title fallback
+      const finalTitle = title.trim() || fetchedMeta?.title || (
+        finalPlatform === 'youtube'
+          ? 'ویدیوی یوتیوب'
+          : finalPlatform === 'instagram'
+          ? 'پست اینستاگرام'
+          : finalPlatform === 'aparat'
+          ? 'ویدیوی آپارات'
+          : `مقاله در ${parsed.sourceDomain}`
+      );
+
+      // Description fallback
+      const finalDescription = description.trim() || fetchedMeta?.description || (
+        finalPlatform === 'youtube'
+          ? 'ویدیوی به اشتراک گذاشته شده از یوتیوب.'
+          : finalPlatform === 'instagram'
+          ? 'پست یا ریلز به اشتراک گذاشته شده از اینستاگرام.'
+          : finalPlatform === 'aparat'
+          ? 'ویدیوی به اشتراک گذاشته شده از آپارات.'
+          : `مقاله تخصصی در ${parsed.sourceDomain}.`
+      );
+
+      const finalAuthorName = authorName.trim() || fetchedMeta?.authorName || user?.displayName || 'کاربر گیک کلاب';
+      const finalThumbnail = thumbnail.trim() || fetchedMeta?.thumbnail || (
+        finalPlatform === 'youtube' && parsed.detectedId
+          ? `https://img.youtube.com/vi/${parsed.detectedId}/hqdefault.jpg`
+          : finalPlatform === 'instagram'
+          ? 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=800&q=80'
+          : finalPlatform === 'aparat'
+          ? 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=800&q=80'
+          : 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=800&q=80'
+      );
+
+      const rawTags = tagsInput
+        .split(/[,،\s]+/)
+        .map((t) => t.replace('#', '').trim())
+        .filter(Boolean);
+
+      const finalTags = rawTags.length > 0 ? rawTags : (fetchedMeta?.tags || ['محتوا', 'گیک_کلاب']);
+      const finalDuration = readingOrWatchTime.trim() || fetchedMeta?.readingOrWatchTime || (
+        finalPlatform === 'youtube' ? '۱۰ دقیقه ویدیو' : finalPlatform === 'instagram' ? '۶۰ ثانیه ریلز' : finalPlatform === 'aparat' ? '۱۵ دقیقه ویدیو' : '۵ دقیقه مطالعه'
+      );
+
+      // Resolve final Category:
+      let finalCategory: Category = 'tech';
+      if (selectedCategory !== 'auto') {
+        finalCategory = selectedCategory;
+      } else if (categoryInput.trim()) {
+        const matched = SITE_CATEGORIES.find(
+          (c) =>
+            c.label.toLowerCase() === categoryInput.trim().toLowerCase() ||
+            c.id.toLowerCase() === categoryInput.trim().toLowerCase() ||
+            c.keywords.some((k) => k.toLowerCase() === categoryInput.trim().toLowerCase())
+        );
+        if (matched) {
+          finalCategory = matched.id;
+        } else {
+          finalCategory = inferCategoryFromContent(categoryInput, finalTitle, finalTags);
+          finalTags.push(categoryInput.trim());
+        }
+      } else {
+        finalCategory = fetchedMeta?.category || inferCategoryFromContent(finalTitle, finalDescription, finalTags);
+      }
+
+      onAdd({
+        title: finalTitle,
+        description: finalDescription,
+        url: url.trim(),
+        platform: finalPlatform,
+        embedUrl: embedUrl || parsed.embedUrl,
+        thumbnail: finalThumbnail,
+        author: {
+          name: finalAuthorName,
+          avatar: user?.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+          handle: `@${finalAuthorName.replace(/\s+/g, '_').toLowerCase()}`,
+          isVerified: false
+        },
+        category: finalCategory,
+        tags: finalTags,
+        readingOrWatchTime: finalDuration,
+        articleContent: articleContent.trim() || finalDescription,
+        sourceDomain: parsed.sourceDomain
+      });
+
+      // Reset form
+      setUrl('');
+      setTitle('');
+      setDescription('');
+      setCategoryInput('');
+      setSelectedCategory('auto');
+      setTagsInput('');
+      setAuthorName('');
+      setFetchedMeta(null);
+    } catch (err) {
+      console.error('Error submitting content:', err);
+    } finally {
+      onClose();
     }
-
-    onAdd({
-      title: finalTitle,
-      description: finalDescription,
-      url: url.trim(),
-      platform: finalPlatform,
-      embedUrl: embedUrl || parsed.embedUrl,
-      thumbnail: finalThumbnail,
-      author: {
-        name: finalAuthorName,
-        avatar: user?.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-        handle: `@${finalAuthorName.replace(/\s+/g, '_').toLowerCase()}`,
-        isVerified: false
-      },
-      category: finalCategory,
-      tags: finalTags,
-      readingOrWatchTime: finalDuration,
-      articleContent: articleContent.trim() || finalDescription,
-      sourceDomain: parsed.sourceDomain
-    });
-
-    onClose();
   };
 
   // Helper samples for instant testing
@@ -331,7 +361,10 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200"
+      onClick={onClose}
+    >
       <div 
         className="w-full max-w-2xl bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
@@ -419,7 +452,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
               )}
             </label>
             <input
-              type="url"
+              type="text"
               required
               value={url}
               onChange={(e) => setUrl(e.target.value)}
@@ -474,7 +507,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
                 <strong>عنوان پیش‌فرض:</strong> {fetchedMeta.title}
               </div>
               <div className="text-xs text-slate-400 line-clamp-1">
-                <strong>نویسنده / کانال:</strong> {fetchedMeta.authorName} | <strong>مدت:</strong> {fetchedMeta.readingOrWatchTime}
+                <strong>{detectedPlatform === 'article' ? 'وبسایت :' : 'نویسنده / کانال:'}</strong> {fetchedMeta.authorName} | <strong>مدت:</strong> {fetchedMeta.readingOrWatchTime}
               </div>
               <p className="text-[11px] text-slate-400 pt-0.5">
                 * فیلدهای زیر در حالت پیش‌فرض با اطلاعات بالا ذخیره می‌شوند مگر اینکه مقدار دلخواه خود را بنویسید.
@@ -485,16 +518,22 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
           {/* Title Input */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
-              <span>عنوان محتوا (اختیاری)</span>
-              <span className="text-[11px] text-slate-400 font-normal">
-                در صورت خالی ماندن، از پلتفرم کپی می‌شود
-              </span>
+              <span className="text-indigo-300 font-bold">عنوان محتوا (قابلیت ویرایش و اصلاح دستی)</span>
+              {fetchedMeta?.title && (
+                <button
+                  type="button"
+                  onClick={() => setTitle(fetchedMeta.title)}
+                  className="text-[11px] text-indigo-400 hover:text-indigo-300 underline cursor-pointer"
+                >
+                  استفاده از عنوان پلتفرم
+                </button>
+              )}
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={fetchedMeta?.title ? `پیش‌فرض از پلتفرم: ${fetchedMeta.title}` : 'یک عنوان دلخواه بنویسید یا خالی بگذارید...'}
+              placeholder="اگر عنوان پلتفرم اشتباه است، عنوان صحیح را اینجا وارد کنید..."
               className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-100 placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
             />
           </div>
@@ -502,10 +541,16 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
           {/* Description */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
-              <span>خلاصه یا توضیحات (اختیاری)</span>
-              <span className="text-[11px] text-slate-400 font-normal">
-                در صورت خالی ماندن، از پلتفرم کپی می‌شود
-              </span>
+              <span className="text-indigo-300 font-bold">خلاصه یا توضیحات (برگرفته از توضیحات متا)</span>
+              {fetchedMeta?.description && (
+                <button
+                  type="button"
+                  onClick={() => setDescription(fetchedMeta.description)}
+                  className="text-[11px] text-indigo-400 hover:text-indigo-300 underline cursor-pointer"
+                >
+                  استفاده از توضیحات متا
+                </button>
+              )}
             </label>
             <textarea
               rows={2}
@@ -732,17 +777,17 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
           </div>
 
           {/* Moderation approval status notice */}
-          {requireApproval && !user?.isAdmin && !user?.autoApproveContent ? (
-            <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 flex items-center gap-2">
-              <Clock className="w-4 h-4 shrink-0 text-amber-400" />
-              <span>تأیید محتوا توسط مدیریت فعال است؛ پست شما پس از بازبینی و تأیید ادمین در فید اصلی نمایش داده خواهد شد.</span>
-            </div>
-          ) : user?.autoApproveContent || user?.isAdmin ? (
+          {Boolean(user && user.uid !== 'user-google-101' && !user.displayName?.includes('مهمان')) || user?.isAdmin || user?.autoApproveContent ? (
             <div className="p-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300 flex items-center gap-2">
               <Check className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
-              <span>حساب شما دارای مجوز <strong>انتشار مستقیم</strong> است و پست بلافاصله در سایت منتشر می‌شود.</span>
+              <span>شما با حساب کاربری وارد شده‌اید و محتوای شما به صورت <strong>انتشار مستقیم (بدون نیاز به تأیید)</strong> منتشر خواهد شد.</span>
             </div>
-          ) : null}
+          ) : (
+            <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 flex items-center gap-2">
+              <Clock className="w-4 h-4 shrink-0 text-amber-400" />
+              <span>شما به عنوان کاربر مهمان در حال ثبت محتوا هستید؛ لینک شما ثبت گردیده و پس از بررسی و تأیید ادمین در سایت قرار خواهد گرفت.</span>
+            </div>
+          )}
 
           {/* Google reCAPTCHA Widget (If enabled by Admin) */}
           {siteSettings?.enableCaptcha && (
@@ -778,7 +823,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={!url.trim() || (Boolean(siteSettings?.enableCaptcha) && !captchaVerified)}
+                disabled={!url.trim()}
                 className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:pointer-events-none text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition active:scale-95 cursor-pointer"
               >
                 <PlusCircle className="w-4 h-4" />

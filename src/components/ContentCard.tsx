@@ -273,12 +273,18 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           </div>
         )}
 
-        {/* Top-Right Platform Badge */}
-        <div className="absolute top-3 right-3 z-10">
+        {/* Top-Right Platform Badge & Pending Status */}
+        <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
           <span className={`text-[11px] font-bold px-2.5 py-1 rounded-xl flex items-center gap-1.5 backdrop-blur-md ${meta.badgeBg}`}>
             {meta.icon}
             {meta.label}
           </span>
+          {item.approvalStatus === 'pending' && (
+            <span className="text-[10px] font-bold px-2 py-1 rounded-xl bg-amber-500 text-slate-950 flex items-center gap-1 shadow-md animate-pulse">
+              <Clock className="w-3 h-3 text-slate-950" />
+              در انتظار بررسی
+            </span>
+          )}
         </div>
       </div>
 

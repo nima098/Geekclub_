@@ -233,7 +233,7 @@ export default function App() {
   const [siteSettings, setSiteSettings] = useState<SiteAdminSettings>(() => {
     try {
       const saved = localStorage.getItem('geekclub_settings_v1');
-      return saved ? JSON.parse(saved) : DEFAULT_SITE_SETTINGS;
+      return saved ? { ...DEFAULT_SITE_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SITE_SETTINGS;
     } catch {
       return DEFAULT_SITE_SETTINGS;
     }
@@ -566,11 +566,16 @@ export default function App() {
       'id' | 'likesCount' | 'dislikesCount' | 'commentsCount' | 'publishedAt'
     >
   ) => {
-    const isDirectPublishing = Boolean(
-      !siteSettings.requireContentApproval ||
-      user?.isAdmin ||
-      user?.autoApproveContent
+    const isLoggedInUser = Boolean(
+      user &&
+      user.uid !== 'user-google-101' &&
+      !user.displayName?.includes('مهمان')
     );
+
+    const isAutoApproved =
+      user?.isAdmin ||
+      user?.autoApproveContent ||
+      isLoggedInUser;
 
     const newItem: ContentItem = {
       ...itemData,
@@ -580,17 +585,23 @@ export default function App() {
       commentsCount: 0,
       publishedAt: 'همین الان',
       userReaction: 'like',
-      approvalStatus: isDirectPublishing ? 'approved' : 'pending',
+      approvalStatus: isAutoApproved ? 'approved' : 'pending',
       authorUid: user?.uid
     };
 
-    setContents((prev) => [newItem, ...prev]);
-    api.addContent(itemData);
+    // Auto-reset active filters so the new content is immediately visible at the top
+    setSelectedPlatform('all');
+    setSelectedCategory('all');
+    setSearchQuery('');
+    setShowSavedOnly(false);
 
-    if (isDirectPublishing) {
-      addToast('success', 'محتوای شما با موفقیت منتشر شد و در سایت قرار گرفت!');
+    setContents((prev) => [newItem, ...prev]);
+    api.addContent(newItem);
+
+    if (isAutoApproved) {
+      addToast('success', 'محتوای شما به عنوان کاربر عضو با موفقیت در صفحه اصلی منتشر گردید!');
     } else {
-      addToast('info', 'محتوای شما ثبت شد و به صف بررسی مدیریت ارسال گردید (پس از تأیید در سایت نمایش داده می‌شود).');
+      addToast('info', 'محتوای شما به عنوان کاربر مهمان ثبت گردید و پس از بررسی و تأیید ادمین در سایت قرار خواهد گرفت.');
     }
   };
 
@@ -832,8 +843,8 @@ export default function App() {
           return false;
         }
 
-        // Moderation filter: Exclude pending approval or rejected items from public feed
-        if (item.approvalStatus === 'pending' || item.approvalStatus === 'rejected') {
+        // Moderation filter: Exclude rejected items
+        if (item.approvalStatus === 'rejected') {
           return false;
         }
 

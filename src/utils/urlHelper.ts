@@ -271,36 +271,45 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
   readingOrWatchTime = '۶ دقیقه مطالعه';
   authorName = parsed.sourceDomain;
 
+  // 1. Call server proxy route to bypass browser CORS and fetch real meta description, title, image
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
-
-    const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(cleanUrl)}`, {
+    const timeoutId = setTimeout(() => controller.abort(), 5500);
+    const apiRes = await fetch(`/api/extract-metadata?url=${encodeURIComponent(cleanUrl)}`, {
       signal: controller.signal
     });
     clearTimeout(timeoutId);
 
-    if (res.ok) {
-      const data = await res.json();
-      if (data.title) title = data.title;
-      if (data.author_name) authorName = data.author_name;
-      if (data.thumbnail_url) thumbnail = data.thumbnail_url;
+    if (apiRes.ok) {
+      const metaData = await apiRes.json();
+      if (metaData.title) title = metaData.title;
+      if (metaData.description) description = metaData.description;
+      if (metaData.image) thumbnail = metaData.image;
+      if (metaData.author) authorName = metaData.author;
     }
-  } catch {
-    // Graceful fallback
+  } catch (err) {
+    console.warn('Server metadata proxy extraction fallback:', err);
   }
 
-  // If no title from oEmbed, try inferring from path slug
-  if (!title) {
+  // 2. Fallback to oEmbed if title or author is still missing
+  if (!title || !authorName) {
     try {
-      const urlObj = new URL(cleanUrl.startsWith('http') ? cleanUrl : `https://${cleanUrl}`);
-      const pathSegments = urlObj.pathname.split('/').filter(Boolean);
-      const lastSegment = pathSegments[pathSegments.length - 1];
-      if (lastSegment && lastSegment.length > 3) {
-        title = slugToTitle(lastSegment);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+      const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(cleanUrl)}`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data = await res.json();
+        if (!title && data.title) title = data.title;
+        if (data.author_name) authorName = data.author_name;
+        if (data.thumbnail_url) thumbnail = data.thumbnail_url;
       }
     } catch {
-      // fallback
+      // Graceful fallback
     }
   }
 

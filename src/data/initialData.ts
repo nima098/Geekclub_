@@ -358,13 +358,13 @@ export const INITIAL_COMMENTS: Record<string, CommentItem[]> = {
 };
 
 export const DEFAULT_SITE_SETTINGS: SiteAdminSettings = {
-  requireContentApproval: true, // Moderation approval enabled by default
+  requireContentApproval: false, // Direct publishing enabled for all users
   notifyOnPending: true,
   allowYouTube: true,
   allowInstagram: true,
   allowArticles: true,
   allowAparat: true,
-  enableCaptcha: true
+  enableCaptcha: false
 };
 
 export const SUPER_ADMIN_EMAIL = '3dsaz1990@gmail.com';
