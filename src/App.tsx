@@ -988,7 +988,7 @@ export default function App() {
       {/* Material Flat Hero Welcome Kicker */}
       <div className="relative border-b border-slate-800/80 bg-slate-950/40 py-8 sm:py-12 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="p-6 sm:p-8 rounded-[2rem] bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800/90 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="p-6 sm:p-8 rounded-[2rem] bg-slate-900/95 backdrop-blur-xl border border-slate-800/80 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             {/* Ambient Background Accent */}
             <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-indigo-600/10 blur-3xl pointer-events-none" />
 
@@ -1007,7 +1007,7 @@ export default function App() {
 
             {/* M3 Quick Stats Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 w-full md:w-auto shrink-0 relative z-10">
-              <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 text-center hover:border-slate-700 transition">
+              <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/60 text-center hover:bg-slate-750 hover:border-slate-600 transition">
                 <div className="flex items-center justify-center text-red-500 mb-1">
                   <Youtube className="w-4 h-4" />
                 </div>
@@ -1017,7 +1017,7 @@ export default function App() {
                 <div className="text-[10px] text-slate-400 font-bold">یوتیوب</div>
               </div>
 
-              <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 text-center hover:border-slate-700 transition">
+              <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/60 text-center hover:bg-slate-750 hover:border-slate-600 transition">
                 <div className="flex items-center justify-center text-rose-500 mb-1">
                   <Video className="w-4 h-4" />
                 </div>
@@ -1027,7 +1027,7 @@ export default function App() {
                 <div className="text-[10px] text-slate-400 font-bold">آپارات</div>
               </div>
 
-              <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 text-center hover:border-slate-700 transition">
+              <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/60 text-center hover:bg-slate-750 hover:border-slate-600 transition">
                 <div className="flex items-center justify-center text-pink-500 mb-1">
                   <Instagram className="w-4 h-4" />
                 </div>
@@ -1037,7 +1037,7 @@ export default function App() {
                 <div className="text-[10px] text-slate-400 font-bold">اینستاگرام</div>
               </div>
 
-              <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 text-center hover:border-slate-700 transition">
+              <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/60 text-center hover:bg-slate-750 hover:border-slate-600 transition">
                 <div className="flex items-center justify-center text-emerald-500 mb-1">
                   <Newspaper className="w-4 h-4" />
                 </div>
@@ -1069,6 +1069,9 @@ export default function App() {
           totalCount={contents.length}
           onResetFilters={handleResetFilters}
           activeFilterCount={activeFilterCount}
+          showSavedOnly={showSavedOnly}
+          onToggleSavedOnly={() => setShowSavedOnly(!showSavedOnly)}
+          savedCount={savedCount}
         />
 
         {/* Content Grid */}
@@ -1116,7 +1119,7 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-800/80 bg-slate-950/60 py-8 text-xs text-slate-400 mt-12">
+      <footer className="border-t border-slate-800/80 bg-slate-900/95 backdrop-blur-xl py-8 text-xs text-slate-400 mt-12 shadow-lg shadow-slate-950/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-200">گیک کلاب (GeekClub)</span>
@@ -1273,15 +1276,6 @@ export default function App() {
         onOpenAdminPanel={() => setIsAdminModalOpen(true)}
       />
 
-      {/* Material 3 Floating Action Button (FAB) */}
-      <button
-        onClick={() => setIsAddModalOpen(true)}
-        className="fixed bottom-6 left-6 z-40 px-4 sm:px-5 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-bold text-xs sm:text-sm flex items-center gap-2 sm:gap-2.5 shadow-2xl shadow-indigo-600/50 hover:shadow-indigo-600/70 border border-indigo-400/30 transition-all duration-200 cursor-pointer"
-        title="اشتراک محتوای جدید"
-      >
-        <PlusCircle className="w-5 h-5 text-white" />
-        <span className="hidden sm:inline">اشتراک محتوای جدید</span>
-      </button>
 
       {/* Toast Notifications */}
       <Toast toasts={toasts} onDismiss={handleDismissToast} />

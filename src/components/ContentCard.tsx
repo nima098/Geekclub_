@@ -71,30 +71,30 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     switch (item.platform) {
       case 'youtube':
         return {
-          icon: <Youtube className="w-3.5 h-3.5 text-white" />,
+          icon: <Youtube className="w-3.5 h-3.5 text-red-400" />,
           label: 'یوتیوب',
-          badgeBg: 'bg-red-600 text-white shadow-md shadow-red-600/30',
+          badgeBg: 'bg-slate-800/80 text-slate-200 border border-slate-700/60 shadow-md',
           accentColor: 'hover:border-red-500/60'
         };
       case 'instagram':
         return {
-          icon: <Instagram className="w-3.5 h-3.5 text-white" />,
+          icon: <Instagram className="w-3.5 h-3.5 text-pink-400" />,
           label: 'اینستاگرام',
-          badgeBg: 'bg-gradient-to-r from-amber-500 via-rose-500 to-purple-600 text-white shadow-md shadow-rose-500/30',
+          badgeBg: 'bg-slate-800/80 text-slate-200 border border-slate-700/60 shadow-md',
           accentColor: 'hover:border-pink-500/60'
         };
       case 'article':
         return {
-          icon: <Newspaper className="w-3.5 h-3.5 text-white" />,
+          icon: <Newspaper className="w-3.5 h-3.5 text-emerald-400" />,
           label: 'مقاله وب',
-          badgeBg: 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30',
+          badgeBg: 'bg-slate-800/80 text-slate-200 border border-slate-700/60 shadow-md',
           accentColor: 'hover:border-emerald-500/60'
         };
       case 'aparat':
         return {
-          icon: <Video className="w-3.5 h-3.5 text-white" />,
+          icon: <Video className="w-3.5 h-3.5 text-rose-400" />,
           label: 'آپارات',
-          badgeBg: 'bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-md shadow-rose-600/30',
+          badgeBg: 'bg-slate-800/80 text-slate-200 border border-slate-700/60 shadow-md',
           accentColor: 'hover:border-rose-500/60'
         };
     }
@@ -103,7 +103,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   const meta = getPlatformMeta();
 
   return (
-    <article className={`group flex flex-col bg-slate-900/80 border border-slate-800 rounded-[1.75rem] overflow-hidden shadow-xl transition-all duration-300 hover:bg-slate-900 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1 ${meta.accentColor} ${
+    <article className={`group flex flex-col bg-slate-900/95 backdrop-blur-xl border border-slate-800/80 rounded-[1.75rem] overflow-hidden shadow-xl transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1 ${meta.accentColor} ${
       viewMode === 'compact' ? 'sm:flex-row' : ''
     }`}>
       {/* Media / Embed Container */}
@@ -137,15 +137,11 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 
                 {/* Play Button Overlay */}
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-indigo-600/90 hover:bg-indigo-600 text-white flex items-center justify-center shadow-xl shadow-indigo-600/40 group-hover/media:scale-110 transition-all duration-300 backdrop-blur-sm">
+                  <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-pink-600/90 hover:bg-pink-600 text-white flex items-center justify-center shadow-xl shadow-pink-600/40 group-hover/media:scale-110 transition-all duration-300 backdrop-blur-sm">
                     <Play className="w-6 h-6 fill-white ml-0.5" />
                   </div>
                 </div>
 
-                <div className="absolute bottom-3 left-3 bg-slate-900/90 text-white text-[11px] font-bold px-2.5 py-1 rounded-xl backdrop-blur-md flex items-center gap-1.5 border border-slate-750">
-                  <Clock className="w-3 h-3 text-red-400" />
-                  <span>{item.readingOrWatchTime}</span>
-                </div>
               </div>
             )}
           </>
@@ -171,35 +167,12 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   className="w-full h-full object-cover transition-transform duration-500 group-hover/ig:scale-105 opacity-90 group-hover/ig:opacity-100"
                   loading="lazy"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent flex flex-col justify-between p-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-xl bg-pink-600 text-white shadow-md backdrop-blur-md flex items-center gap-1">
-                      <Instagram className="w-3.5 h-3.5" />
-                      ریلز اینستاگرام
-                    </span>
-                    <span className="text-[11px] font-bold text-white bg-black/60 px-2.5 py-1 rounded-xl backdrop-blur-sm border border-white/10">
-                      {item.readingOrWatchTime}
-                    </span>
-                  </div>
-                  
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent flex flex-col justify-end p-4">
                   {/* Play Button Overlay */}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-pink-600/90 hover:bg-pink-600 text-white flex items-center justify-center shadow-xl shadow-pink-600/40 group-hover/ig:scale-110 transition-all duration-300 backdrop-blur-sm">
                       <Play className="w-6 h-6 fill-white ml-0.5" />
                     </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <a
-                      href={item.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="px-3 py-1.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-pink-600/30 transition backdrop-blur-sm"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      مشاهده در اینستاگرام
-                    </a>
                   </div>
                 </div>
               </div>
@@ -236,11 +209,6 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                     <Play className="w-6 h-6 fill-white ml-0.5" />
                   </div>
                 </div>
-
-                <div className="absolute bottom-3 left-3 bg-slate-900/90 text-white text-[11px] font-bold px-2.5 py-1 rounded-xl backdrop-blur-md flex items-center gap-1.5 border border-slate-750">
-                  <Clock className="w-3 h-3 text-rose-400" />
-                  <span>{item.readingOrWatchTime}</span>
-                </div>
               </div>
             )}
           </>
@@ -265,11 +233,6 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 مطالعه مقاله
               </div>
             </div>
-
-            <div className="absolute bottom-3 left-3 bg-slate-900/90 text-white text-[11px] font-bold px-2.5 py-1 rounded-xl backdrop-blur-md flex items-center gap-1.5 border border-slate-750">
-              <BookOpen className="w-3 h-3 text-emerald-400" />
-              <span>{item.readingOrWatchTime}</span>
-            </div>
           </div>
         )}
 
@@ -289,7 +252,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
       </div>
 
       {/* Content Body */}
-      <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
+      <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3 bg-slate-900/95 backdrop-blur-xl">
         <div>
           {/* Author & Published Info - Unboxed Text Metadata */}
           <div className="flex items-center justify-between gap-2 mb-2.5">
@@ -359,7 +322,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         {/* M3 Joined Reaction Bar & Action Controls */}
         <div className="pt-3.5 mt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
           {/* M3 Segmented Reaction Controls (Like / Dislike) */}
-          <div className="flex items-center gap-1 bg-slate-800/90 border border-slate-750 rounded-2xl p-1">
+          <div className="flex items-center gap-1 bg-slate-800/80 border border-slate-700/60 rounded-2xl p-1">
             {/* Like */}
             <button
               onClick={() => onLike(item.id)}
@@ -397,7 +360,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             {/* Comments button */}
             <button
               onClick={() => onOpenComments(item)}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-750 text-slate-300 hover:text-indigo-300 border border-slate-750 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+              className="px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-indigo-300 border border-slate-700/60 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
               title="مشاهده و ثبت نظر"
             >
               <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
@@ -410,7 +373,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               className={`p-1.5 rounded-xl border transition cursor-pointer ${
                 item.saved
                   ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                  : 'bg-slate-800/90 hover:bg-slate-750 text-slate-400 hover:text-white border-slate-750'
+                  : 'bg-slate-800/80 hover:bg-slate-750 text-slate-400 hover:text-white border-slate-700/60'
               }`}
               title={item.saved ? 'حذف از ذخیره‌ها' : 'ذخیره محتوا'}
             >
@@ -420,7 +383,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             {/* Share button */}
             <button
               onClick={handleShare}
-              className="p-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-750 text-slate-400 hover:text-white border border-slate-750 transition cursor-pointer"
+              className="p-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-400 hover:text-white border border-slate-700/60 transition cursor-pointer"
               title="کپی لینک اشتراک"
             >
               {isCopied ? (
@@ -438,7 +401,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                     onDeleteContent(item.id);
                   }
                 }}
-                className="p-1.5 rounded-xl bg-slate-800/90 hover:bg-rose-600/20 text-slate-400 hover:text-rose-400 border border-slate-750 transition cursor-pointer"
+                className="p-1.5 rounded-xl bg-slate-800/80 hover:bg-rose-600/20 text-slate-400 hover:text-rose-400 border border-slate-700/60 transition cursor-pointer"
                 title="حذف و انتقال به سطل بازیافت (قابل بازگردانی)"
               >
                 <Trash2 className="w-4 h-4" />

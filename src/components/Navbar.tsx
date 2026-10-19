@@ -63,7 +63,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-xl border-b border-slate-800/80 shadow-md shadow-slate-950/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
         {/* Brand & Wordmark Zone */}
-        <div className="flex items-center gap-4 shrink-0">
+        <div className="flex items-center gap-3 sm:gap-4 shrink-0">
           <div 
             className="flex items-center gap-3 cursor-pointer group" 
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -75,65 +75,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="text-lg sm:text-xl font-black text-white tracking-tight">
                 گیک کلاب
               </span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 font-mono">
-                GeekClub
-              </span>
             </div>
           </div>
 
-          {/* M3 Platform Tonal Indicator Pills */}
-          <div className="hidden lg:flex items-center gap-2 pr-4 border-r border-slate-800 text-xs text-slate-400 font-medium">
-            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-800/60 border border-slate-750">
-              <Youtube className="w-3.5 h-3.5 text-red-400" />
-              یوتیوب
-            </span>
-            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-800/60 border border-slate-750">
-              <Instagram className="w-3.5 h-3.5 text-pink-400" />
-              اینستاگرام
-            </span>
-            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-800/60 border border-slate-750">
-              <Video className="w-3.5 h-3.5 text-rose-400" />
-              آپارات
-            </span>
-            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-800/60 border border-slate-750">
-              <Newspaper className="w-3.5 h-3.5 text-emerald-400" />
-              مقالات
-            </span>
-          </div>
-        </div>
-
-        {/* Action Controls & User Account Zone */}
-        <div className="flex items-center gap-2 sm:gap-2.5">
-          {/* Saved Items Toggle */}
-          <button
-            onClick={onToggleSavedOnly}
-            className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-              showSavedOnly 
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm' 
-                : 'bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/60'
-            }`}
-            title="نشان‌شده‌ها"
-          >
-            <Bookmark className={`w-4 h-4 ${showSavedOnly ? 'fill-amber-400 text-amber-400' : 'text-slate-400'}`} />
-            <span className="hidden sm:inline">ذخیره‌ها</span>
-            {savedCount > 0 && (
-              <span className="px-1.5 py-0.2 bg-amber-500 text-slate-950 font-black text-[10px] rounded-full font-mono">
-                {savedCount}
-              </span>
-            )}
-          </button>
-
-          {/* Feedback & Suggestions Button */}
-          <button
-            onClick={onOpenFeedbackModal}
-            className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-pink-300 border border-slate-700/60 font-medium text-xs flex items-center gap-1.5 transition cursor-pointer"
-            title="ثبت انتقادات و پیشنهادات"
-          >
-            <MessageSquarePlus className="w-4 h-4 text-pink-400" />
-            <span className="hidden lg:inline">انتقادات و پیشنهادات</span>
-          </button>
-
-          {/* Theme Mode Toggle Button (Sun / Moon) */}
+          {/* Theme Mode Toggle Button (Sun / Moon) - Positioned next to title */}
           <button
             onClick={onToggleTheme}
             className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-amber-400 border border-slate-700/60 transition cursor-pointer flex items-center justify-center group"
@@ -145,6 +90,20 @@ export const Navbar: React.FC<NavbarProps> = ({
             ) : (
               <Moon className="w-4 h-4 text-indigo-400 transition-transform duration-300 group-hover:-rotate-12" />
             )}
+          </button>
+        </div>
+
+        {/* Action Controls & User Account Zone */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+
+          {/* Feedback & Suggestions Button */}
+          <button
+            onClick={onOpenFeedbackModal}
+            className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-pink-300 border border-slate-700/60 font-medium text-xs flex items-center gap-1.5 transition cursor-pointer"
+            title="ثبت انتقادات و پیشنهادات"
+          >
+            <MessageSquarePlus className="w-4 h-4 text-pink-400" />
+            <span className="hidden lg:inline">انتقادات و پیشنهادات</span>
           </button>
 
           {/* PWA Install Button */}

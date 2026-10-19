@@ -16,7 +16,8 @@ import {
   Clock,
   Sparkles,
   Video,
-  Check
+  Check,
+  Bookmark
 } from 'lucide-react';
 import { Platform, Category, SortOption, ViewMode } from '../types/content';
 
@@ -35,6 +36,9 @@ interface FilterBarProps {
   totalCount: number;
   onResetFilters: () => void;
   activeFilterCount: number;
+  showSavedOnly?: boolean;
+  onToggleSavedOnly?: () => void;
+  savedCount?: number;
 }
 
 const CATEGORIES: { id: Category; label: string }[] = [
@@ -62,7 +66,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   totalFilteredCount,
   totalCount,
   onResetFilters,
-  activeFilterCount
+  activeFilterCount,
+  showSavedOnly = false,
+  onToggleSavedOnly,
+  savedCount = 0
 }) => {
   return (
     <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-[1.75rem] p-4 sm:p-5 shadow-2xl shadow-slate-950/20 space-y-4">
@@ -93,7 +100,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         {/* M3 Segmented Sort & View Controls */}
         <div className="flex items-center gap-2 justify-between lg:justify-end flex-wrap">
           {/* M3 Segmented Sort Button Container */}
-          <div className="flex items-center gap-1 bg-slate-800/90 border border-slate-750 rounded-2xl p-1 text-xs">
+          <div className="flex items-center gap-1 bg-slate-800/80 border border-slate-700/60 rounded-2xl p-1 text-xs">
             <span className="text-slate-400 px-2 hidden sm:inline-flex items-center gap-1.5 font-bold">
               <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-400" />
               مرتب‌سازی:
@@ -145,7 +152,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           </div>
 
           {/* M3 Segmented View Mode Controls */}
-          <div className="flex items-center gap-1 bg-slate-800/90 border border-slate-750 rounded-2xl p-1">
+          <div className="flex items-center gap-1 bg-slate-800/80 border border-slate-700/60 rounded-2xl p-1">
             <button
               onClick={() => onViewModeChange('grid3')}
               className={`p-2 rounded-xl transition cursor-pointer ${
@@ -244,6 +251,29 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <Newspaper className={`w-4 h-4 ${selectedPlatform === 'article' ? 'text-white' : 'text-emerald-500'}`} />
           <span>مقالات وبسایت‌ها</span>
         </button>
+
+        {/* Saved Items Filter Chip */}
+        {onToggleSavedOnly && (
+          <button
+            onClick={onToggleSavedOnly}
+            className={`px-3.5 py-1.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+              showSavedOnly
+                ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/30 font-black'
+                : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 border border-slate-750 hover:text-white'
+            }`}
+            title="نمایش فقط مطالب نشان‌شده و ذخیره شده"
+          >
+            <Bookmark className={`w-4 h-4 ${showSavedOnly ? 'fill-slate-950 text-slate-950' : 'text-amber-400'}`} />
+            <span>نشان‌شده‌ها (ذخیره‌ها)</span>
+            {savedCount > 0 && (
+              <span className={`px-1.5 py-0.2 rounded-full font-mono text-[10px] font-black ${
+                showSavedOnly ? 'bg-slate-950 text-amber-400' : 'bg-amber-500 text-slate-950'
+              }`}>
+                {savedCount}
+              </span>
+            )}
+          </button>
+        )}
 
         {/* Filter Reset Button */}
         {activeFilterCount > 0 && (
