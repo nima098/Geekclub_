@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   X, 
   PlusCircle, 
@@ -14,7 +14,9 @@ import {
   ChevronDown,
   Layers,
   Clock,
-  Video
+  Video,
+  AlertTriangle,
+  ExternalLink
 } from 'lucide-react';
 import { 
   Platform, 
@@ -35,6 +37,8 @@ interface AddContentModalProps {
   initialUrl?: string;
   requireApproval?: boolean;
   siteSettings?: SiteAdminSettings;
+  existingContents?: ContentItem[];
+  onOpenExistingContent?: (item: ContentItem) => void;
 }
 
 export const AddContentModal: React.FC<AddContentModalProps> = ({
@@ -44,7 +48,9 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
   user,
   initialUrl,
   requireApproval,
-  siteSettings
+  siteSettings,
+  existingContents = [],
+  onOpenExistingContent
 }) => {
   const [url, setUrl] = useState(initialUrl || '');
 
@@ -75,6 +81,54 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
   const [isLoadingMeta, setIsLoadingMeta] = useState(false);
   const [fetchedMeta, setFetchedMeta] = useState<ExtractedMetadata | null>(null);
   const [captchaVerified, setCaptchaVerified] = useState(false);
+
+  // Helper to normalize URLs for accurate comparison
+  const normalizeUrl = (raw: string): string => {
+    if (!raw) return '';
+    try {
+      let u = raw.trim().toLowerCase();
+      u = u.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
+      return u;
+    } catch {
+      return raw.trim().toLowerCase();
+    }
+  };
+
+  // Duplicate URL Detection
+  const duplicateItem = useMemo(() => {
+    if (!url.trim() || !existingContents || existingContents.length === 0) return null;
+
+    const currentNorm = normalizeUrl(url);
+    const parsedCurrent = parseContentUrl(url);
+
+    return (
+      existingContents.find((item) => {
+        // 1. Exact or normalized URL match
+        const itemNorm = normalizeUrl(item.url);
+        if (
+          itemNorm &&
+          (itemNorm === currentNorm ||
+            item.url.trim().toLowerCase() === url.trim().toLowerCase())
+        ) {
+          return true;
+        }
+
+        // 2. Platform video / post ID match (YouTube video ID, Instagram code, Aparat ID)
+        if (parsedCurrent.detectedId) {
+          const itemParsed = parseContentUrl(item.url);
+          if (
+            itemParsed.detectedId &&
+            itemParsed.detectedId === parsedCurrent.detectedId &&
+            itemParsed.platform === parsedCurrent.platform
+          ) {
+            return true;
+          }
+        }
+
+        return false;
+      }) || null
+    );
+  }, [url, existingContents]);
 
   // Close category dropdown on outside click
   useEffect(() => {
@@ -198,6 +252,11 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim()) return;
+
+    if (duplicateItem) {
+      alert('خطا: این لینک قبلاً در گیک کلاب ثبت شده است!');
+      return;
+    }
 
     try {
       const parsed = parseContentUrl(url.trim());
@@ -459,9 +518,66 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="مثال: https://www.youtube.com/watch?v=... یا اینستاگرام یا لینک مقاله"
-              className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-100 placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-mono dir-ltr text-left"
+              className={`w-full px-3.5 py-2.5 rounded-2xl bg-slate-800/80 border text-slate-100 placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:ring-2 font-mono dir-ltr text-left transition ${
+                duplicateItem
+                  ? 'border-rose-500 focus:ring-rose-500/50 bg-rose-950/20'
+                  : 'border-slate-700 focus:ring-indigo-500/50'
+              }`}
             />
           </div>
+
+          {/* Duplicate Link Error Banner & GeekClub Content Link */}
+          {duplicateItem && (
+            <div className="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/40 space-y-3 animate-in fade-in duration-200">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2 text-rose-300 font-bold text-xs sm:text-sm">
+                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                  <span>خطا: این لینک قبلاً در گیک کلاب ثبت شده است!</span>
+                </div>
+                <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-200 border border-rose-500/30 font-bold shrink-0">
+                  محتوای تکراری
+                </span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center gap-3">
+                <img
+                  src={duplicateItem.thumbnail}
+                  alt={duplicateItem.title}
+                  className="w-12 h-12 rounded-lg object-cover border border-slate-700/60 shrink-0"
+                />
+                <div className="min-w-0 flex-1 space-y-1">
+                  <h5 className="text-xs font-bold text-slate-100 truncate">
+                    {duplicateItem.title}
+                  </h5>
+                  <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                    <span>منتشرکننده: {duplicateItem.author.name}</span>
+                    <span>·</span>
+                    <span>امتیاز: {duplicateItem.likesCount || 0} لایک</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-rose-500/20">
+                <p className="text-[11px] text-rose-200/80 leading-relaxed">
+                  جهت جلوگیری از انتشار محتوای تکراری، ارسال مجدد این لینک غیرمجاز است. می‌توانید نسخه ثبت‌شده در گیک کلاب را مشاهده کنید:
+                </p>
+
+                {onOpenExistingContent && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onOpenExistingContent(duplicateItem);
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-md shadow-rose-600/30 shrink-0 cursor-pointer"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>دیدن مطلب در گیک کلاب</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Secondary Fields Container: 20px extra separation and muted/dimmed when empty */}
           <div
@@ -825,7 +941,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={!url.trim()}
+                disabled={!url.trim() || Boolean(duplicateItem)}
                 className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:pointer-events-none text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition active:scale-95 cursor-pointer"
               >
                 <PlusCircle className="w-4 h-4" />

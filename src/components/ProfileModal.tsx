@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   X, 
   User as UserIcon, 
@@ -20,19 +20,36 @@ import {
   ToggleRight,
   Crown,
   Clock,
-  Trash2
+  Trash2,
+  List,
+  ThumbsUp,
+  ThumbsDown,
+  ExternalLink,
+  Youtube,
+  Instagram,
+  Newspaper,
+  BookOpen,
+  Filter,
+  CheckCircle2,
+  Clock3,
+  XCircle,
+  Award,
+  Layers
 } from 'lucide-react';
-import { UserProfile, InboxMessage, ProfileComment } from '../types/content';
+import { UserProfile, InboxMessage, ProfileComment, ContentItem, Platform } from '../types/content';
 
 interface ProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   user: UserProfile;
+  contents?: ContentItem[];
   onUpdateUser: (updated: UserProfile) => void;
   inbox: InboxMessage[];
   onMarkMessageRead: (messageId: string) => void;
   profileComments: ProfileComment[];
   onAddProfileComment: (text: string) => void;
+  onOpenArticle?: (item: ContentItem) => void;
+  onOpenComments?: (item: ContentItem) => void;
 }
 
 // Preset avatars for quick selection
@@ -51,13 +68,16 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   isOpen,
   onClose,
   user,
+  contents = [],
   onUpdateUser,
   inbox,
   onMarkMessageRead,
   profileComments,
-  onAddProfileComment
+  onAddProfileComment,
+  onOpenArticle,
+  onOpenComments
 }) => {
-  const [activeTab, setActiveTab] = useState<'settings' | 'inbox' | 'guestbook'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'my_contents' | 'inbox' | 'guestbook'>('my_contents');
 
   // Form states
   const [displayName, setDisplayName] = useState(user.displayName);
@@ -79,7 +99,39 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   // Profile comment input
   const [newCommentText, setNewCommentText] = useState('');
 
+  // My Contents Filters
+  const [filterStatus, setFilterStatus] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all');
+  const [filterPlatform, setFilterPlatform] = useState<Platform | 'all'>('all');
+
   if (!isOpen) return null;
+
+  // Derive user's shared contents
+  const userContents = contents.filter((c) => {
+    const matchUid = c.authorUid && user.uid && c.authorUid === user.uid;
+    const matchName = c.author?.name && user.displayName && c.author.name.trim().toLowerCase() === user.displayName.trim().toLowerCase();
+    const matchHandle = user.username && c.author?.handle && c.author.handle.toLowerCase().includes(user.username.toLowerCase());
+    return matchUid || matchName || matchHandle;
+  });
+
+  // Net Reputation Score = Likes - Dislikes
+  const totalLikes = userContents.reduce((sum, c) => sum + (c.likesCount || 0), 0);
+  const totalDislikes = userContents.reduce((sum, c) => sum + (c.dislikesCount || 0), 0);
+  const netScore = totalLikes - totalDislikes;
+
+  const approvedCount = userContents.filter((c) => c.approvalStatus === 'approved').length;
+  const pendingCount = userContents.filter((c) => c.approvalStatus === 'pending').length;
+  const rejectedCount = userContents.filter((c) => c.approvalStatus === 'rejected').length;
+
+  // Filtered list
+  const filteredUserContents = userContents.filter((c) => {
+    if (filterStatus === 'approved' && c.approvalStatus !== 'approved') return false;
+    if (filterStatus === 'pending' && c.approvalStatus !== 'pending') return false;
+    if (filterStatus === 'rejected' && c.approvalStatus !== 'rejected') return false;
+
+    if (filterPlatform !== 'all' && c.platform !== filterPlatform) return false;
+
+    return true;
+  });
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,25 +169,39 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
   const unreadCount = inbox.filter((m) => !m.read).length;
 
+  const getPlatformIcon = (platform: Platform) => {
+    switch (platform) {
+      case 'youtube':
+        return <Youtube className="w-4 h-4 text-red-400" />;
+      case 'instagram':
+        return <Instagram className="w-4 h-4 text-pink-400" />;
+      case 'aparat':
+        return <VideoIcon className="w-4 h-4 text-rose-500" />;
+      case 'article':
+      default:
+        return <Newspaper className="w-4 h-4 text-emerald-400" />;
+    }
+  };
+
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div 
-        className="w-full max-w-3xl bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200"
+        className="w-full max-w-3xl bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/80">
+        <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 gap-3">
           <div className="flex items-center gap-3">
             <img
               src={photoURL}
               alt={displayName}
-              className="w-12 h-12 rounded-2xl object-cover ring-2 ring-indigo-500/50 shadow-md"
+              className="w-12 h-12 rounded-2xl object-cover ring-2 ring-indigo-500/50 shadow-md shrink-0"
             />
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-base font-bold text-slate-100">
                   {displayName}
                 </h3>
@@ -143,51 +209,80 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   @{username}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
-                {hideEmail ? (
-                  <span className="text-amber-400/90 flex items-center gap-1">
-                    <EyeOff className="w-3 h-3" />
-                    ایمیل پنهان از دیگران
+
+              {/* Net Reputation Score & Contents count badges */}
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                <span 
+                  className={`text-xs font-bold px-2.5 py-0.5 rounded-xl flex items-center gap-1.5 border shadow-sm ${
+                    netScore > 0 
+                      ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' 
+                      : netScore < 0 
+                        ? 'bg-rose-500/15 text-rose-300 border-rose-500/30' 
+                        : 'bg-slate-800 text-slate-300 border-slate-700'
+                  }`}
+                  title="امتیاز اعتبار کاربر = مجموع لایک‌ها منهای دیس‌لایک‌های تمام محتواهای کاربر"
+                >
+                  <Award className="w-3.5 h-3.5 text-amber-400" />
+                  <span>امتیاز اعتبار:</span>
+                  <span className="font-mono text-sm font-black dir-ltr">
+                    {netScore > 0 ? `+${netScore}` : netScore}
                   </span>
-                ) : (
-                  <span className="font-mono dir-ltr">{user.email}</span>
-                )}
-              </p>
+                </span>
+
+                <span className="text-[11px] text-slate-300 bg-slate-800 px-2 py-0.5 rounded-lg border border-slate-700 font-medium">
+                  {userContents.length} پست اشتراک گذاشته شده
+                </span>
+              </div>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition cursor-pointer"
+            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-2 px-5 pt-3 border-b border-slate-800 bg-slate-900/50 text-xs font-semibold">
+        <div className="flex items-center gap-1 sm:gap-2 px-4 pt-3 border-b border-slate-800 bg-slate-900/50 text-xs font-semibold overflow-x-auto scrollbar-none">
+          <button
+            onClick={() => setActiveTab('my_contents')}
+            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap ${
+              activeTab === 'my_contents'
+                ? 'border-indigo-500 text-indigo-400 font-bold'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            محتواهای من
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-mono">
+              {userContents.length}
+            </span>
+          </button>
+
           <button
             onClick={() => setActiveTab('settings')}
-            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition ${
+            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap ${
               activeTab === 'settings'
                 ? 'border-indigo-500 text-indigo-400 font-bold'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
             <UserIcon className="w-4 h-4" />
-            تنظیمات و نمایه کاربری
+            تنظیمات پروفایل
           </button>
 
           <button
             onClick={() => setActiveTab('inbox')}
-            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition relative ${
+            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition relative whitespace-nowrap ${
               activeTab === 'inbox'
                 ? 'border-indigo-500 text-indigo-400 font-bold'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
             <Inbox className="w-4 h-4" />
-            صندوق پیام‌ها (این‌باکس)
+            پیام‌ها
             {unreadCount > 0 && (
               <span className="w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
                 {unreadCount}
@@ -197,23 +292,281 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
           <button
             onClick={() => setActiveTab('guestbook')}
-            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition ${
+            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap ${
               activeTab === 'guestbook'
                 ? 'border-indigo-500 text-indigo-400 font-bold'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
             <MessageSquare className="w-4 h-4" />
-            دیدگاه‌های پروفایل
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400">
+            دیدگاه‌های دیواری
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono">
               {profileComments.length}
             </span>
           </button>
         </div>
 
         {/* Tab Content */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6">
-          {/* 1. Settings & Profile Tab */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          {/* 1. My Shared Contents Tab */}
+          {activeTab === 'my_contents' && (
+            <div className="space-y-5">
+              {/* Summary Stats Card */}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-950/40 via-slate-900 to-slate-900 border border-indigo-500/20 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                <div className="p-2.5 rounded-xl bg-slate-800/40 border border-slate-800">
+                  <span className="text-[10px] text-slate-400 block mb-0.5">کل پست‌ها</span>
+                  <span className="text-base font-mono font-bold text-slate-100">{userContents.length}</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                  <span className="text-[10px] text-emerald-400 block mb-0.5">مجموع لایک‌ها</span>
+                  <span className="text-base font-mono font-bold text-emerald-300">+{totalLikes}</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20">
+                  <span className="text-[10px] text-rose-400 block mb-0.5">مجموع دیس‌لایک‌ها</span>
+                  <span className="text-base font-mono font-bold text-rose-300">-{totalDislikes}</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                  <span className="text-[10px] text-amber-400 block mb-0.5">امتیاز خالص</span>
+                  <span className="text-base font-mono font-bold text-amber-300 dir-ltr">
+                    {netScore > 0 ? `+${netScore}` : netScore}
+                  </span>
+                </div>
+              </div>
+
+              {/* Interactive Filters Bar */}
+              <div className="space-y-3 p-3.5 rounded-2xl bg-slate-800/40 border border-slate-800">
+                {/* Status Filter */}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                    <Filter className="w-3.5 h-3.5 text-indigo-400" />
+                    وضعیت انتشار:
+                  </span>
+
+                  <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-750">
+                    <button
+                      onClick={() => setFilterStatus('all')}
+                      className={`px-2.5 py-1 text-xs rounded-lg transition ${
+                        filterStatus === 'all'
+                          ? 'bg-indigo-600 text-white font-bold'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      همه ({userContents.length})
+                    </button>
+                    <button
+                      onClick={() => setFilterStatus('approved')}
+                      className={`px-2.5 py-1 text-xs rounded-lg transition ${
+                        filterStatus === 'approved'
+                          ? 'bg-emerald-600 text-white font-bold'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      منتشر شده ({approvedCount})
+                    </button>
+                    <button
+                      onClick={() => setFilterStatus('pending')}
+                      className={`px-2.5 py-1 text-xs rounded-lg transition ${
+                        filterStatus === 'pending'
+                          ? 'bg-amber-600 text-white font-bold'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      در انتظار ({pendingCount})
+                    </button>
+                    {rejectedCount > 0 && (
+                      <button
+                        onClick={() => setFilterStatus('rejected')}
+                        className={`px-2.5 py-1 text-xs rounded-lg transition ${
+                          filterStatus === 'rejected'
+                            ? 'bg-rose-600 text-white font-bold'
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        رد شده ({rejectedCount})
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Platform Filter */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800">
+                  <span className="text-xs font-bold text-slate-300">پلتفرم:</span>
+                  <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-750">
+                    <button
+                      onClick={() => setFilterPlatform('all')}
+                      className={`px-2.5 py-1 text-xs rounded-lg transition ${
+                        filterPlatform === 'all'
+                          ? 'bg-indigo-600 text-white font-bold'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      همه
+                    </button>
+                    <button
+                      onClick={() => setFilterPlatform('youtube')}
+                      className={`px-2.5 py-1 text-xs rounded-lg transition flex items-center gap-1 ${
+                        filterPlatform === 'youtube'
+                          ? 'bg-indigo-600 text-white font-bold'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <Youtube className="w-3 h-3 text-red-400" />
+                      یوتیوب
+                    </button>
+                    <button
+                      onClick={() => setFilterPlatform('instagram')}
+                      className={`px-2.5 py-1 text-xs rounded-lg transition flex items-center gap-1 ${
+                        filterPlatform === 'instagram'
+                          ? 'bg-indigo-600 text-white font-bold'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <Instagram className="w-3 h-3 text-pink-400" />
+                      اینستاگرام
+                    </button>
+                    <button
+                      onClick={() => setFilterPlatform('article')}
+                      className={`px-2.5 py-1 text-xs rounded-lg transition flex items-center gap-1 ${
+                        filterPlatform === 'article'
+                          ? 'bg-indigo-600 text-white font-bold'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <Newspaper className="w-3 h-3 text-emerald-400" />
+                      مقاله
+                    </button>
+                    <button
+                      onClick={() => setFilterPlatform('aparat')}
+                      className={`px-2.5 py-1 text-xs rounded-lg transition flex items-center gap-1 ${
+                        filterPlatform === 'aparat'
+                          ? 'bg-indigo-600 text-white font-bold'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      آپارات
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Compact Contents List */}
+              <div className="space-y-2.5">
+                {filteredUserContents.length === 0 ? (
+                  <div className="text-center py-10 text-slate-400 bg-slate-800/30 rounded-2xl border border-slate-800 text-xs space-y-2">
+                    <Layers className="w-8 h-8 mx-auto opacity-40 text-slate-400" />
+                    <p>هیچ محتوایی با فیلترهای انتخابی یافت نشد.</p>
+                  </div>
+                ) : (
+                  filteredUserContents.map((item) => (
+                    <div
+                      key={item.id}
+                      className="p-3 sm:p-3.5 rounded-2xl bg-slate-800/50 border border-slate-800 hover:bg-slate-800/80 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        {/* Thumbnail */}
+                        <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-slate-900 shrink-0 border border-slate-700/60">
+                          <img
+                            src={item.thumbnail}
+                            alt={item.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition"
+                          />
+                        </div>
+
+                        {/* Text details */}
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {getPlatformIcon(item.platform)}
+                            <h4 className="text-xs sm:text-sm font-bold text-slate-200 truncate group-hover:text-indigo-300 transition">
+                              {item.title}
+                            </h4>
+                          </div>
+
+                          {/* Inline Metadata */}
+                          <div className="flex items-center gap-2 text-[11px] text-slate-400 flex-wrap">
+                            <span>{item.publishedAt}</span>
+                            <span>·</span>
+                            <span>{item.readingOrWatchTime}</span>
+
+                            {/* Approval Status Badge */}
+                            {item.approvalStatus === 'approved' && (
+                              <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 font-medium">
+                                <CheckCircle2 className="w-3 h-3" />
+                                منتشر شده
+                              </span>
+                            )}
+                            {item.approvalStatus === 'pending' && (
+                              <span className="inline-flex items-center gap-1 text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 font-medium">
+                                <Clock3 className="w-3 h-3" />
+                                در انتظار بررسی ادمین
+                              </span>
+                            )}
+                            {item.approvalStatus === 'rejected' && (
+                              <span className="inline-flex items-center gap-1 text-[10px] text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-md border border-rose-500/20 font-medium">
+                                <XCircle className="w-3 h-3" />
+                                رد شده
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right Section: Metrics & Actions */}
+                      <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800 shrink-0">
+                        {/* Metrics */}
+                        <div className="flex items-center gap-2 text-xs font-mono">
+                          <span className="text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/20" title="لایک‌ها">
+                            <ThumbsUp className="w-3 h-3" />
+                            {item.likesCount || 0}
+                          </span>
+                          <span className="text-rose-400 flex items-center gap-1 bg-rose-500/10 px-2 py-1 rounded-lg border border-rose-500/20" title="دیس‌لایک‌ها">
+                            <ThumbsDown className="w-3 h-3" />
+                            {item.dislikesCount || 0}
+                          </span>
+                          <span className="text-slate-300 flex items-center gap-1 bg-slate-800 px-2 py-1 rounded-lg border border-slate-700" title="دیدگاه‌ها">
+                            <MessageSquare className="w-3 h-3 text-indigo-400" />
+                            {item.commentsCount || 0}
+                          </span>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-1.5">
+                          {item.platform === 'article' && onOpenArticle && (
+                            <button
+                              onClick={() => {
+                                onClose();
+                                onOpenArticle(item);
+                              }}
+                              className="px-2.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                              title="خواندن کامل مقاله"
+                            >
+                              <BookOpen className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline">مشاهده</span>
+                            </button>
+                          )}
+
+                          {onOpenComments && (
+                            <button
+                              onClick={() => {
+                                onClose();
+                                onOpenComments(item);
+                              }}
+                              className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                              title="مشاهده نظرات"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
+                              <span className="hidden sm:inline">نظرات</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 2. Settings & Profile Tab */}
           {activeTab === 'settings' && (
             <form onSubmit={handleSaveProfile} className="space-y-6">
               {/* Avatar Selection Section */}
@@ -420,7 +773,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             </form>
           )}
 
-          {/* 2. Inbox & Messages Tab */}
+          {/* 3. Inbox & Messages Tab */}
           {activeTab === 'inbox' && (
             <div className="space-y-4">
               {selectedMessage ? (
@@ -541,7 +894,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             </div>
           )}
 
-          {/* 3. Profile Guestbook / Comments Tab */}
+          {/* 4. Profile Guestbook / Comments Tab */}
           {activeTab === 'guestbook' && (
             <div className="space-y-5">
               <div className="p-3.5 rounded-2xl bg-slate-800/40 border border-slate-800 flex items-center justify-between text-xs">
@@ -643,3 +996,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     </div>
   );
 };
+
+// Helper component for Aparat icon
+const VideoIcon: React.FC<{ className?: string }> = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+  </svg>
+);

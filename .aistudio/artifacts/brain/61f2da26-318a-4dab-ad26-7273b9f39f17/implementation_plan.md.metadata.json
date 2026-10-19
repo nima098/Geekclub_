@@ -1,6 +1,6 @@
 {
-  "summary": "Implementation plan for parsing page H1/H2 headers and filtering out site name matching headers for article title extraction.",
-  "updatedAt": "2026-10-18T22:55:57.687621033Z",
+  "summary": "Implementation plan for user profile shared contents list, net reputation score calculation (likes minus dislikes), status/platform filter controls, and compact item metrics.",
+  "updatedAt": "2026-10-19T19:06:09.315025488Z",
   "requestFeedback": true,
   "userFacing": true
 }

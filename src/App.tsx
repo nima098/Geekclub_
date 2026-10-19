@@ -81,7 +81,9 @@ import {
   ArrowUp,
   BookmarkCheck,
   Crown,
-  MessageSquarePlus
+  MessageSquarePlus,
+  Video,
+  PlusCircle
 } from 'lucide-react';
 import { api } from './services/api';
 
@@ -136,6 +138,35 @@ export default function App() {
       return DEFAULT_USER;
     }
   });
+
+  // Theme Mode State (Default: Dark Mode)
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    try {
+      const saved = localStorage.getItem('geekclub_theme_v1');
+      return saved === 'light' ? 'light' : 'dark';
+    } catch {
+      return 'dark';
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('geekclub_theme_v1', theme);
+      if (theme === 'light') {
+        document.documentElement.classList.add('light');
+        document.documentElement.classList.remove('dark');
+      } else {
+        document.documentElement.classList.add('dark');
+        document.documentElement.classList.remove('light');
+      }
+    } catch {
+      // ignore
+    }
+  }, [theme]);
+
+  const handleToggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
 
   // Filters & Controls
   const [searchQuery, setSearchQuery] = useState('');
@@ -934,7 +965,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col font-sans selection:bg-indigo-600 selection:text-white">
+    <div className="min-h-screen bg-[#090d16] light:bg-[#efefef] text-slate-100 light:text-slate-900 transition-colors duration-300 flex flex-col font-sans selection:bg-indigo-600 selection:text-white">
       {/* Top Navigation */}
       <Navbar
         user={user}
@@ -950,55 +981,70 @@ export default function App() {
         onToggleSavedOnly={() => setShowSavedOnly(!showSavedOnly)}
         showSavedOnly={showSavedOnly}
         totalItemsCount={contents.filter((c) => !c.isDeleted).length}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
       />
 
-      {/* Hero Welcome Banner */}
-      <div className="relative border-b border-slate-800/80 bg-gradient-to-b from-indigo-950/20 via-slate-900/40 to-transparent py-8 sm:py-10">
+      {/* Material Flat Hero Welcome Kicker */}
+      <div className="relative border-b border-slate-800/80 bg-slate-950/40 py-8 sm:py-12 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="space-y-2 max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>پلتفرم اشتراک و کاوش محتوای چندرسانه‌ای</span>
+          <div className="p-6 sm:p-8 rounded-[2rem] bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800/90 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            {/* Ambient Background Accent */}
+            <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-indigo-600/10 blur-3xl pointer-events-none" />
+
+            <div className="space-y-3 max-w-2xl relative z-10">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs font-bold">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                <span>پلتفرم تخصصی اشتراک و امبد محتوای چندرسانه‌ای</span>
               </div>
-              <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white leading-tight">
-                اینجا فقط محتواهای گلچین شده و تایید شده اعضا معرفی میشن
+              <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white leading-tight sm:leading-tight">
+                مرجع برتر ویدیوها، ریلزها و مقالات تخصصی جامعه گیک‌ها
               </h1>
-              <p className="text-sm sm:text-base text-slate-400 leading-loose">
-                ویدیوها را مستقیماً تماشا کنید، ریلزها را مرور نمایید، مقالات تخصصی را در حالت خوانش اختصاصی مطالعه کنید، لایک کنید و در گفت‌وگوها مشارکت داشته باشید.
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed sm:leading-loose">
+                محتواها را مستقیماً تماشا کنید، مقالات را در حالت خوانش بی‌پیرایه بخوانید، امتیاز دهید و دیدگاه خود را با دیگران به اشتراک بگذارید.
               </p>
             </div>
 
-            {/* Quick Stats Cards */}
-            <div className="grid grid-cols-3 gap-3 w-full md:w-auto shrink-0">
-              <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 text-center">
+            {/* M3 Quick Stats Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 w-full md:w-auto shrink-0 relative z-10">
+              <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 text-center hover:border-slate-700 transition">
                 <div className="flex items-center justify-center text-red-500 mb-1">
-                  <Youtube className="w-5 h-5" />
+                  <Youtube className="w-4 h-4" />
                 </div>
-                <div className="text-lg font-black text-slate-100">
+                <div className="text-base sm:text-lg font-black text-slate-100 font-mono">
                   {contents.filter((c) => c.platform === 'youtube').length}
                 </div>
-                <div className="text-[11px] text-slate-400 font-medium">ویدیو یوتیوب</div>
+                <div className="text-[10px] text-slate-400 font-bold">یوتیوب</div>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 text-center">
-                <div className="flex items-center justify-center text-pink-500 mb-1">
-                  <Instagram className="w-5 h-5" />
+              <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 text-center hover:border-slate-700 transition">
+                <div className="flex items-center justify-center text-rose-500 mb-1">
+                  <Video className="w-4 h-4" />
                 </div>
-                <div className="text-lg font-black text-slate-100">
+                <div className="text-base sm:text-lg font-black text-slate-100 font-mono">
+                  {contents.filter((c) => c.platform === 'aparat').length}
+                </div>
+                <div className="text-[10px] text-slate-400 font-bold">آپارات</div>
+              </div>
+
+              <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 text-center hover:border-slate-700 transition">
+                <div className="flex items-center justify-center text-pink-500 mb-1">
+                  <Instagram className="w-4 h-4" />
+                </div>
+                <div className="text-base sm:text-lg font-black text-slate-100 font-mono">
                   {contents.filter((c) => c.platform === 'instagram').length}
                 </div>
-                <div className="text-[11px] text-slate-400 font-medium">پست و ریلز</div>
+                <div className="text-[10px] text-slate-400 font-bold">اینستاگرام</div>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 text-center">
+              <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 text-center hover:border-slate-700 transition">
                 <div className="flex items-center justify-center text-emerald-500 mb-1">
-                  <Newspaper className="w-5 h-5" />
+                  <Newspaper className="w-4 h-4" />
                 </div>
-                <div className="text-lg font-black text-slate-100">
+                <div className="text-base sm:text-lg font-black text-slate-100 font-mono">
                   {contents.filter((c) => c.platform === 'article').length}
                 </div>
-                <div className="text-[11px] text-slate-400 font-medium">مقالات وب</div>
+                <div className="text-[10px] text-slate-400 font-bold">مقالات</div>
               </div>
             </div>
           </div>
@@ -1146,6 +1192,14 @@ export default function App() {
         initialUrl={sharedIncomingUrl}
         requireApproval={siteSettings.requireContentApproval}
         siteSettings={siteSettings}
+        existingContents={contents}
+        onOpenExistingContent={(item) => {
+          if (item.platform === 'article') {
+            setActiveArticleItem(item);
+          } else {
+            setActiveCommentsItem(item);
+          }
+        }}
       />
 
       {/* Username Setup Modal - Asked immediately after successful Google login */}
@@ -1172,11 +1226,14 @@ export default function App() {
           isOpen={isProfileModalOpen}
           onClose={() => setIsProfileModalOpen(false)}
           user={user}
+          contents={contents}
           onUpdateUser={handleUpdateUser}
           inbox={inbox}
           onMarkMessageRead={handleMarkMessageRead}
           profileComments={profileComments}
           onAddProfileComment={handleAddProfileComment}
+          onOpenArticle={(item) => setActiveArticleItem(item)}
+          onOpenComments={(item) => setActiveCommentsItem(item)}
         />
       )}
 
@@ -1215,6 +1272,16 @@ export default function App() {
         onAdminLogin={handleLogin}
         onOpenAdminPanel={() => setIsAdminModalOpen(true)}
       />
+
+      {/* Material 3 Floating Action Button (FAB) */}
+      <button
+        onClick={() => setIsAddModalOpen(true)}
+        className="fixed bottom-6 left-6 z-40 px-4 sm:px-5 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-bold text-xs sm:text-sm flex items-center gap-2 sm:gap-2.5 shadow-2xl shadow-indigo-600/50 hover:shadow-indigo-600/70 border border-indigo-400/30 transition-all duration-200 cursor-pointer"
+        title="اشتراک محتوای جدید"
+      >
+        <PlusCircle className="w-5 h-5 text-white" />
+        <span className="hidden sm:inline">اشتراک محتوای جدید</span>
+      </button>
 
       {/* Toast Notifications */}
       <Toast toasts={toasts} onDismiss={handleDismissToast} />
