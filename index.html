@@ -5,24 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>گیک کلاب - اشتراک و مرور محتوا</title>
     <script>
-      window.addEventListener('unhandledrejection', function (event) {
-        if (
-          event.reason &&
-          (String(event.reason.message || '').includes('WebSocket') ||
-           String(event.reason.stack || '').includes('vite') ||
-           String(event.reason || '').includes('WebSocket'))
-        ) {
-          event.preventDefault();
+      (function() {
+        var OriginalWebSocket = window.WebSocket;
+        if (OriginalWebSocket) {
+          window.WebSocket = function(url, protocols) {
+            try {
+              var ws = new OriginalWebSocket(url, protocols);
+              ws.addEventListener('error', function(e) {
+                if (e && typeof e.stopImmediatePropagation === 'function') {
+                  e.stopImmediatePropagation();
+                }
+              });
+              return ws;
+            } catch (err) {
+              return {
+                addEventListener: function() {},
+                removeEventListener: function() {},
+                send: function() {},
+                close: function() {},
+                readyState: 3
+              };
+            }
+          };
+          window.WebSocket.prototype = OriginalWebSocket.prototype;
+          window.WebSocket.CONNECTING = 0;
+          window.WebSocket.OPEN = 1;
+          window.WebSocket.CLOSING = 2;
+          window.WebSocket.CLOSED = 3;
         }
-      });
-      window.addEventListener('error', function (event) {
-        if (
-          String(event.message || '').includes('WebSocket') ||
-          String(event.filename || '').includes('vite')
-        ) {
-          event.preventDefault();
-        }
-      }, true);
+
+        window.addEventListener('unhandledrejection', function (event) {
+          var str = String(event.reason || '') + String((event.reason && event.reason.message) || '') + String((event.reason && event.reason.stack) || '');
+          if (str.toLowerCase().includes('websocket') || str.toLowerCase().includes('vite')) {
+            event.preventDefault();
+            if (typeof event.stopPropagation === 'function') event.stopPropagation();
+          }
+        }, true);
+
+        window.addEventListener('error', function (event) {
+          var str = String(event.message || '') + String(event.filename || '');
+          if (str.toLowerCase().includes('websocket') || str.toLowerCase().includes('vite')) {
+            event.preventDefault();
+            if (typeof event.stopPropagation === 'function') event.stopPropagation();
+          }
+        }, true);
+      })();
     </script>
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />

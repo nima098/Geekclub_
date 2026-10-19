@@ -313,7 +313,7 @@ export default function App() {
     }
   }, [profileComments]);
 
-  // Synchronize with backend API on mount
+  // Synchronize with Cloud Firestore in real-time
   useEffect(() => {
     async function syncBackendData() {
       const serverContents = await api.getContents();
@@ -322,6 +322,17 @@ export default function App() {
       }
     }
     syncBackendData();
+
+    // Subscribe to Cloud Firestore live contents updates across all users & Vercel
+    const unsubscribe = api.subscribeContents((items) => {
+      if (items && items.length > 0) {
+        setContents(items);
+      }
+    });
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
   }, []);
 
   // Handle Web Share Target from mobile OS (Native Share Sheet -> GeekClub PWA)
@@ -722,6 +733,7 @@ export default function App() {
         c.id === contentId ? { ...c, approvalStatus: 'approved' } : c
       )
     );
+    api.updateContent(contentId, { approvalStatus: 'approved' });
     addToast('success', 'محتوا با موفقیت تأیید شد و در فید عمومی سایت منتشر گردید.');
   };
 
@@ -731,6 +743,7 @@ export default function App() {
         c.id === contentId ? { ...c, approvalStatus: 'rejected' } : c
       )
     );
+    api.updateContent(contentId, { approvalStatus: 'rejected' });
     addToast('error', 'محتوا رد شد و از صف انتشار خارج گردید.');
   };
 
@@ -763,17 +776,23 @@ export default function App() {
 
   // --- Soft-Delete & Trash Handlers ---
   const handleToggleSoftDelete = (contentId: string, shouldDelete: boolean) => {
+    const deletedAtStr = shouldDelete ? new Date().toLocaleDateString('fa-IR') : undefined;
     setContents((prev) =>
       prev.map((c) =>
         c.id === contentId
           ? {
               ...c,
               isDeleted: shouldDelete,
-              deletedAt: shouldDelete ? new Date().toLocaleDateString('fa-IR') : undefined
+              deletedAt: deletedAtStr
             }
           : c
       )
     );
+
+    api.updateContent(contentId, {
+      isDeleted: shouldDelete,
+      deletedAt: deletedAtStr
+    });
 
     if (shouldDelete) {
       addToast('info', 'محتوا به سطل بازیافت منتقل شد و از فید پنهان گردید (قابل بازگردانی از پنل ادمین).');
@@ -784,6 +803,7 @@ export default function App() {
 
   const handlePermanentDelete = (contentId: string) => {
     setContents((prev) => prev.filter((c) => c.id !== contentId));
+    api.deleteContent(contentId);
     addToast('error', 'محتوا به طور کامل از حافظه دیتابیس حذف گردید.');
   };
 
