@@ -65,7 +65,7 @@ export const testCDNConnection = async (): Promise<CDNHealthReport> => {
         endpoint: config.endpointUrl,
         latencyMs,
         message: 'اتصال به سرور CDN و توکن امنیتی کاملاً برقرار و معتبر است.',
-        details: `پاسخ مثبت دریافت شد (زمان پاسخ‌دهی: ${latencyMs}ms). فایل upload.php و CORS آماده پردازش آپلودها می‌باشند.`,
+        details: `پاسخ مثبت دریافت شد (زمان پاسخ‌دهی: ${latencyMs}ms). فایل upload.php و تنظیمات CORS آماده آپلود عکس‌ها در پوشه s1 می‌باشند.`,
         timestamp
       };
     } else {
@@ -354,33 +354,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' || (isset($_GET['ping']) || isset($_POS
 }
 
 // 3. Folder & Directory Setup inside 's1' folder
-$folderCategory = isset($_POST['folder']) ? preg_replace('/[^a-zA-Z0-9_\-]/', '', $_POST['folder']) : 'contents';
+$folderCategory = isset($_POST['folder']) ? preg_replace('/[^a-zA-Z0-9_\\-]/', '', $_POST['folder']) : 'contents';
 if (empty($folderCategory)) {
     $folderCategory = 'contents';
 }
 
 $yearMonth = date('Y/m');
 
-// Smart path detection whether script is inside s1/ or root
-$currentDir = basename(__DIR__);
-if ($currentDir === 's1') {
-    $relativeSubpath = $folderCategory . '/' . $yearMonth;
-    $uploadBaseDir = __DIR__ . '/' . $relativeSubpath;
-    $urlSubpath = 's1/' . $folderCategory . '/' . $yearMonth;
-} else {
-    $relativeSubpath = 's1/' . $folderCategory . '/' . $yearMonth;
-    $uploadBaseDir = __DIR__ . '/' . $relativeSubpath;
-    $urlSubpath = $relativeSubpath;
-}
-
+// Save file physically inside __DIR__/{folder}/{YYYY}/{MM}
+$uploadBaseDir = __DIR__ . '/' . $folderCategory . '/' . $yearMonth;
 if (!file_exists($uploadBaseDir)) {
     @mkdir($uploadBaseDir, 0755, true);
 }
 
-// 4. Construct Public CDN Base URL
+// 4. Construct Public CDN Base URL automatically matching the script's exact web location
 $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
 $host = $_SERVER['HTTP_HOST'] ?? 'upc.geekclub.ir';
-$baseUrl = $scheme . "://" . $host . "/" . $urlSubpath . "/";
+
+// Detect web subpath of this upload.php script automatically (e.g. "/s1" or "" or "/s1/upload")
+$scriptPath = $_SERVER['SCRIPT_NAME'] ?? '/s1/upload.php';
+$scriptDir = str_replace('\\\\', '/', dirname($scriptPath));
+if ($scriptDir === '/' || $scriptDir === '.') {
+    $scriptDir = '';
+}
+
+$baseUrl = $scheme . "://" . $host . $scriptDir . "/" . $folderCategory . "/" . $yearMonth . "/";
 
 // 5. File Validation
 if (!isset($_FILES['file'])) {

@@ -8,17 +8,15 @@ import {
   MessageSquare, 
   Share2, 
   Bookmark, 
-  ExternalLink, 
   Play, 
   Clock, 
   Check, 
   BookOpen,
-  Volume2,
-  Maximize2,
   Trash2,
   Video
 } from 'lucide-react';
 import { ContentItem, ViewMode, UserProfile } from '../types/content';
+import { handleImageError, getPlatformFallbackImage } from '../utils/imageHelper';
 
 interface ContentCardProps {
   item: ContentItem;
@@ -132,6 +130,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   alt={item.title}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover/media:scale-105 opacity-90 group-hover/media:opacity-100"
                   loading="lazy"
+                  onError={(e) => handleImageError(e, getPlatformFallbackImage('youtube', item.url))}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-black/30" />
                 
@@ -166,6 +165,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   alt={item.title}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover/ig:scale-105 opacity-90 group-hover/ig:opacity-100"
                   loading="lazy"
+                  onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url))}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent flex flex-col justify-end p-4">
                   {/* Play Button Overlay */}
@@ -200,6 +200,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   alt={item.title}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover/media:scale-105 opacity-90 group-hover/media:opacity-100"
                   loading="lazy"
+                  onError={(e) => handleImageError(e, getPlatformFallbackImage('aparat', item.url))}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-black/30" />
                 
@@ -224,6 +225,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               alt={item.title}
               className="w-full h-full object-cover transition-transform duration-500 group-hover/art:scale-105 opacity-85 group-hover/art:opacity-100"
               loading="lazy"
+              onError={(e) => handleImageError(e, getPlatformFallbackImage('article', item.url))}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-black/30" />
             
@@ -270,6 +272,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 src={item.author.avatar}
                 alt={item.author.name}
                 className="w-7 h-7 rounded-full object-cover ring-2 ring-indigo-500/30"
+                onError={(e) => handleImageError(e, getPlatformFallbackImage('avatar'))}
               />
               <div className="text-right">
                 <div className="flex items-center gap-1">
@@ -422,4 +425,3 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     </article>
   );
 };
-
