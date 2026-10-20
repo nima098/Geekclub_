@@ -28,7 +28,7 @@ import {
 import { 
   DomainAuthHelpModal 
 } from './components/DomainAuthHelpModal';
-import { FALLBACK_IMAGES, getPlatformFallbackImage } from './utils/imageHelper';
+import { FALLBACK_IMAGES, getPlatformFallbackImage, getAuthorAvatar } from './utils/imageHelper';
 import { 
   ProfileModal 
 } from './components/ProfileModal';
@@ -106,17 +106,17 @@ export default function App() {
       const merged = [...missingInitial, ...parsedSaved];
       const itemsToProcess = merged.length > 0 ? merged : INITIAL_CONTENT;
 
-      // Clean up old /s1/s1/ subpaths and ensure all thumbnails use CDN URLs on upc.geekclub.ir
+      // Clean up old /s1/s1/ subpaths and ensure all items have valid working images
       return itemsToProcess.map((item) => {
         let cleanThumb = (item.thumbnail || '').replace('/s1/s1/', '/s1/');
-        if (!cleanThumb.includes('upc.geekclub.ir') && !cleanThumb.startsWith('/uploads/')) {
-          cleanThumb = `https://upc.geekclub.ir/s1/contents/2026/10/${item.id}_cover.jpg`;
+        if (!cleanThumb || cleanThumb.includes('avatar_.')) {
+          cleanThumb = getPlatformFallbackImage(item.platform, item.url);
         }
 
         let cleanAvatar = (item.author?.avatar || '').replace('/s1/s1/', '/s1/');
-        if (!cleanAvatar.includes('upc.geekclub.ir') && !cleanAvatar.startsWith('/uploads/')) {
-          const handleClean = (item.author?.handle || 'user').replace(/[^a-zA-Z0-9_]/g, '');
-          cleanAvatar = `https://upc.geekclub.ir/s1/contents/2026/10/avatar_${handleClean}.jpg`;
+        // If avatar points to non-existent upc.geekclub.ir or broken handle, use personalized SVG avatar
+        if (!cleanAvatar || cleanAvatar.includes('avatar_.jpg') || cleanAvatar.includes('upc.geekclub.ir')) {
+          cleanAvatar = getAuthorAvatar(item.author?.name || 'کاربر');
         }
 
         return {

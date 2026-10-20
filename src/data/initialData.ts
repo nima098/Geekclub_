@@ -7,6 +7,7 @@ import {
   InboxMessage,
   ProfileComment
 } from '../types/content';
+import { FALLBACK_IMAGES, getAuthorAvatar } from '../utils/imageHelper';
 
 export const SUPER_ADMIN_EMAIL = '3dsaz1990@gmail.com';
 
@@ -16,7 +17,7 @@ export const SUPER_ADMIN_USER: UserProfile = {
   username: 'admin',
   email: SUPER_ADMIN_EMAIL,
   hideEmail: false,
-  photoURL: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_admin.jpg',
+  photoURL: getAuthorAvatar('مدیر کل سیستم'),
   bio: 'مدیریت ارشد پلتفرم اشتراک‌گذاری رسانه گیک‌کلاب',
   allowProfileComments: true,
   joinedAt: 'مهر ۱۴۰۴',
@@ -31,7 +32,7 @@ export const DEFAULT_USER: UserProfile = {
   username: 'sara_ux',
   email: 'sara@geekclub.ir',
   hideEmail: false,
-  photoURL: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_sara_ux.jpg',
+  photoURL: getAuthorAvatar('سارا ناصری'),
   bio: 'علاقه‌مند به توسعه فرانت‌اند و تجربه کاربری مدرن. عضو فعال گیک‌کلاب.',
   allowProfileComments: true,
   joinedAt: 'مهر ۱۴۰۴',
@@ -66,10 +67,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.youtube.com/watch?v=5kFfqpQ3_iI',
     platform: 'youtube',
     embedUrl: 'https://www.youtube.com/embed/5kFfqpQ3_iI',
-    thumbnail: 'https://upc.geekclub.ir/s1/contents/2026/10/yt_astro5_framework.jpg',
+    thumbnail: 'https://img.youtube.com/vi/5kFfqpQ3_iI/hqdefault.jpg',
     author: {
       name: 'سارا ناصری (کاربر عضو)',
-      avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_sara_ux.jpg',
+      avatar: getAuthorAvatar('سارا ناصری'),
       handle: '@sara_ux',
       isVerified: false
     },
@@ -92,10 +93,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.youtube.com/watch?v=bMknfKXIFA8',
     platform: 'youtube',
     embedUrl: 'https://www.youtube.com/embed/bMknfKXIFA8',
-    thumbnail: 'https://upc.geekclub.ir/s1/contents/2026/10/yt_ai_models.jpg',
+    thumbnail: 'https://img.youtube.com/vi/bMknfKXIFA8/hqdefault.jpg',
     author: {
       name: 'آکادمی کد و فناوری',
-      avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_codetech.jpg',
+      avatar: getAuthorAvatar('آکادمی کد و فناوری'),
       handle: '@codetech_fa',
       isVerified: true
     },
@@ -116,10 +117,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://virgool.io/@ux_design/modern-ui-principles',
     platform: 'article',
     embedUrl: 'https://virgool.io/@ux_design/modern-ui-principles',
-    thumbnail: 'https://upc.geekclub.ir/s1/contents/2026/10/art_modern_ui.jpg',
+    thumbnail: FALLBACK_IMAGES.article,
     author: {
       name: 'نیما ارجمند',
-      avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_nima_arjmand.jpg',
+      avatar: getAuthorAvatar('نیما ارجمند'),
       handle: 'طراح ارشد محصول',
       isVerified: true
     },
@@ -149,10 +150,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.instagram.com/reel/DZfG1Nui61u/',
     platform: 'instagram',
     embedUrl: 'https://www.instagram.com/reel/DZfG1Nui61u/embed',
-    thumbnail: 'https://upc.geekclub.ir/s1/contents/2026/10/ig_geek_workspace.jpg',
+    thumbnail: FALLBACK_IMAGES.instagram,
     author: {
       name: 'گیک استودیو',
-      avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_geek_setup.jpg',
+      avatar: getAuthorAvatar('گیک استودیو'),
       handle: '@geek_setup',
       isVerified: true
     },
@@ -174,10 +175,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.aparat.com/v/m435165',
     platform: 'aparat',
     embedUrl: 'https://www.aparat.com/video/video/embed/videohash/m435165/vt/frame',
-    thumbnail: 'https://upc.geekclub.ir/s1/contents/2026/10/ap_ai_machine_learning.jpg',
+    thumbnail: 'https://static.cdn.asset.aparat.com/avt/m435165-big.jpg',
     author: {
       name: 'کانال هوش مصنوعی ایران',
-      avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_ai_iran.jpg',
+      avatar: getAuthorAvatar('کانال هوش مصنوعی ایران'),
       handle: '@ai_iran',
       isVerified: true
     },
@@ -199,10 +200,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.instagram.com/reel/C8kP2qXyZa1/',
     platform: 'instagram',
     embedUrl: 'https://www.instagram.com/reel/C8kP2qXyZa1/embed',
-    thumbnail: 'https://upc.geekclub.ir/s1/contents/2026/10/ig_javascript_tricks.jpg',
+    thumbnail: FALLBACK_IMAGES.instagram,
     author: {
       name: 'کد با سارا',
-      avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_codewith_sara.jpg',
+      avatar: getAuthorAvatar('کد با سارا'),
       handle: '@codewith_sara',
       isVerified: true
     },
@@ -223,10 +224,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.youtube.com/watch?v=LDB4uaJ87e0',
     platform: 'youtube',
     embedUrl: 'https://www.youtube.com/embed/LDB4uaJ87e0',
-    thumbnail: 'https://upc.geekclub.ir/s1/contents/2026/10/yt_react_fullstack.jpg',
+    thumbnail: 'https://img.youtube.com/vi/LDB4uaJ87e0/hqdefault.jpg',
     author: {
       name: 'فرهاد نصیری',
-      avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_farhad_dev.jpg',
+      avatar: getAuthorAvatar('فرهاد نصیری'),
       handle: '@farhad_dev',
       isVerified: true
     },
@@ -247,10 +248,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://medium.com/@techlead/high-scale-database-strategies',
     platform: 'article',
     embedUrl: 'https://medium.com/@techlead/high-scale-database-strategies',
-    thumbnail: 'https://upc.geekclub.ir/s1/contents/2026/10/art_database_scale.jpg',
+    thumbnail: FALLBACK_IMAGES.article,
     author: {
       name: 'مهندس آرش شریفی',
-      avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_arash_sharifi.jpg',
+      avatar: getAuthorAvatar('مهندس آرش شریفی'),
       handle: 'معمار نرم‌افزار',
       isVerified: true
     },
@@ -280,10 +281,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.instagram.com/p/C9ab12cdEFg/',
     platform: 'instagram',
     embedUrl: 'https://www.instagram.com/p/C9ab12cdEFg/embed',
-    thumbnail: 'https://upc.geekclub.ir/s1/contents/2026/10/ig_podcast_studio.jpg',
+    thumbnail: FALLBACK_IMAGES.instagram,
     author: {
       name: 'استودیو پادکس',
-      avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_podx_studio.jpg',
+      avatar: getAuthorAvatar('استودیو پادکس'),
       handle: '@podx_studio',
       isVerified: false
     },
@@ -304,10 +305,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.youtube.com/watch?v=SqcY0GlETPk',
     platform: 'youtube',
     embedUrl: 'https://www.youtube.com/embed/SqcY0GlETPk',
-    thumbnail: 'https://upc.geekclub.ir/s1/contents/2026/10/yt_prompt_engineering.jpg',
+    thumbnail: 'https://img.youtube.com/vi/SqcY0GlETPk/hqdefault.jpg',
     author: {
       name: 'دکتر مانی دانشور',
-      avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_mani_ai_lab.jpg',
+      avatar: getAuthorAvatar('دکتر مانی دانشور'),
       handle: '@mani_ai_lab',
       isVerified: true
     },
@@ -328,10 +329,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://techcrunch.ir/startup-lean-validation-guide',
     platform: 'article',
     embedUrl: 'https://techcrunch.ir/startup-lean-validation-guide',
-    thumbnail: 'https://upc.geekclub.ir/s1/contents/2026/10/art_startup_lean.jpg',
+    thumbnail: FALLBACK_IMAGES.article,
     author: {
       name: 'الهام سعیدی',
-      avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_elham_saeedi.jpg',
+      avatar: getAuthorAvatar('الهام سعیدی'),
       handle: 'مشاور استارتاپ‌ها',
       isVerified: true
     },
@@ -361,7 +362,7 @@ export const INITIAL_COMMENTS: Record<string, CommentItem[]> = {
       contentId: 'yt-1',
       author: {
         name: 'رضا کمالی',
-        avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_reza_kamali.jpg'
+        avatar: getAuthorAvatar('رضا کمالی')
       },
       text: 'فوق‌العاده بود! بالاخره یه ویدیو پیدا کردم که عمیق به مقایسه این مدل‌ها بپردازه.',
       createdAt: '۱ ساعت پیش',
@@ -374,7 +375,7 @@ export const INITIAL_COMMENTS: Record<string, CommentItem[]> = {
       contentId: 'art-1',
       author: {
         name: 'مریم حسینی',
-        avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_maryam_hoseini.jpg'
+        avatar: getAuthorAvatar('مریم حسینی')
       },
       text: 'دقیقاً با نکته ریزانیمیشن‌ها موافقم. حس سرزنده‌بودن به اپ میده.',
       createdAt: '۳ ساعت پیش',
@@ -388,7 +389,7 @@ export const INITIAL_INBOX: InboxMessage[] = [
     id: 'msg-1',
     sender: {
       name: 'پشتیبانی گیک‌کلاب',
-      avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_admin.jpg',
+      avatar: getAuthorAvatar('پشتیبانی گیک‌کلاب'),
       isSystemAdmin: true,
       role: 'سیستم'
     },
@@ -407,7 +408,7 @@ export const INITIAL_PROFILE_COMMENTS: Record<string, ProfileComment[]> = {
       profileUserId: 'usr-sara',
       author: {
         name: 'فرهاد نصیری',
-        avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_farhad_dev.jpg',
+        avatar: getAuthorAvatar('فرهاد نصیری'),
         username: 'farhad_dev'
       },
       text: 'پست‌های فوق‌العاده‌ای در حوزه UI/UX منتشر می‌کنی. موفق باشی!',

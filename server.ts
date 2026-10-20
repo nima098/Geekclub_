@@ -650,16 +650,28 @@ async function syncPlatformCoverImages() {
           }
         }
       }
+      // 3. Instagram / Article Cover Download
+      else if (item.url) {
+        try {
+          const noembed = await axios.get(`https://noembed.com/embed?url=${encodeURIComponent(item.url)}`, { timeout: 5000 });
+          if (noembed.data?.thumbnail_url) {
+            sourceImageUrl = noembed.data.thumbnail_url;
+          }
+        } catch {}
+      }
 
-      // Only download if thumbnail is missing, is external, or needs initial sync
-      const isAlreadySynced = item.thumbnail && (item.thumbnail.includes('upc.geekclub.ir') || item.thumbnail.startsWith('/uploads/'));
-      if (sourceImageUrl && !isAlreadySynced) {
+      // Ensure local server file exists
+      const expectedFilename = `cover_${item.id}.jpg`;
+      const localFilePath = path.join(UPLOADS_DIR, expectedFilename);
+      if (sourceImageUrl && !fs.existsSync(localFilePath)) {
         console.log(`📥 Downloading original ${item.platform} cover for ${item.id} from ${sourceImageUrl}...`);
-        const cdnOrLocalUrl = await downloadAndCacheImage(sourceImageUrl, `cover_${item.id}`);
-        if (cdnOrLocalUrl && cdnOrLocalUrl !== item.thumbnail) {
-          item.thumbnail = cdnOrLocalUrl;
-          updated = true;
-        }
+        await downloadAndCacheImage(sourceImageUrl, `cover_${item.id}`);
+      }
+
+      // If thumbnail is empty, use working source image or fallback
+      if (!item.thumbnail) {
+        item.thumbnail = sourceImageUrl || `/uploads/${expectedFilename}`;
+        updated = true;
       }
     }
 

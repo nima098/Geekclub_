@@ -100,12 +100,46 @@ export const FALLBACK_IMAGES = {
 };
 
 /**
+ * Generates a colorful, deterministic, 100% reliable SVG avatar with the author's initial letter.
+ * Zero external network requests, works everywhere offline and online without 404s.
+ */
+export const getAuthorAvatar = (name: string = 'کاربر'): string => {
+  const cleanName = (name || 'کاربر').trim();
+  const initial = cleanName.charAt(0) || 'گ';
+  const colors = [
+    ['#3b82f6', '#1d4ed8'],
+    ['#8b5cf6', '#6d28d9'],
+    ['#ec4899', '#be185d'],
+    ['#10b981', '#047857'],
+    ['#f59e0b', '#b45309'],
+    ['#06b6d4', '#0e7490']
+  ];
+  let hash = 0;
+  for (let i = 0; i < cleanName.length; i++) {
+    hash = cleanName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const colorPair = colors[Math.abs(hash) % colors.length];
+
+  return `data:image/svg+xml;utf8,${encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="g_${Math.abs(hash)}" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="${colorPair[0]}"/>
+      <stop offset="100%" stop-color="${colorPair[1]}"/>
+    </linearGradient>
+  </defs>
+  <rect width="100" height="100" rx="50" fill="url(#g_${Math.abs(hash)})"/>
+  <text x="50" y="63" font-family="Tahoma, Arial, sans-serif" font-size="42" font-weight="bold" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">${initial}</text>
+</svg>
+`.trim())}`;
+};
+
+/**
  * Returns a reliable fallback image URL based on platform or URL content.
  */
 export const getPlatformFallbackImage = (platform?: Platform | string, rawUrl?: string): string => {
-  // If rawUrl is an external image link like YouTube thumbnail, proxy it via server
-  if (rawUrl && rawUrl.startsWith('http') && !rawUrl.includes('/api/proxy-image') && !rawUrl.includes('upc.geekclub.ir') && !rawUrl.startsWith('data:')) {
-    return `/api/proxy-image?url=${encodeURIComponent(rawUrl)}`;
+  if (platform === 'avatar') {
+    return FALLBACK_IMAGES.avatar;
   }
 
   if (platform === 'youtube' || (rawUrl && (rawUrl.includes('youtube.com') || rawUrl.includes('youtu.be')))) {
@@ -120,15 +154,12 @@ export const getPlatformFallbackImage = (platform?: Platform | string, rawUrl?: 
     return FALLBACK_IMAGES.aparat;
   }
 
-  if (platform === 'avatar') {
-    return FALLBACK_IMAGES.avatar;
-  }
-
   return FALLBACK_IMAGES.article;
 };
 
 /**
- * Image onError handler to replace broken or unreachable image URLs with server proxy or SVG Data URI.
+ * Image onError handler to replace broken or unreachable image URLs with reliable local file, proxy or SVG.
+ * Guaranteed never to throw infinite loops or 404 proxy cascades.
  */
 export const handleImageError = (
   e: React.SyntheticEvent<HTMLImageElement, Event>,
@@ -139,24 +170,42 @@ export const handleImageError = (
   const target = e.currentTarget;
   const currentSrc = target.src;
 
-  // Stop if already an inline Data URI
+  // 1. Stop if already an inline SVG Data URI
   if (currentSrc.startsWith('data:image')) {
     return;
   }
 
-  // 1. If CDN URL or external URL failed, try local downloaded server copy
-  if (!currentSrc.includes('/uploads/') && itemId) {
-    target.src = `/uploads/cover_${itemId}.jpg`;
+  // 2. If it's an avatar that failed, immediately replace with safe SVG avatar
+  if (platform === 'avatar' || currentSrc.includes('avatar')) {
+    target.src = FALLBACK_IMAGES.avatar;
     return;
   }
 
-  // 2. If failed on a direct external URL (like img.youtube.com), try proxy route
+  // 3. If failed on upc.geekclub.ir CDN, NEVER proxy upc.geekclub.ir (it would just 404 again)
+  if (currentSrc.includes('upc.geekclub.ir')) {
+    if (itemId && !currentSrc.includes('/uploads/')) {
+      target.src = `/uploads/cover_${itemId}.jpg`;
+      return;
+    }
+    const safeSvg = fallbackUrl || getPlatformFallbackImage(platform);
+    target.src = safeSvg;
+    return;
+  }
+
+  // 4. If failed on local /uploads/
+  if (currentSrc.includes('/uploads/')) {
+    const safeSvg = fallbackUrl || getPlatformFallbackImage(platform);
+    target.src = safeSvg;
+    return;
+  }
+
+  // 5. If failed on an external URL like img.youtube.com, try proxy route
   if (currentSrc.startsWith('http') && !currentSrc.includes('/api/proxy-image')) {
     target.src = `/api/proxy-image?url=${encodeURIComponent(currentSrc)}`;
     return;
   }
 
-  // 3. Final fallback: Clean inline SVG Data URI
+  // 6. Ultimate fallback: Clean platform SVG
   const safeSvg = (fallbackUrl && fallbackUrl.startsWith('data:')) 
     ? fallbackUrl 
     : getPlatformFallbackImage(platform);

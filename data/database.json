@@ -10,16 +10,12 @@
       "thumbnail": "https://img.youtube.com/vi/5kFfqpQ3_iI/hqdefault.jpg",
       "author": {
         "name": "سارا ناصری (کاربر عضو)",
-        "avatar": "https://upc.geekclub.ir/s1/contents/2026/10/avatar_sara_ux.jpg",
+        "avatar": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" rx=\"50\" fill=\"%233b82f6\"/><text x=\"50\" y=\"63\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"42\" font-weight=\"bold\" fill=\"%23ffffff\" text-anchor=\"middle\" dominant-baseline=\"middle\">س</text></svg>",
         "handle": "@sara_ux",
         "isVerified": false
       },
       "category": "programming",
-      "tags": [
-        "Astro",
-        "فرانت‌اند",
-        "بهینه‌سازی"
-      ],
+      "tags": ["Astro", "فرانت‌اند", "بهینه‌سازی"],
       "publishedAt": "۱۰ دقیقه پیش",
       "readingOrWatchTime": "۱۴ دقیقه",
       "likesCount": 0,
@@ -37,20 +33,15 @@
       "url": "https://www.youtube.com/watch?v=bMknfKXIFA8",
       "platform": "youtube",
       "embedUrl": "https://www.youtube.com/embed/bMknfKXIFA8",
-      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_221949_554fe9d8.jpg",
+      "thumbnail": "https://img.youtube.com/vi/bMknfKXIFA8/hqdefault.jpg",
       "author": {
         "name": "آکادمی کد و فناوری",
-        "avatar": "https://upc.geekclub.ir/s1/contents/2026/10/avatar_codetech.jpg",
+        "avatar": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" rx=\"50\" fill=\"%238b5cf6\"/><text x=\"50\" y=\"63\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"42\" font-weight=\"bold\" fill=\"%23ffffff\" text-anchor=\"middle\" dominant-baseline=\"middle\">آ</text></svg>",
         "handle": "@codetech_fa",
         "isVerified": true
       },
       "category": "ai",
-      "tags": [
-        "هوش مصنوعی",
-        "برنامه‌نویسی",
-        "تکنولوژی",
-        "LLM"
-      ],
+      "tags": ["هوش مصنوعی", "برنامه‌نویسی", "تکنولوژی", "LLM"],
       "publishedAt": "۲ ساعت پیش",
       "readingOrWatchTime": "۱۸ دقیقه",
       "likesCount": 142,
@@ -66,20 +57,15 @@
       "url": "https://virgool.io/@ux_design/modern-ui-principles",
       "platform": "article",
       "embedUrl": "https://virgool.io/@ux_design/modern-ui-principles",
-      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/art_modern_ui.jpg",
+      "thumbnail": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"800\" height=\"450\" viewBox=\"0 0 800 450\"><rect width=\"800\" height=\"450\" fill=\"%230f172a\"/><rect x=\"330\" y=\"110\" width=\"140\" height=\"150\" rx=\"12\" fill=\"%23334155\"/><rect x=\"350\" y=\"135\" width=\"100\" height=\"12\" rx=\"4\" fill=\"%2306b6d4\"/><rect x=\"350\" y=\"160\" width=\"80\" height=\"8\" rx=\"3\" fill=\"%2394a3b8\"/><rect x=\"350\" y=\"180\" width=\"100\" height=\"8\" rx=\"3\" fill=\"%2364748b\"/><rect x=\"350\" y=\"200\" width=\"60\" height=\"8\" rx=\"3\" fill=\"%2364748b\"/><text x=\"400\" y=\"315\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"22\" font-weight=\"bold\" fill=\"%23f8fafc\" text-anchor=\"middle\">مقاله تخصصی گیک کلاب</text></svg>",
       "author": {
         "name": "نیما ارجمند",
-        "avatar": "https://upc.geekclub.ir/s1/contents/2026/10/avatar_nima_arjmand.jpg",
+        "avatar": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" rx=\"50\" fill=\"%2310b981\"/><text x=\"50\" y=\"63\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"42\" font-weight=\"bold\" fill=\"%23ffffff\" text-anchor=\"middle\" dominant-baseline=\"middle\">ن</text></svg>",
         "handle": "طراح ارشد محصول",
         "isVerified": true
       },
       "category": "design",
-      "tags": [
-        "طراحی رابط کاربری",
-        "UI/UX",
-        "طراحی محصول",
-        "ترندهای دیزاین"
-      ],
+      "tags": ["طراحی رابط کاربری", "UI/UX", "طراحی محصول", "ترندهای دیزاین"],
       "publishedAt": "۵ ساعت پیش",
       "readingOrWatchTime": "۷ دقیقه مطالعه",
       "likesCount": 89,
@@ -96,20 +82,15 @@
       "url": "https://www.instagram.com/reel/DZfG1Nui61u/",
       "platform": "instagram",
       "embedUrl": "https://www.instagram.com/reel/DZfG1Nui61u/embed",
-      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/ig_geek_workspace.jpg",
+      "thumbnail": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"800\" height=\"450\" viewBox=\"0 0 800 450\"><rect width=\"800\" height=\"450\" fill=\"%230f172a\"/><circle cx=\"400\" cy=\"190\" r=\"110\" fill=\"%23833ab4\" fill-opacity=\"0.2\"/><rect x=\"340\" y=\"130\" width=\"120\" height=\"120\" rx=\"30\" fill=\"none\" stroke=\"%23fd1d1d\" stroke-width=\"9\"/><circle cx=\"400\" cy=\"190\" r=\"35\" fill=\"none\" stroke=\"%23fd1d1d\" stroke-width=\"9\"/><text x=\"400\" y=\"310\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"22\" font-weight=\"bold\" fill=\"%23f8fafc\" text-anchor=\"middle\">محتوای اینستاگرام | GeekClub</text></svg>",
       "author": {
         "name": "گیک استودیو",
-        "avatar": "https://upc.geekclub.ir/s1/contents/2026/10/avatar_geek_setup.jpg",
+        "avatar": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" rx=\"50\" fill=\"%23ec4899\"/><text x=\"50\" y=\"63\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"42\" font-weight=\"bold\" fill=\"%23ffffff\" text-anchor=\"middle\" dominant-baseline=\"middle\">گ</text></svg>",
         "handle": "@geek_setup",
         "isVerified": true
       },
       "category": "tech",
-      "tags": [
-        "گجت",
-        "میز کار",
-        "برنامه‌نویسی",
-        "اینستاگرام"
-      ],
+      "tags": ["گجت", "میز کار", "برنامه‌نویسی", "اینستاگرام"],
       "publishedAt": "همین الان",
       "readingOrWatchTime": "ریلز اینستاگرام",
       "likesCount": 128,
@@ -126,20 +107,15 @@
       "url": "https://www.aparat.com/v/m435165",
       "platform": "aparat",
       "embedUrl": "https://www.aparat.com/video/video/embed/videohash/m435165/vt/frame",
-      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/ap_ai_machine_learning.jpg",
+      "thumbnail": "https://static.cdn.asset.aparat.com/avt/m435165-big.jpg",
       "author": {
         "name": "کانال هوش مصنوعی ایران",
-        "avatar": "https://upc.geekclub.ir/s1/contents/2026/10/avatar_ai_iran.jpg",
+        "avatar": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" rx=\"50\" fill=\"%23ed145b\"/><text x=\"50\" y=\"63\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"42\" font-weight=\"bold\" fill=\"%23ffffff\" text-anchor=\"middle\" dominant-baseline=\"middle\">ک</text></svg>",
         "handle": "@ai_iran",
         "isVerified": true
       },
       "category": "ai",
-      "tags": [
-        "آپارات",
-        "هوش مصنوعی",
-        "پایتون",
-        "آموزش"
-      ],
+      "tags": ["آپارات", "هوش مصنوعی", "پایتون", "آموزش"],
       "publishedAt": "۳ ساعت پیش",
       "readingOrWatchTime": "۲۲ دقیقه ویدیو",
       "likesCount": 164,
@@ -156,20 +132,15 @@
       "url": "https://www.instagram.com/reel/C8kP2qXyZa1/",
       "platform": "instagram",
       "embedUrl": "https://www.instagram.com/reel/C8kP2qXyZa1/embed",
-      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/ig_javascript_tricks.jpg",
+      "thumbnail": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"800\" height=\"450\" viewBox=\"0 0 800 450\"><rect width=\"800\" height=\"450\" fill=\"%230f172a\"/><rect x=\"340\" y=\"130\" width=\"120\" height=\"120\" rx=\"30\" fill=\"none\" stroke=\"%23fd1d1d\" stroke-width=\"9\"/><circle cx=\"400\" cy=\"190\" r=\"35\" fill=\"none\" stroke=\"%23fd1d1d\" stroke-width=\"9\"/><text x=\"400\" y=\"310\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"22\" font-weight=\"bold\" fill=\"%23f8fafc\" text-anchor=\"middle\">ترفندهای جاوااسکریپت</text></svg>",
       "author": {
         "name": "کد با سارا",
-        "avatar": "https://upc.geekclub.ir/s1/contents/2026/10/avatar_codewith_sara.jpg",
+        "avatar": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" rx=\"50\" fill=\"%23f59e0b\"/><text x=\"50\" y=\"63\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"42\" font-weight=\"bold\" fill=\"%23ffffff\" text-anchor=\"middle\" dominant-baseline=\"middle\">ک</text></svg>",
         "handle": "@codewith_sara",
         "isVerified": true
       },
       "category": "programming",
-      "tags": [
-        "جاوااسکریپت",
-        "ترفند کدنویسی",
-        "فرانت‌اند",
-        "تایپ‌اسکریپت"
-      ],
+      "tags": ["جاوااسکریپت", "ترفند کدنویسی", "فرانت‌اند", "تایپ‌اسکریپت"],
       "publishedAt": "دیروز",
       "readingOrWatchTime": "۶۰ ثانیه ریلز",
       "likesCount": 310,
@@ -185,20 +156,15 @@
       "url": "https://www.youtube.com/watch?v=LDB4uaJ87e0",
       "platform": "youtube",
       "embedUrl": "https://www.youtube.com/embed/LDB4uaJ87e0",
-      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_221950_07283f17.jpg",
+      "thumbnail": "https://img.youtube.com/vi/LDB4uaJ87e0/hqdefault.jpg",
       "author": {
         "name": "فرهاد نصیری",
-        "avatar": "https://upc.geekclub.ir/s1/contents/2026/10/avatar_farhad_dev.jpg",
+        "avatar": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" rx=\"50\" fill=\"%2306b6d4\"/><text x=\"50\" y=\"63\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"42\" font-weight=\"bold\" fill=\"%23ffffff\" text-anchor=\"middle\" dominant-baseline=\"middle\">ف</text></svg>",
         "handle": "@farhad_dev",
         "isVerified": true
       },
       "category": "programming",
-      "tags": [
-        "ری‌اکت",
-        "Tailwind CSS",
-        "فول استک",
-        "آموزش پروژه محور"
-      ],
+      "tags": ["ری‌اکت", "Tailwind CSS", "فول استک", "آموزش پروژه محور"],
       "publishedAt": "۲ روز پیش",
       "readingOrWatchTime": "۳۵ دقیقه",
       "likesCount": 224,
@@ -214,20 +180,15 @@
       "url": "https://medium.com/@techlead/high-scale-database-strategies",
       "platform": "article",
       "embedUrl": "https://medium.com/@techlead/high-scale-database-strategies",
-      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/art_database_scale.jpg",
+      "thumbnail": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"800\" height=\"450\" viewBox=\"0 0 800 450\"><rect width=\"800\" height=\"450\" fill=\"%230f172a\"/><rect x=\"330\" y=\"110\" width=\"140\" height=\"150\" rx=\"12\" fill=\"%23334155\"/><text x=\"400\" y=\"315\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"22\" font-weight=\"bold\" fill=\"%23f8fafc\" text-anchor=\"middle\">بهینه‌سازی دیتابیس</text></svg>",
       "author": {
         "name": "مهندس آرش شریفی",
-        "avatar": "https://upc.geekclub.ir/s1/contents/2026/10/avatar_arash_sharifi.jpg",
+        "avatar": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" rx=\"50\" fill=\"%233b82f6\"/><text x=\"50\" y=\"63\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"42\" font-weight=\"bold\" fill=\"%23ffffff\" text-anchor=\"middle\" dominant-baseline=\"middle\">آ</text></svg>",
         "handle": "معمار نرم‌افزار",
         "isVerified": true
       },
       "category": "tech",
-      "tags": [
-        "پایگاه داده",
-        "مقیاس‌پذیری",
-        "Redis",
-        "معماری سیستم"
-      ],
+      "tags": ["پایگاه داده", "مقیاس‌پذیری", "Redis", "معماری سیستم"],
       "publishedAt": "۳ روز پیش",
       "readingOrWatchTime": "۱۲ دقیقه مطالعه",
       "likesCount": 165,
@@ -244,20 +205,15 @@
       "url": "https://www.instagram.com/p/C9ab12cdEFg/",
       "platform": "instagram",
       "embedUrl": "https://www.instagram.com/p/C9ab12cdEFg/embed",
-      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/ig_podcast_studio.jpg",
+      "thumbnail": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"800\" height=\"450\" viewBox=\"0 0 800 450\"><rect width=\"800\" height=\"450\" fill=\"%230f172a\"/><circle cx=\"400\" cy=\"190\" r=\"110\" fill=\"%23833ab4\" fill-opacity=\"0.2\"/><text x=\"400\" y=\"310\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"22\" font-weight=\"bold\" fill=\"%23f8fafc\" text-anchor=\"middle\">آنباکس ابزار تولید محتوا</text></svg>",
       "author": {
         "name": "استودیو پادکس",
-        "avatar": "https://upc.geekclub.ir/s1/contents/2026/10/avatar_podx_studio.jpg",
+        "avatar": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" rx=\"50\" fill=\"%238b5cf6\"/><text x=\"50\" y=\"63\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"42\" font-weight=\"bold\" fill=\"%23ffffff\" text-anchor=\"middle\" dominant-baseline=\"middle\">ا</text></svg>",
         "handle": "@podx_studio",
         "isVerified": false
       },
       "category": "entertainment",
-      "tags": [
-        "تولید محتوا",
-        "پادکست",
-        "تجهیزات استودیو",
-        "اینستاگرام"
-      ],
+      "tags": ["تولید محتوا", "پادکست", "تجهیزات استودیو", "اینستاگرام"],
       "publishedAt": "۴ روز پیش",
       "readingOrWatchTime": "پست اسلایدی",
       "likesCount": 420,
@@ -273,20 +229,15 @@
       "url": "https://www.youtube.com/watch?v=SqcY0GlETPk",
       "platform": "youtube",
       "embedUrl": "https://www.youtube.com/embed/SqcY0GlETPk",
-      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/cover_yt-3.jpg",
+      "thumbnail": "https://img.youtube.com/vi/SqcY0GlETPk/hqdefault.jpg",
       "author": {
         "name": "دکتر مانی دانشور",
-        "avatar": "https://upc.geekclub.ir/s1/contents/2026/10/avatar_mani_ai_lab.jpg",
+        "avatar": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" rx=\"50\" fill=\"%23ec4899\"/><text x=\"50\" y=\"63\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"42\" font-weight=\"bold\" fill=\"%23ffffff\" text-anchor=\"middle\" dominant-baseline=\"middle\">د</text></svg>",
         "handle": "@mani_ai_lab",
         "isVerified": true
       },
       "category": "ai",
-      "tags": [
-        "مهندسی پرامپت",
-        "هوش مصنوعی",
-        "پرامپت نویسی",
-        "تکنولوژی"
-      ],
+      "tags": ["مهندسی پرامپت", "هوش مصنوعی", "پرامپت نویسی", "تکنولوژی"],
       "publishedAt": "۵ روز پیش",
       "readingOrWatchTime": "۲۲ دقیقه",
       "likesCount": 380,
@@ -302,20 +253,15 @@
       "url": "https://techcrunch.ir/startup-lean-validation-guide",
       "platform": "article",
       "embedUrl": "https://techcrunch.ir/startup-lean-validation-guide",
-      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/art_startup_lean.jpg",
+      "thumbnail": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"800\" height=\"450\" viewBox=\"0 0 800 450\"><rect width=\"800\" height=\"450\" fill=\"%230f172a\"/><rect x=\"330\" y=\"110\" width=\"140\" height=\"150\" rx=\"12\" fill=\"%23334155\"/><text x=\"400\" y=\"315\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"22\" font-weight=\"bold\" fill=\"%23f8fafc\" text-anchor=\"middle\">راهنمای Lean Startup</text></svg>",
       "author": {
         "name": "الهام سعیدی",
-        "avatar": "https://upc.geekclub.ir/s1/contents/2026/10/avatar_elham_saeedi.jpg",
+        "avatar": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" rx=\"50\" fill=\"%2310b981\"/><text x=\"50\" y=\"63\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"42\" font-weight=\"bold\" fill=\"%23ffffff\" text-anchor=\"middle\" dominant-baseline=\"middle\">ا</text></svg>",
         "handle": "مشاور استارتاپ‌ها",
         "isVerified": true
       },
       "category": "business",
-      "tags": [
-        "استارتاپ",
-        "کسب و کار",
-        "مدیریت محصول",
-        "MVP"
-      ],
+      "tags": ["استارتاپ", "کسب و کار", "مدیریت محصول", "MVP"],
       "publishedAt": "۱ هفته پیش",
       "readingOrWatchTime": "۹ دقیقه مطالعه",
       "likesCount": 205,
