@@ -965,7 +965,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#090d16] light:bg-[#efefef] text-slate-100 light:text-slate-900 transition-colors duration-300 flex flex-col font-sans selection:bg-indigo-600 selection:text-white">
+    <div className="min-h-screen bg-[#090d16] light:bg-[#efefef] text-slate-100 light:text-slate-900 transition-colors duration-300 flex flex-col font-sans selection:bg-indigo-600 selection:text-white w-full max-w-full overflow-x-hidden">
       {/* Top Navigation */}
       <Navbar
         user={user}
@@ -986,7 +986,7 @@ export default function App() {
       />
 
       {/* Material Flat Hero Welcome Kicker */}
-      <div className="relative border-b border-slate-800/80 bg-slate-950/40 py-8 sm:py-12 overflow-hidden">
+      <div className="relative border-b border-slate-800/80 bg-slate-950/40 pt-8 sm:pt-12 pb-4 sm:pb-6 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="p-6 sm:p-8 rounded-[2rem] bg-slate-900/95 backdrop-blur-xl border border-slate-800/80 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             {/* Ambient Background Accent */}
@@ -1095,20 +1095,22 @@ export default function App() {
             {user?.isAdmin && (
               <button
                 onClick={() => setIsAdminModalOpen(true)}
-                className="flex items-center gap-1.5 text-amber-400 hover:text-amber-300 font-bold transition cursor-pointer bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1 rounded-lg border border-amber-500/20"
+                className="flex items-center gap-1.5 text-[#0077d9] hover:text-[#0066bd] font-bold transition cursor-pointer bg-[#0077d9]/10 hover:bg-[#0077d9]/20 px-2.5 py-1 rounded-lg border border-[#0077d9]/30"
+                style={{ color: '#0077d9' }}
                 title="ورود به پنل مدیریت سایت و بازیابی محتوا"
               >
-                <Crown className="w-3.5 h-3.5 text-amber-400" />
-                پنل مدیریت سایت
+                <Crown className="w-3.5 h-3.5 text-[#0077d9]" style={{ color: '#0077d9' }} />
+                <span style={{ color: '#0077d9' }}>پنل مدیریت سایت</span>
               </button>
             )}
 
             <button
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="flex items-center gap-1.5 text-indigo-400 hover:text-indigo-300 transition cursor-pointer"
+              className="flex items-center gap-1.5 text-[#0077d9] hover:text-[#0066bd] transition cursor-pointer"
+              style={{ color: '#0077d9' }}
             >
-              <ArrowUp className="w-4 h-4" />
-              بازگشت به بالا
+              <ArrowUp className="w-4 h-4 text-[#0077d9]" style={{ color: '#0077d9' }} />
+              <span className="text-[#0077d9]" style={{ color: '#0077d9' }}>بازگشت به بالا</span>
             </button>
           </div>
         </div>
@@ -1222,6 +1224,7 @@ export default function App() {
         onUpdateUserPermissions={handleUpdateUserPermissions}
         onApproveContent={handleApproveContent}
         onRejectContent={handleRejectContent}
+        onUpdateContents={(updatedItems) => setContents(updatedItems)}
       />
 
       {/* Dedicated Admin Portal Login Modal */}

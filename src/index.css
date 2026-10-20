@@ -19,6 +19,11 @@
     font-family: 'Vazirmatn', 'Vazir', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   }
   
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
   html, body, button, input, textarea, select {
     font-family: 'Vazirmatn', 'Vazir', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
     direction: rtl;

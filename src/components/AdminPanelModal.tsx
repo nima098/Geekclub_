@@ -44,6 +44,14 @@ import {
   InboxMessage, 
   SiteAdminSettings 
 } from '../types/content';
+import { 
+  getCDNConfig, 
+  saveCDNConfig, 
+  PHP_CDN_SCRIPT_CODE,
+  testCDNConnection,
+  transferExternalUrlToCDN,
+  CDNHealthReport
+} from '../services/cdnService';
 
 interface AdminPanelModalProps {
   isOpen: boolean;
@@ -61,6 +69,7 @@ interface AdminPanelModalProps {
   onUpdateUserPermissions: (userId: string, updates: Partial<UserProfile>) => void;
   onApproveContent: (contentId: string) => void;
   onRejectContent: (contentId: string) => void;
+  onUpdateContents?: (updatedContents: ContentItem[]) => void;
 }
 
 export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
@@ -78,7 +87,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   usersList = [],
   onUpdateUserPermissions,
   onApproveContent,
-  onRejectContent
+  onRejectContent,
+  onUpdateContents
 }) => {
   const [activeTab, setActiveTab] = useState<
     'dashboard' | 'contents' | 'users' | 'feedback' | 'broadcast' | 'settings'
@@ -99,6 +109,123 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [msgSubject, setMsgSubject] = useState('');
   const [msgContent, setMsgContent] = useState('');
   const [broadcastSent, setBroadcastSent] = useState(false);
+
+  // CDN Configuration state
+  const [cdnEndpoint, setCdnEndpoint] = useState(() => getCDNConfig().endpointUrl);
+  const [cdnToken, setCdnToken] = useState(() => getCDNConfig().apiToken);
+  const [copiedPhpScript, setCopiedPhpScript] = useState(false);
+  const [cdnSaveSuccess, setCdnSaveSuccess] = useState(false);
+
+  // CDN Health Check & Diagnostics state
+  const [cdnHealthReport, setCdnHealthReport] = useState<CDNHealthReport | null>(null);
+  const [isTestingCdn, setIsTestingCdn] = useState(false);
+
+  // CDN Image Migration state
+  const [isMigratingImages, setIsMigratingImages] = useState(false);
+  const [migrationStatus, setMigrationStatus] = useState<{
+    current: number;
+    total: number;
+    currentTitle: string;
+    completed: boolean;
+  } | null>(null);
+  const [migrationLogs, setMigrationLogs] = useState<string[]>([]);
+
+  const handleTestCDNHealth = async () => {
+    setIsTestingCdn(true);
+    try {
+      const report = await testCDNConnection();
+      setCdnHealthReport(report);
+    } catch {
+      setCdnHealthReport({
+        ok: false,
+        statusCode: 0,
+        endpoint: cdnEndpoint,
+        latencyMs: 0,
+        message: 'خطا در ارزیابی سرور CDN',
+        details: 'امکان برقراری ارتباط وجود ندارد.',
+        timestamp: new Date().toLocaleTimeString('fa-IR')
+      });
+    } finally {
+      setIsTestingCdn(false);
+    }
+  };
+
+  const handleStartImageMigration = async () => {
+    const unmigratedItems = contents.filter(
+      (item) => item.thumbnail && !item.thumbnail.includes('upc.geekclub.ir')
+    );
+
+    if (unmigratedItems.length === 0) {
+      setMigrationLogs(['تمام عکس‌های موجود در حال حاضر روی CDN اختصاصی (upc.geekclub.ir) قرار دارند.']);
+      setMigrationStatus({
+        current: 0,
+        total: 0,
+        currentTitle: 'تمامی عکس‌ها روی CDN قرار دارند',
+        completed: true
+      });
+      return;
+    }
+
+    setIsMigratingImages(true);
+    setMigrationStatus({
+      current: 0,
+      total: unmigratedItems.length,
+      currentTitle: unmigratedItems[0]?.title || '',
+      completed: false
+    });
+    setMigrationLogs([`شروع انتقال ${unmigratedItems.length} تصویر به هاست CDN اختصاصی...`]);
+
+    let updatedList = [...contents];
+    let transferredCount = 0;
+
+    for (let i = 0; i < unmigratedItems.length; i++) {
+      const item = unmigratedItems[i];
+      setMigrationStatus({
+        current: i + 1,
+        total: unmigratedItems.length,
+        currentTitle: item.title,
+        completed: false
+      });
+
+      try {
+        const cdnUrl = await transferExternalUrlToCDN(item.thumbnail, 'contents', `migrated_${item.id}`);
+        if (cdnUrl && cdnUrl.includes('upc.geekclub.ir')) {
+          transferredCount++;
+          updatedList = updatedList.map((c) => (c.id === item.id ? { ...c, thumbnail: cdnUrl } : c));
+          setMigrationLogs((prev) => [
+            `[${i + 1}/${unmigratedItems.length}] عکس "${item.title}" به CDN منتقل گردید: ${cdnUrl}`,
+            ...prev
+          ]);
+        } else {
+          setMigrationLogs((prev) => [
+            `[${i + 1}/${unmigratedItems.length}] انتقال عکس "${item.title}" انجام نشد (لینک فعلی حفظ شد)`,
+            ...prev
+          ]);
+        }
+      } catch (err: any) {
+        setMigrationLogs((prev) => [
+          `[${i + 1}/${unmigratedItems.length}] خطا در انتقال عکس "${item.title}": ${err.message}`,
+          ...prev
+        ]);
+      }
+    }
+
+    if (onUpdateContents && transferredCount > 0) {
+      onUpdateContents(updatedList);
+    }
+
+    setIsMigratingImages(false);
+    setMigrationStatus({
+      current: unmigratedItems.length,
+      total: unmigratedItems.length,
+      currentTitle: 'عملیات انتقال به پایان رسید',
+      completed: true
+    });
+    setMigrationLogs((prev) => [
+      `پایان عملیات: تعداد ${transferredCount} تصویر با موفقیت فشرده‌سازی و روی upc.geekclub.ir/s1/ ذخیره شد.`,
+      ...prev
+    ]);
+  };
 
   // Fullscreen state & effect (MUST BE DECLARED BEFORE ANY RETURN STATEMENT)
   const [isBrowserFullscreen, setIsBrowserFullscreen] = useState(
@@ -1107,6 +1234,254 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   >
                     {siteSettings.enableCaptcha ? <ToggleRight className="w-9 h-9" /> : <ToggleLeft className="w-9 h-9" />}
                   </button>
+                </div>
+              </div>
+
+              {/* Dedicated CDN Setup & Management Section (upc.geekclub.ir) */}
+              <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-4">
+                <div className="flex items-center justify-between border-b border-amber-500/20 pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400">
+                      <ExternalLink className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm sm:text-base font-bold text-amber-200">
+                        تنظیمات و اسکریپت CDN هاست اختصاصی (upc.geekclub.ir)
+                      </h4>
+                      <p className="text-xs text-slate-300">
+                        مدیریت نقطه اتصال آپلود تصاویر و دریافت کد آماده فایل <code className="text-amber-300 font-mono">upload.php</code>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-200 mb-1.5">
+                      آدرس کامل Endpoint آپلود CDN
+                    </label>
+                    <input
+                      type="url"
+                      value={cdnEndpoint}
+                      onChange={(e) => setCdnEndpoint(e.target.value)}
+                      placeholder="https://upc.geekclub.ir/upload.php"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 dir-ltr text-left font-mono focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-200 mb-1.5">
+                      توکن امنیتی API (Secret Key)
+                    </label>
+                    <input
+                      type="text"
+                      value={cdnToken}
+                      onChange={(e) => setCdnToken(e.target.value)}
+                      placeholder="geekclub_cdn_secret_2026"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 dir-ltr text-left font-mono focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      saveCDNConfig({ endpointUrl: cdnEndpoint, apiToken: cdnToken });
+                      setCdnSaveSuccess(true);
+                      setTimeout(() => setCdnSaveSuccess(false), 2500);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md shadow-amber-500/20"
+                  >
+                    <Check className="w-4 h-4" />
+                    ذخیره تنظیمات CDN
+                  </button>
+
+                  {cdnSaveSuccess && (
+                    <span className="text-xs text-emerald-400 font-bold flex items-center gap-1 animate-in fade-in duration-200">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      تنظیمات CDN با موفقیت ذخیره شد.
+                    </span>
+                  )}
+                </div>
+
+                {/* PHP Script Code Copy Box */}
+                <div className="pt-3 border-t border-amber-500/20 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                      کد اسکریپت واسط PHP (ذخیره با نام upload.php روی upc.geekclub.ir)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(PHP_CDN_SCRIPT_CODE);
+                        setCopiedPhpScript(true);
+                        setTimeout(() => setCopiedPhpScript(false), 2500);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-white border border-amber-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                    >
+                      {copiedPhpScript ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          کد کپی شد!
+                        </>
+                      ) : (
+                        <>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          کپی کد upload.php
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="relative">
+                    <textarea
+                      readOnly
+                      rows={6}
+                      value={PHP_CDN_SCRIPT_CODE}
+                      className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] font-mono text-emerald-400 dir-ltr text-left leading-relaxed focus:outline-none"
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    راهنما: کافیست متن بالا را کپی کرده، در هاست خود در پوشه اصلی <code className="text-amber-300 font-mono">upc.geekclub.ir</code> درون فایلی به نام <code className="text-amber-300 font-mono">upload.php</code> ذخیره نمایید. تصاویر به صورت پوشه‌بندی شده و سازمان‌دهی شده درون پوشه اصلی <code className="text-amber-300 font-mono">s1/</code> و بخش‌های مربوطه (مانند <code className="text-amber-300 font-mono">s1/contents/YYYY/MM/</code> و <code className="text-amber-300 font-mono">s1/avatars/YYYY/MM/</code>) خودکار ذخیره می‌شوند.
+                  </p>
+                </div>
+
+                {/* Connection Health Test & Diagnostic Report Box */}
+                <div className="pt-4 border-t border-amber-500/20 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className="text-xs font-bold text-slate-100 flex items-center gap-1.5">
+                        <ShieldCheck className="w-4 h-4 text-amber-400" />
+                        گزارش سلامت اتصال و وضعیت خطاهای CDN
+                      </h5>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        ارزیابی زنده اتصال مرورگر به endpoint اختصاصی <code className="text-amber-300 font-mono">upc.geekclub.ir/s1/upload.php</code>
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleTestCDNHealth}
+                      disabled={isTestingCdn}
+                      className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer border border-amber-500/30 disabled:opacity-50"
+                    >
+                      <Clock className={`w-3.5 h-3.5 ${isTestingCdn ? 'animate-spin text-amber-400' : ''}`} />
+                      {isTestingCdn ? 'در حال سنجش...' : 'تست اتصال CDN'}
+                    </button>
+                  </div>
+
+                  {cdnHealthReport && (
+                    <div
+                      className={`p-3 rounded-xl text-xs space-y-1.5 border animate-in fade-in duration-200 ${
+                        cdnHealthReport.ok
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
+                          : 'bg-rose-500/10 border-rose-500/30 text-rose-200'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between font-bold">
+                        <span className="flex items-center gap-1.5">
+                          {cdnHealthReport.ok ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                          ) : (
+                            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                          )}
+                          {cdnHealthReport.message}
+                        </span>
+                        <span className="font-mono text-[10px] dir-ltr opacity-80">
+                          {cdnHealthReport.timestamp} - {cdnHealthReport.latencyMs}ms
+                        </span>
+                      </div>
+                      <p className="text-[11px] leading-relaxed opacity-90">
+                        {cdnHealthReport.details}
+                      </p>
+                      <div className="text-[10px] font-mono dir-ltr text-slate-400 bg-slate-950/60 p-2 rounded-lg border border-slate-800/80">
+                        Endpoint: {cdnHealthReport.endpoint} | Status Code: {cdnHealthReport.statusCode}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Existing Images Transfer / Migration Tool Section */}
+                <div className="pt-4 border-t border-amber-500/20 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className="text-xs font-bold text-slate-100 flex items-center gap-1.5">
+                        <RotateCcw className="w-4 h-4 text-amber-400" />
+                        انتقال عکس‌های فعلی به منبع اختصاصی CDN
+                      </h5>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        فشرده‌سازی خودکار و انتقال تصاویری که هنوز روی CDN آپلود نشده‌اند
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleStartImageMigration}
+                      disabled={isMigratingImages}
+                      className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md shadow-amber-500/20 disabled:opacity-50"
+                    >
+                      <ExternalLink className={`w-3.5 h-3.5 ${isMigratingImages ? 'animate-spin' : ''}`} />
+                      {isMigratingImages ? 'در حال انتقال...' : 'انتقال عکس‌های فعلی به CDN'}
+                    </button>
+                  </div>
+
+                  {/* Migration Stats Pill */}
+                  <div className="grid grid-cols-3 gap-2 text-center text-xs pt-1">
+                    <div className="p-2 rounded-xl bg-slate-900 border border-slate-800">
+                      <span className="block text-[10px] text-slate-400">کل محتواها</span>
+                      <span className="font-bold text-slate-100 font-mono">{contents.length}</span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                      <span className="block text-[10px] text-emerald-300">روی CDN اختصاصی</span>
+                      <span className="font-bold text-emerald-400 font-mono">
+                        {contents.filter((c) => c.thumbnail && c.thumbnail.includes('upc.geekclub.ir')).length}
+                      </span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                      <span className="block text-[10px] text-amber-300">نیازمند انتقال</span>
+                      <span className="font-bold text-amber-400 font-mono">
+                        {contents.filter((c) => c.thumbnail && !c.thumbnail.includes('upc.geekclub.ir')).length}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Progress & Live Log Box */}
+                  {migrationStatus && (
+                    <div className="p-3 rounded-xl bg-slate-900 border border-amber-500/30 space-y-2 text-xs">
+                      <div className="flex items-center justify-between text-amber-300 font-medium">
+                        <span className="truncate max-w-[240px]">
+                          {migrationStatus.completed ? 'اتمام فرآیند انتقال' : `در حال انتقال: ${migrationStatus.currentTitle}`}
+                        </span>
+                        <span className="font-mono text-white">
+                          {migrationStatus.current} / {migrationStatus.total}
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                        <div
+                          className="bg-amber-400 h-full transition-all duration-300 rounded-full"
+                          style={{
+                            width: `${
+                              migrationStatus.total > 0
+                                ? Math.round((migrationStatus.current / migrationStatus.total) * 100)
+                                : 100
+                            }%`
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {migrationLogs.length > 0 && (
+                    <div className="max-h-32 overflow-y-auto p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-[10px] font-mono text-slate-300 space-y-1 dir-ltr text-left">
+                      {migrationLogs.map((log, idx) => (
+                        <div key={idx} className="leading-snug border-b border-slate-900/60 pb-0.5">
+                          {log}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

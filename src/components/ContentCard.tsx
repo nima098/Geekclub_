@@ -71,28 +71,28 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     switch (item.platform) {
       case 'youtube':
         return {
-          icon: <Youtube className="w-3.5 h-3.5 text-red-400" />,
+          icon: <Youtube className="w-3 h-3 text-red-400" />,
           label: 'یوتیوب',
           badgeBg: 'bg-slate-800/80 text-slate-200 border border-slate-700/60 shadow-md',
           accentColor: 'hover:border-red-500/60'
         };
       case 'instagram':
         return {
-          icon: <Instagram className="w-3.5 h-3.5 text-pink-400" />,
+          icon: <Instagram className="w-3 h-3 text-pink-400" />,
           label: 'اینستاگرام',
           badgeBg: 'bg-slate-800/80 text-slate-200 border border-slate-700/60 shadow-md',
           accentColor: 'hover:border-pink-500/60'
         };
       case 'article':
         return {
-          icon: <Newspaper className="w-3.5 h-3.5 text-emerald-400" />,
+          icon: <Newspaper className="w-3 h-3 text-emerald-400" />,
           label: 'مقاله وب',
           badgeBg: 'bg-slate-800/80 text-slate-200 border border-slate-700/60 shadow-md',
           accentColor: 'hover:border-emerald-500/60'
         };
       case 'aparat':
         return {
-          icon: <Video className="w-3.5 h-3.5 text-rose-400" />,
+          icon: <Video className="w-3 h-3 text-rose-400" />,
           label: 'آپارات',
           badgeBg: 'bg-slate-800/80 text-slate-200 border border-slate-700/60 shadow-md',
           accentColor: 'hover:border-rose-500/60'
@@ -137,10 +137,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 
                 {/* Play Button Overlay */}
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div 
-                    style={{ backgroundColor: 'oklch(0.592 0.249 0.584)' }}
-                    className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl text-white flex items-center justify-center shadow-xl shadow-[oklch(0.592_0.249_0.584)]/40 group-hover/media:scale-110 transition-all duration-300 backdrop-blur-sm"
-                  >
+                  <div style={{ backgroundColor: "oklch(0.592 0.249 0.584)" }} className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl text-white flex items-center justify-center shadow-xl shadow-[oklch(0.592_0.249_0.584)]/40 group-hover/media:scale-110 transition-all duration-300 backdrop-blur-sm">
                     <Play className="w-6 h-6 fill-white ml-0.5" />
                   </div>
                 </div>
@@ -173,10 +170,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent flex flex-col justify-end p-4">
                   {/* Play Button Overlay */}
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div 
-                      style={{ backgroundColor: 'oklch(0.592 0.249 0.584)' }}
-                      className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl text-white flex items-center justify-center shadow-xl shadow-[oklch(0.592_0.249_0.584)]/40 group-hover/ig:scale-110 transition-all duration-300 backdrop-blur-sm"
-                    >
+                    <div style={{ backgroundColor: "oklch(0.592 0.249 0.584)" }} className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl text-white flex items-center justify-center shadow-xl shadow-[oklch(0.592_0.249_0.584)]/40 group-hover/ig:scale-110 transition-all duration-300 backdrop-blur-sm">
                       <Play className="w-6 h-6 fill-white ml-0.5" />
                     </div>
                   </div>
@@ -211,10 +205,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 
                 {/* Play Button Overlay */}
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div 
-                    style={{ backgroundColor: 'oklch(0.592 0.249 0.584)' }}
-                    className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl text-white flex items-center justify-center shadow-xl shadow-[oklch(0.592_0.249_0.584)]/40 group-hover/media:scale-110 transition-all duration-300 backdrop-blur-sm"
-                  >
+                  <div style={{ backgroundColor: "oklch(0.592 0.249 0.584)" }} className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl text-white flex items-center justify-center shadow-xl shadow-[oklch(0.592_0.249_0.584)]/40 group-hover/media:scale-110 transition-all duration-300 backdrop-blur-sm">
                     <Play className="w-6 h-6 fill-white ml-0.5" />
                   </div>
                 </div>
@@ -245,19 +236,28 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           </div>
         )}
 
-        {/* Top-Right Platform Badge & Pending Status */}
-        <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
-          <span className={`text-[11px] font-bold px-2.5 py-1 rounded-xl flex items-center gap-1.5 backdrop-blur-md ${meta.badgeBg}`}>
-            {meta.icon}
-            {meta.label}
-          </span>
-          {item.approvalStatus === 'pending' && (
+        {/* Top-Right Pending Status */}
+        {item.approvalStatus === 'pending' && (
+          <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
             <span className="text-[10px] font-bold px-2.5 py-1 rounded-xl bg-amber-500 text-slate-950 flex items-center gap-1 shadow-md animate-pulse">
               <Clock className="w-3 h-3 text-slate-950" />
               در انتظار بررسی
             </span>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Bottom-Left Platform Source Link (Icon Only) */}
+        <a
+          href={item.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="absolute bottom-2 left-2 z-10 inline-flex items-center justify-center p-1 rounded-md bg-slate-800/80 hover:bg-slate-750 text-slate-200 hover:text-white border border-slate-700/60 backdrop-blur-md transition-all hover:scale-105 shadow-md"
+          title={`مشاهده منبع در ${meta.label}`}
+          aria-label={`مشاهده منبع در ${meta.label}`}
+        >
+          {meta.icon}
+        </a>
       </div>
 
       {/* Content Body */}

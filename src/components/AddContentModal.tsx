@@ -18,6 +18,8 @@ import {
   AlertTriangle,
   ExternalLink
 } from 'lucide-react';
+import { ImageCDNUpload } from './ImageCDNUpload';
+import { transferExternalUrlToCDN } from '../services/cdnService';
 import { 
   Platform, 
   Category, 
@@ -81,6 +83,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
   const [isLoadingMeta, setIsLoadingMeta] = useState(false);
   const [fetchedMeta, setFetchedMeta] = useState<ExtractedMetadata | null>(null);
   const [captchaVerified, setCaptchaVerified] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Helper to normalize URLs for accurate comparison
   const normalizeUrl = (raw: string): string => {
@@ -249,14 +252,16 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!url.trim()) return;
+    if (!url.trim() || isSubmitting) return;
 
     if (duplicateItem) {
       alert('خطا: این لینک قبلاً در گیک کلاب ثبت شده است!');
       return;
     }
+
+    setIsSubmitting(true);
 
     try {
       const parsed = parseContentUrl(url.trim());
@@ -313,7 +318,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
       );
 
       const finalAuthorName = authorName.trim() || fetchedMeta?.authorName || user?.displayName || 'کاربر گیک کلاب';
-      const finalThumbnail = thumbnail.trim() || fetchedMeta?.thumbnail || (
+      let rawThumbnail = thumbnail.trim() || fetchedMeta?.thumbnail || (
         finalPlatform === 'youtube' && parsed.detectedId
           ? `https://img.youtube.com/vi/${parsed.detectedId}/hqdefault.jpg`
           : finalPlatform === 'instagram'
@@ -322,6 +327,16 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
           ? 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=800&q=80'
           : 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=800&q=80'
       );
+
+      // Auto transfer cover photo (YouTube, Aparat, Instagram, Article) to personal CDN on upc.geekclub.ir/s1/
+      let finalThumbnail = rawThumbnail;
+      if (rawThumbnail && !rawThumbnail.includes('upc.geekclub.ir')) {
+        try {
+          finalThumbnail = await transferExternalUrlToCDN(rawThumbnail, 'contents', `cover_${finalPlatform}`);
+        } catch (err) {
+          console.warn('Auto CDN transfer fallback to original URL:', err);
+        }
+      }
 
       const rawTags = tagsInput
         .split(/[,،\s]+/)
@@ -381,14 +396,19 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
       setCategoryInput('');
       setSelectedCategory('auto');
       setTagsInput('');
+      setThumbnail('');
+      setReadingOrWatchTime('');
       setAuthorName('');
+      setEmbedUrl('');
+      setArticleContent('');
       setFetchedMeta(null);
+      setDetectedPlatform(null);
       setCaptchaVerified(false);
-
-      // Close modal on successful submission
       onClose();
     } catch (err) {
       console.error('Error submitting content:', err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -679,6 +699,14 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
             />
           </div>
 
+          {/* CDN Cover Image Upload */}
+          <ImageCDNUpload
+            currentUrl={thumbnail}
+            onUrlChange={(newUrl) => setThumbnail(newUrl)}
+            label="تصویر کاور محتوا (آپلود مستقیم به CDN اختصاصی upc.geekclub.ir در پوشه s1)"
+            folder="contents"
+          />
+
           {/* Category with Auto-detect and Suggestion / Autocomplete */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="relative" ref={categoryContainerRef}>
@@ -941,11 +969,20 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={!url.trim() || Boolean(duplicateItem)}
+                disabled={!url.trim() || Boolean(duplicateItem) || isSubmitting}
                 className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:pointer-events-none text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition active:scale-95 cursor-pointer"
               >
-                <PlusCircle className="w-4 h-4" />
-                انتشار محتوا
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
+                    در حال انتقال کاور به CDN اختصاصی...
+                  </>
+                ) : (
+                  <>
+                    <PlusCircle className="w-4 h-4" />
+                    انتشار محتوا
+                  </>
+                )}
               </button>
             </div>
         </form>

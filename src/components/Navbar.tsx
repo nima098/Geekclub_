@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Share2, 
   PlusCircle, 
@@ -58,21 +58,48 @@ export const Navbar: React.FC<NavbarProps> = ({
   onToggleTheme
 }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowProfileMenu(false);
+      }
+    };
+
+    if (showProfileMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showProfileMenu]);
 
   return (
-    <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-xl border-b border-slate-800/80 shadow-md shadow-slate-950/20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-30 w-full max-w-full overflow-x-clip bg-slate-900/95 backdrop-blur-xl border-b border-slate-800/80 shadow-md shadow-slate-950/20">
+      <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 h-16 sm:h-18 flex items-center justify-between gap-1.5 sm:gap-4 w-full min-w-0">
         {/* Brand & Wordmark Zone */}
-        <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 min-w-0">
           <div 
             className="flex items-center gap-3 cursor-pointer group" 
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           >
-            <div className="w-10 h-10 rounded-2xl bg-[#0077d9] text-white flex items-center justify-center shadow-lg shadow-[#0077d9]/30 group-hover:scale-105 transition-transform duration-200">
+            <div className="w-8.5 h-8.5 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-[#0077d9] text-white flex items-center justify-center shadow-lg shadow-[#0077d9]/30 group-hover:scale-105 transition-transform duration-200 shrink-0">
               <Share2 className="w-5 h-5 text-white" />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-lg sm:text-xl font-black text-white tracking-tight">
+              <span className="text-sm sm:text-xl font-black text-slate-100 tracking-tight whitespace-nowrap">
                 گیک کلاب
               </span>
             </div>
@@ -81,7 +108,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Theme Mode Toggle Button (Sun / Moon) */}
           <button
             onClick={onToggleTheme}
-            className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-amber-400 border border-slate-700/60 transition cursor-pointer flex items-center justify-center group"
+            className="p-2 sm:p-2.5 rounded-xl bg-slate-800/80 shrink-0 hover:bg-slate-750 text-slate-300 hover:text-amber-400 border border-slate-700/60 transition cursor-pointer flex items-center justify-center group"
             title={theme === 'dark' ? 'تغییر به حالت روشن (Light Mode)' : 'تغییر به حالت تاریک (Dark Mode)'}
             aria-label="تغییر پوسته"
           >
@@ -94,12 +121,12 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Action Controls & User Account Zone */}
-        <div className="flex items-center gap-2 sm:gap-2.5">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 min-w-0">
 
           {/* Feedback & Suggestions Button */}
           <button
             onClick={onOpenFeedbackModal}
-            className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-sky-300 border border-slate-700/60 font-medium text-xs flex items-center gap-1.5 transition cursor-pointer"
+            className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-sky-300 border border-slate-700/60 font-medium text-xs flex items-center gap-1.5 transition cursor-pointer shrink-0"
             title="ثبت انتقادات و پیشنهادات"
           >
             <MessageSquarePlus className="w-4 h-4 text-[#0077d9]" />
@@ -112,7 +139,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Primary Material Add Content Button */}
           <button
             onClick={onOpenAddModal}
-            className="px-3.5 sm:px-4 py-2 rounded-xl bg-[#0077d9] hover:bg-[#0066bd] active:scale-95 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-lg shadow-[#0077d9]/30 transition-all cursor-pointer"
+            className="px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#0077d9] hover:bg-[#0066bd] active:scale-95 text-white font-bold text-xs sm:text-sm flex items-center gap-1 sm:gap-1.5 shadow-lg shadow-[#0077d9]/30 transition-all cursor-pointer shrink-0"
           >
             <PlusCircle className="w-4 h-4 text-white fill-none" />
             <span className="whitespace-nowrap text-white">اشتراک محتوا</span>
@@ -120,12 +147,12 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Google Auth / User Profile */}
           {user ? (
-            <div className="relative">
+            <div className="relative" ref={profileMenuRef}>
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 className="flex items-center gap-2 p-1.5 pr-2.5 rounded-2xl bg-slate-800/90 hover:bg-slate-750 border border-slate-700/80 transition cursor-pointer text-right"
               >
-                <div className="hidden sm:block text-right">
+                <div className="hidden lg:block text-right">
                   <div className="text-xs font-bold text-slate-100 truncate max-w-[100px]">
                     {user.displayName}
                   </div>
@@ -146,12 +173,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               {/* Profile Dropdown */}
               {showProfileMenu && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40 cursor-default"
-                    onClick={() => setShowProfileMenu(false)}
-                  />
-                  <div className="absolute left-0 mt-2 w-72 rounded-2xl bg-slate-900 border border-slate-750 shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute left-0 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-2xl bg-slate-900 border border-slate-750 shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
                     <div className="px-4 py-3 border-b border-slate-800 space-y-1">
                       <p className="text-[11px] font-medium text-slate-400">نمایه کاربری گیک کلاب</p>
                       <p className="text-sm font-bold text-slate-100 truncate">{user.displayName}</p>
@@ -202,13 +224,35 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <button
                         onClick={() => {
                           setShowProfileMenu(false);
+                          onToggleSavedOnly();
+                        }}
+                        className={`w-full text-right px-3 py-2 text-xs rounded-xl flex items-center justify-between transition cursor-pointer ${
+                          showSavedOnly 
+                            ? 'bg-amber-500/15 text-amber-300 font-bold border border-amber-500/30' 
+                            : 'text-slate-200 hover:text-white hover:bg-slate-800'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <Bookmark className={`w-4 h-4 ${showSavedOnly ? 'text-amber-400 fill-amber-400/20' : 'text-slate-300'}`} />
+                          لیست محتواهای ذخیره‌شده
+                        </span>
+                        {savedCount > 0 && (
+                          <span className="text-[10px] bg-slate-800 text-amber-300 border border-slate-700/60 font-bold px-2 py-0.5 rounded-full">
+                            {savedCount} مورد
+                          </span>
+                        )}
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setShowProfileMenu(false);
                           onOpenProfileModal();
                         }}
                         className="w-full text-right px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-xl flex items-center justify-between transition cursor-pointer"
                       >
                         <span className="flex items-center gap-2">
                           <Inbox className="w-4 h-4 text-slate-300" />
-                          صندوق پیام‌ها (این‌باکس)
+                          صندوق پیام‌ها
                         </span>
                         {unreadInboxCount > 0 && (
                           <span className="text-[10px] bg-slate-800 text-slate-200 border border-slate-700/60 font-bold px-1.5 py-0.2 rounded-full">
@@ -255,7 +299,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                       </button>
                     </div>
                   </div>
-                </>
               )}
             </div>
           ) : (

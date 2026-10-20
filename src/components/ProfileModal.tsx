@@ -37,6 +37,7 @@ import {
   Layers
 } from 'lucide-react';
 import { UserProfile, InboxMessage, ProfileComment, ContentItem, Platform } from '../types/content';
+import { ImageCDNUpload } from './ImageCDNUpload';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -620,44 +621,19 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                       ))}
                     </div>
 
-                    {/* Custom URL Input Button */}
-                    <div className="pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setShowCustomAvatarInput(!showCustomAvatarInput)}
-                        className="text-xs text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1"
-                      >
-                        <ImageIcon className="w-3.5 h-3.5" />
-                        درج مستقیم آدرس اینترنتی عکس
-                      </button>
-
-                      {showCustomAvatarInput && (
-                        <div className="flex gap-2 mt-2">
-                          <input
-                            type="url"
-                            value={customAvatarUrl}
-                            onChange={(e) => setCustomAvatarUrl(e.target.value)}
-                            placeholder="https://example.com/photo.jpg"
-                            className="flex-1 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 dir-ltr text-left font-mono"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (customAvatarUrl.trim()) {
-                                setPhotoURL(customAvatarUrl.trim());
-                                setShowCustomAvatarInput(false);
-                              }
-                            }}
-                            className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold"
-                          >
-                            تایید
-                          </button>
-                        </div>
-                      )}
+                      {/* CDN Avatar Upload */}
+                      <div className="pt-2">
+                        <ImageCDNUpload
+                          currentUrl={photoURL}
+                          onUrlChange={(newUrl) => setPhotoURL(newUrl)}
+                          label="آپلود تصویر پروفایل در CDN اختصاصی (upc.geekclub.ir)"
+                          placeholder="https://upc.geekclub.ir/s1/avatars/2026/10/..."
+                          folder="avatars"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
               {/* Display Name & Custom Username */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
