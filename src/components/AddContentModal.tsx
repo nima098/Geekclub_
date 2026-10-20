@@ -30,6 +30,7 @@ import {
   SiteAdminSettings
 } from '../types/content';
 import { parseContentUrl, fetchMetadataFromUrl, ExtractedMetadata } from '../utils/urlHelper';
+import { FALLBACK_IMAGES } from '../utils/imageHelper';
 
 interface AddContentModalProps {
   isOpen: boolean;
@@ -322,10 +323,10 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
         finalPlatform === 'youtube' && parsed.detectedId
           ? `https://img.youtube.com/vi/${parsed.detectedId}/hqdefault.jpg`
           : finalPlatform === 'instagram'
-          ? 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=800&q=80'
+          ? FALLBACK_IMAGES.instagram
           : finalPlatform === 'aparat'
-          ? 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=800&q=80'
-          : 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=800&q=80'
+          ? FALLBACK_IMAGES.aparat
+          : FALLBACK_IMAGES.article
       );
 
       // Auto transfer cover photo (YouTube, Aparat, Instagram, Article) to personal CDN on upc.geekclub.ir/s1/

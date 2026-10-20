@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { UserProfile, InboxMessage, ProfileComment, ContentItem, Platform } from '../types/content';
 import { ImageCDNUpload } from './ImageCDNUpload';
+import { handleImageError, FALLBACK_IMAGES } from '../utils/imageHelper';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -53,16 +54,16 @@ interface ProfileModalProps {
   onOpenComments?: (item: ContentItem) => void;
 }
 
-// Preset avatars for quick selection
+// Preset avatars for quick selection using zero-request SVG Data URIs
 const PRESET_AVATARS = [
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80',
-  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=250&q=80',
-  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=250&q=80',
-  'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=250&q=80',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=250&q=80',
-  'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=250&q=80',
-  'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=250&q=80',
-  'https://images.unsplash.com/photo-1628157582853-a796fa650a6a?auto=format&fit=crop&w=250&q=80'
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" rx="100" fill="%231e293b"/><circle cx="100" cy="75" r="38" fill="%233b82f6"/><path d="M 35 175 C 35 130, 165 130, 165 175 Z" fill="%233b82f6"/></svg>',
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" rx="100" fill="%230f172a"/><circle cx="100" cy="75" r="38" fill="%2310b981"/><path d="M 35 175 C 35 130, 165 130, 165 175 Z" fill="%2310b981"/></svg>',
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" rx="100" fill="%23311b92"/><circle cx="100" cy="75" r="38" fill="%23ec4899"/><path d="M 35 175 C 35 130, 165 130, 165 175 Z" fill="%23ec4899"/></svg>',
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" rx="100" fill="%23064e3b"/><circle cx="100" cy="75" r="38" fill="%23f59e0b"/><path d="M 35 175 C 35 130, 165 130, 165 175 Z" fill="%23f59e0b"/></svg>',
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" rx="100" fill="%234c1d95"/><circle cx="100" cy="75" r="38" fill="%238b5cf6"/><path d="M 35 175 C 35 130, 165 130, 165 175 Z" fill="%238b5cf6"/></svg>',
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" rx="100" fill="%23881337"/><circle cx="100" cy="75" r="38" fill="%23f43f5e"/><path d="M 35 175 C 35 130, 165 130, 165 175 Z" fill="%23f43f5e"/></svg>',
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" rx="100" fill="%23164e63"/><circle cx="100" cy="75" r="38" fill="%2306b6d4"/><path d="M 35 175 C 35 130, 165 130, 165 175 Z" fill="%2306b6d4"/></svg>',
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" rx="100" fill="%231e1b4b"/><circle cx="100" cy="75" r="38" fill="%236366f1"/><path d="M 35 175 C 35 130, 165 130, 165 175 Z" fill="%236366f1"/></svg>'
 ];
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({
@@ -200,6 +201,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               src={photoURL}
               alt={displayName}
               className="w-12 h-12 rounded-2xl object-cover ring-2 ring-indigo-500/50 shadow-md shrink-0"
+              onError={(e) => handleImageError(e, FALLBACK_IMAGES.avatar)}
             />
             <div>
               <div className="flex items-center gap-2 flex-wrap">

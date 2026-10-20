@@ -10,6 +10,7 @@ import {
   LogIn
 } from 'lucide-react';
 import { ContentItem, CommentItem, UserProfile } from '../types/content';
+import { handleImageError, FALLBACK_IMAGES } from '../utils/imageHelper';
 
 interface CommentsModalProps {
   item: ContentItem | null;
@@ -109,6 +110,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
                       src={comment.author.avatar}
                       alt={comment.author.name}
                       className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-700"
+                      onError={(e) => handleImageError(e, FALLBACK_IMAGES.avatar)}
                     />
                     <div>
                       <span className="text-xs font-bold text-slate-200">
@@ -164,6 +166,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
                 src={user.photoURL}
                 alt={user.displayName}
                 className="w-9 h-9 rounded-xl object-cover ring-2 ring-indigo-500/40 shrink-0 mb-1"
+                onError={(e) => handleImageError(e, FALLBACK_IMAGES.avatar)}
               />
               <div className="flex-1 relative">
                 <textarea

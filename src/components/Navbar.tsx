@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { UserProfile } from '../types/content';
 import { PWAInstallButton } from './PWAInstallButton';
+import { handleImageError, FALLBACK_IMAGES } from '../utils/imageHelper';
 
 interface NavbarProps {
   user: UserProfile | null;
@@ -162,6 +163,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     src={user.photoURL}
                     alt={user.displayName}
                     className="w-8 h-8 rounded-xl object-cover ring-2 ring-indigo-500/60 shadow-sm"
+                    onError={(e) => handleImageError(e, FALLBACK_IMAGES.avatar)}
                   />
                   {unreadInboxCount > 0 && (
                     <span className="absolute -top-1 -right-1 min-w-3.5 h-3.5 px-1 rounded-full bg-slate-800/90 border border-slate-700/60 text-slate-200 text-[9px] font-bold flex items-center justify-center ring-2 ring-slate-900">

@@ -1,4 +1,5 @@
 import { Platform, Category, inferCategoryFromContent } from '../types/content';
+import { FALLBACK_IMAGES } from './imageHelper';
 
 export interface ParsedUrlResult {
   platform: Platform;
@@ -112,7 +113,7 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
     const videoId = parsed.detectedId;
     thumbnail = videoId 
       ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
-      : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80';
+      : FALLBACK_IMAGES.youtube;
     
     tags = ['یوتیوب', 'ویدیو', 'تکنولوژی'];
     category = 'tech';
@@ -166,7 +167,7 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
 
   // 2. Instagram metadata extraction
   if (parsed.platform === 'instagram') {
-    thumbnail = 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=800&q=80';
+    thumbnail = FALLBACK_IMAGES.instagram;
     tags = ['اینستاگرام', 'ریلز', 'رسانه'];
     category = 'entertainment';
     readingOrWatchTime = cleanUrl.includes('reel') ? 'ریلز اینستاگرام' : 'پست اینستاگرام';
@@ -216,7 +217,7 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
 
   // 3. Aparat metadata extraction
   if (parsed.platform === 'aparat') {
-    thumbnail = 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=800&q=80';
+    thumbnail = FALLBACK_IMAGES.aparat;
     tags = ['آپارات', 'ویدیو', 'فناوری'];
     category = 'tech';
     readingOrWatchTime = 'ویدیو آپارات';
@@ -265,7 +266,7 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
   }
 
   // 4. Web Article metadata extraction
-  thumbnail = 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=800&q=80';
+  thumbnail = FALLBACK_IMAGES.article;
   tags = ['مقاله', 'وبسایت', parsed.sourceDomain];
   category = 'tech';
   readingOrWatchTime = '۶ دقیقه مطالعه';

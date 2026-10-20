@@ -1,4 +1,5 @@
 import { ContentItem, CommentItem, UserProfile, SiteAdminSettings } from '../types/content';
+import { FALLBACK_IMAGES } from '../utils/imageHelper';
 
 export const INITIAL_CONTENT: ContentItem[] = [
   {
@@ -8,10 +9,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.youtube.com/watch?v=5kFfqpQ3_iI',
     platform: 'youtube',
     embedUrl: 'https://www.youtube.com/embed/5kFfqpQ3_iI',
-    thumbnail: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=800&q=80',
+    thumbnail: 'https://img.youtube.com/vi/5kFfqpQ3_iI/hqdefault.jpg',
     author: {
       name: 'سارا ناصری (کاربر عضو)',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+      avatar: FALLBACK_IMAGES.avatar,
       handle: '@sara_ux',
       isVerified: false
     },
@@ -34,10 +35,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.youtube.com/watch?v=bMknfKXIFA8',
     platform: 'youtube',
     embedUrl: 'https://www.youtube.com/embed/bMknfKXIFA8',
-    thumbnail: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
+    thumbnail: 'https://img.youtube.com/vi/bMknfKXIFA8/hqdefault.jpg',
     author: {
       name: 'آکادمی کد و فناوری',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+      avatar: FALLBACK_IMAGES.avatar,
       handle: '@codetech_fa',
       isVerified: true
     },
@@ -58,10 +59,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://virgool.io/@ux_design/modern-ui-principles',
     platform: 'article',
     embedUrl: 'https://virgool.io/@ux_design/modern-ui-principles',
-    thumbnail: 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=800&q=80',
+    thumbnail: FALLBACK_IMAGES.article,
     author: {
       name: 'نیما ارجمند',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+      avatar: FALLBACK_IMAGES.avatar,
       handle: 'طراح ارشد محصول',
       isVerified: true
     },
@@ -91,10 +92,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.instagram.com/reel/DZfG1Nui61u/',
     platform: 'instagram',
     embedUrl: 'https://www.instagram.com/reel/DZfG1Nui61u/embed',
-    thumbnail: 'https://images.unsplash.com/photo-1587620962725-abab7fe55159?auto=format&fit=crop&w=800&q=80',
+    thumbnail: FALLBACK_IMAGES.instagram,
     author: {
       name: 'گیک استودیو',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+      avatar: FALLBACK_IMAGES.avatar,
       handle: '@geek_setup',
       isVerified: true
     },
@@ -116,10 +117,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.aparat.com/v/m435165',
     platform: 'aparat',
     embedUrl: 'https://www.aparat.com/video/video/embed/videohash/m435165/vt/frame',
-    thumbnail: 'https://images.unsplash.com/photo-1677442136019-21780efad99a?auto=format&fit=crop&w=800&q=80',
+    thumbnail: FALLBACK_IMAGES.aparat,
     author: {
       name: 'کانال هوش مصنوعی ایران',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+      avatar: FALLBACK_IMAGES.avatar,
       handle: '@ai_iran',
       isVerified: true
     },
@@ -141,10 +142,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.instagram.com/reel/C8kP2qXyZa1/',
     platform: 'instagram',
     embedUrl: 'https://www.instagram.com/reel/C8kP2qXyZa1/embed',
-    thumbnail: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=800&q=80',
+    thumbnail: FALLBACK_IMAGES.instagram,
     author: {
       name: 'کد با سارا',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+      avatar: FALLBACK_IMAGES.avatar,
       handle: '@codewith_sara',
       isVerified: true
     },
@@ -165,10 +166,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.youtube.com/watch?v=LDB4uaJ87e0',
     platform: 'youtube',
     embedUrl: 'https://www.youtube.com/embed/LDB4uaJ87e0',
-    thumbnail: 'https://images.unsplash.com/photo-1587620962725-abab7fe55159?auto=format&fit=crop&w=800&q=80',
+    thumbnail: 'https://img.youtube.com/vi/LDB4uaJ87e0/hqdefault.jpg',
     author: {
       name: 'فرهاد نصیری',
-      avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=150&q=80',
+      avatar: FALLBACK_IMAGES.avatar,
       handle: '@farhad_dev',
       isVerified: true
     },
@@ -189,10 +190,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://medium.com/@techlead/high-scale-database-strategies',
     platform: 'article',
     embedUrl: 'https://medium.com/@techlead/high-scale-database-strategies',
-    thumbnail: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=800&q=80',
+    thumbnail: FALLBACK_IMAGES.article,
     author: {
       name: 'مهندس آرش شریفی',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+      avatar: FALLBACK_IMAGES.avatar,
       handle: 'معمار نرم‌افزار',
       isVerified: true
     },
@@ -222,10 +223,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.instagram.com/p/C9ab12cdEFg/',
     platform: 'instagram',
     embedUrl: 'https://www.instagram.com/p/C9ab12cdEFg/embed',
-    thumbnail: 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?auto=format&fit=crop&w=800&q=80',
+    thumbnail: FALLBACK_IMAGES.instagram,
     author: {
       name: 'استودیو پادکس',
-      avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=150&q=80',
+      avatar: FALLBACK_IMAGES.avatar,
       handle: '@podx_studio',
       isVerified: false
     },
@@ -246,10 +247,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.youtube.com/watch?v=SqcY0GlETPk',
     platform: 'youtube',
     embedUrl: 'https://www.youtube.com/embed/SqcY0GlETPk',
-    thumbnail: 'https://images.unsplash.com/photo-1677442136019-21780efad99a?auto=format&fit=crop&w=800&q=80',
+    thumbnail: 'https://img.youtube.com/vi/SqcY0GlETPk/hqdefault.jpg',
     author: {
       name: 'دکتر مانی دانشور',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
+      avatar: FALLBACK_IMAGES.avatar,
       handle: '@mani_ai_lab',
       isVerified: true
     },
@@ -270,10 +271,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://techcrunch.ir/startup-lean-validation-guide',
     platform: 'article',
     embedUrl: 'https://techcrunch.ir/startup-lean-validation-guide',
-    thumbnail: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=800&q=80',
+    thumbnail: FALLBACK_IMAGES.article,
     author: {
       name: 'الهام سعیدی',
-      avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=150&q=80',
+      avatar: FALLBACK_IMAGES.avatar,
       handle: 'مشاور استارتاپ‌ها',
       isVerified: true
     },
@@ -303,7 +304,7 @@ export const INITIAL_COMMENTS: Record<string, CommentItem[]> = {
       contentId: 'yt-1',
       author: {
         name: 'رضا کمالی',
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+        avatar: FALLBACK_IMAGES.avatar,
         email: 'reza@example.com'
       },
       text: 'خیلی ویدیوی مفیدی بود! به خصوص بخش مربوط به ادغام ابزارهای هوش مصنوعی در محیط توسعه عالی توضیح داده شد. ممنون از سازنده محتوا.',
@@ -316,7 +317,7 @@ export const INITIAL_COMMENTS: Record<string, CommentItem[]> = {
       contentId: 'yt-1',
       author: {
         name: 'مریم حسینی',
-        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+        avatar: FALLBACK_IMAGES.avatar,
         email: 'maryam@example.com'
       },
       text: 'آیا برای مدل‌های لوکال هم پارت دوم ضبط می‌کنید؟ خیلی مشتاقم بررسی کنید.',
@@ -331,7 +332,7 @@ export const INITIAL_COMMENTS: Record<string, CommentItem[]> = {
       contentId: 'art-1',
       author: {
         name: 'پویا سلیمی',
-        avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=150&q=80',
+        avatar: FALLBACK_IMAGES.avatar,
         email: 'pouya@example.com'
       },
       text: 'کاملاً موافقم. دوران وب‌سایت‌های تخت و کپی‌پیستی به سر آمده و جزئیات ریز است که تفاوت ایجاد می‌کند.',
@@ -346,7 +347,7 @@ export const INITIAL_COMMENTS: Record<string, CommentItem[]> = {
       contentId: 'ig-1',
       author: {
         name: 'علیرضا داوودی',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+        avatar: FALLBACK_IMAGES.avatar,
         email: 'alireza@example.com'
       },
       text: 'ترفند سوم واقعاً زمان زیادی رو در پروژه‌های روزمره صرفه‌جویی می‌کنه. دمت گرم!',
@@ -380,7 +381,7 @@ export const SUPER_ADMIN_USER: UserProfile = {
   username: 'admin_3dsaz',
   email: '3dsaz1990@gmail.com',
   hideEmail: false,
-  photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+  photoURL: FALLBACK_IMAGES.avatar,
   bio: 'مدیر کل و صاحب امتیاز سامانه 👑',
   allowProfileComments: true,
   joinedAt: 'مهر ۱۴۰۵',
@@ -395,7 +396,7 @@ export const DEFAULT_USER: UserProfile = {
   username: 'geek_guest',
   email: 'user.creative@gmail.com',
   hideEmail: false,
-  photoURL: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+  photoURL: FALLBACK_IMAGES.avatar,
   bio: 'علاقه‌مند به تکنولوژی، هوش مصنوعی و جامعه برنامه‌نویسان 🚀',
   allowProfileComments: true,
   joinedAt: 'مهر ۱۴۰۵',
@@ -413,7 +414,7 @@ export const INITIAL_REGISTERED_USERS: UserProfile[] = [
     username: 'farhad_dev',
     email: 'farhad.dev@gmail.com',
     hideEmail: false,
-    photoURL: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=150&q=80',
+    photoURL: FALLBACK_IMAGES.avatar,
     bio: 'توسعه‌دهنده فول‌استک و محتوانویس تکنولوژی',
     allowProfileComments: true,
     joinedAt: 'شهریور ۱۴۰۵',
@@ -427,7 +428,7 @@ export const INITIAL_REGISTERED_USERS: UserProfile[] = [
     username: 'sara_ux',
     email: 'sara.ux@gmail.com',
     hideEmail: true,
-    photoURL: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+    photoURL: FALLBACK_IMAGES.avatar,
     bio: 'طراح رابط کاربری و تجربه کاربری (UI/UX)',
     allowProfileComments: true,
     joinedAt: 'مرداد ۱۴۰۵',
@@ -441,7 +442,7 @@ export const INITIAL_REGISTERED_USERS: UserProfile[] = [
     username: 'arash_db',
     email: 'arash.sh@yahoo.com',
     hideEmail: false,
-    photoURL: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+    photoURL: FALLBACK_IMAGES.avatar,
     bio: 'مهندس سیستم و دیتابیس',
     allowProfileComments: true,
     joinedAt: 'تیر ۱۴۰۵',
@@ -455,7 +456,7 @@ export const INITIAL_REGISTERED_USERS: UserProfile[] = [
     username: 'kamran_ai',
     email: 'kamran.ai@gmail.com',
     hideEmail: false,
-    photoURL: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
+    photoURL: FALLBACK_IMAGES.avatar,
     bio: 'علاقه‌مند به یادگیری ماشین و پردازش تصویر',
     allowProfileComments: false,
     joinedAt: 'مهر ۱۴۰۵',
@@ -470,7 +471,7 @@ export const INITIAL_INBOX = [
     id: 'msg-1',
     sender: {
       name: 'تیم مدیریت گیک کلاب',
-      avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=150&q=80',
+      avatar: FALLBACK_IMAGES.avatar,
       isSystemAdmin: true,
       role: 'ادمین ارشد وبسایت'
     },
@@ -484,7 +485,7 @@ export const INITIAL_INBOX = [
     id: 'msg-2',
     sender: {
       name: 'آرش شریفی',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+      avatar: FALLBACK_IMAGES.avatar,
       isSystemAdmin: false,
       role: 'کاربر ویژه'
     },
@@ -498,7 +499,7 @@ export const INITIAL_INBOX = [
     id: 'msg-3',
     sender: {
       name: 'ربات سیستمی گیک کلاب',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+      avatar: FALLBACK_IMAGES.avatar,
       isSystemAdmin: true,
       role: 'اعلان سیستم'
     },
@@ -516,7 +517,7 @@ export const INITIAL_PROFILE_COMMENTS = [
     profileUserId: 'user-google-101',
     author: {
       name: 'نیما ارجمند',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+      avatar: FALLBACK_IMAGES.avatar,
       username: 'nima_ux'
     },
     text: 'درود! سلیقه خیلی خوبی در انتخاب محتواها دارید. خوشحالم که در این جامعه همراه هستیم.',
@@ -527,7 +528,7 @@ export const INITIAL_PROFILE_COMMENTS = [
     profileUserId: 'user-google-101',
     author: {
       name: 'سارا ناصری',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+      avatar: FALLBACK_IMAGES.avatar,
       username: 'sara_dev'
     },
     text: 'پروفایل فوق‌العاده‌ای چیدی! به امید محتواهای خفن بیشتر ✨',

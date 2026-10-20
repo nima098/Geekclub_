@@ -28,6 +28,7 @@ import {
 import { 
   DomainAuthHelpModal 
 } from './components/DomainAuthHelpModal';
+import { FALLBACK_IMAGES, getPlatformFallbackImage } from './utils/imageHelper';
 import { 
   ProfileModal 
 } from './components/ProfileModal';
@@ -99,11 +100,33 @@ export default function App() {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.CONTENT);
       const parsedSaved: ContentItem[] = saved ? JSON.parse(saved) : [];
-      // Ensure all initial content items (including newly added Instagram reels) exist in state
+      // Ensure all initial content items exist in state
       const existingIds = new Set(parsedSaved.map((c) => c.id));
       const missingInitial = INITIAL_CONTENT.filter((c) => !existingIds.has(c.id));
       const merged = [...missingInitial, ...parsedSaved];
-      return merged.length > 0 ? merged : INITIAL_CONTENT;
+      const itemsToProcess = merged.length > 0 ? merged : INITIAL_CONTENT;
+
+      // Clean up old /s1/s1/ subpaths and replace broken unsplash URLs with SVG Data URIs or YouTube thumbnails
+      return itemsToProcess.map((item) => {
+        let cleanThumb = (item.thumbnail || '').replace('/s1/s1/', '/s1/');
+        if (cleanThumb.includes('unsplash.com')) {
+          cleanThumb = getPlatformFallbackImage(item.platform, item.url);
+        }
+
+        let cleanAvatar = (item.author?.avatar || '').replace('/s1/s1/', '/s1/');
+        if (cleanAvatar.includes('unsplash.com')) {
+          cleanAvatar = FALLBACK_IMAGES.avatar;
+        }
+
+        return {
+          ...item,
+          thumbnail: cleanThumb,
+          author: {
+            ...item.author,
+            avatar: cleanAvatar
+          }
+        };
+      });
     } catch {
       return INITIAL_CONTENT;
     }
