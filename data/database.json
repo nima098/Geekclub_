@@ -7,7 +7,7 @@
       "url": "https://www.youtube.com/watch?v=5kFfqpQ3_iI",
       "platform": "youtube",
       "embedUrl": "https://www.youtube.com/embed/5kFfqpQ3_iI",
-      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/yt_astro5_framework.jpg",
+      "thumbnail": "https://img.youtube.com/vi/5kFfqpQ3_iI/hqdefault.jpg",
       "author": {
         "name": "سارا ناصری (کاربر عضو)",
         "avatar": "https://upc.geekclub.ir/s1/contents/2026/10/avatar_sara_ux.jpg",
@@ -15,7 +15,11 @@
         "isVerified": false
       },
       "category": "programming",
-      "tags": ["Astro", "فرانت‌اند", "بهینه‌سازی"],
+      "tags": [
+        "Astro",
+        "فرانت‌اند",
+        "بهینه‌سازی"
+      ],
       "publishedAt": "۱۰ دقیقه پیش",
       "readingOrWatchTime": "۱۴ دقیقه",
       "likesCount": 0,
@@ -33,7 +37,7 @@
       "url": "https://www.youtube.com/watch?v=bMknfKXIFA8",
       "platform": "youtube",
       "embedUrl": "https://www.youtube.com/embed/bMknfKXIFA8",
-      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/yt_ai_models.jpg",
+      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_221949_554fe9d8.jpg",
       "author": {
         "name": "آکادمی کد و فناوری",
         "avatar": "https://upc.geekclub.ir/s1/contents/2026/10/avatar_codetech.jpg",
@@ -41,7 +45,12 @@
         "isVerified": true
       },
       "category": "ai",
-      "tags": ["هوش مصنوعی", "برنامه‌نویسی", "تکنولوژی", "LLM"],
+      "tags": [
+        "هوش مصنوعی",
+        "برنامه‌نویسی",
+        "تکنولوژی",
+        "LLM"
+      ],
       "publishedAt": "۲ ساعت پیش",
       "readingOrWatchTime": "۱۸ دقیقه",
       "likesCount": 142,
@@ -65,7 +74,12 @@
         "isVerified": true
       },
       "category": "design",
-      "tags": ["طراحی رابط کاربری", "UI/UX", "طراحی محصول", "ترندهای دیزاین"],
+      "tags": [
+        "طراحی رابط کاربری",
+        "UI/UX",
+        "طراحی محصول",
+        "ترندهای دیزاین"
+      ],
       "publishedAt": "۵ ساعت پیش",
       "readingOrWatchTime": "۷ دقیقه مطالعه",
       "likesCount": 89,
@@ -90,7 +104,12 @@
         "isVerified": true
       },
       "category": "tech",
-      "tags": ["گجت", "میز کار", "برنامه‌نویسی", "اینستاگرام"],
+      "tags": [
+        "گجت",
+        "میز کار",
+        "برنامه‌نویسی",
+        "اینستاگرام"
+      ],
       "publishedAt": "همین الان",
       "readingOrWatchTime": "ریلز اینستاگرام",
       "likesCount": 128,
@@ -115,7 +134,12 @@
         "isVerified": true
       },
       "category": "ai",
-      "tags": ["آپارات", "هوش مصنوعی", "پایتون", "آموزش"],
+      "tags": [
+        "آپارات",
+        "هوش مصنوعی",
+        "پایتون",
+        "آموزش"
+      ],
       "publishedAt": "۳ ساعت پیش",
       "readingOrWatchTime": "۲۲ دقیقه ویدیو",
       "likesCount": 164,
@@ -140,7 +164,12 @@
         "isVerified": true
       },
       "category": "programming",
-      "tags": ["جاوااسکریپت", "ترفند کدنویسی", "فرانت‌اند", "تایپ‌اسکریپت"],
+      "tags": [
+        "جاوااسکریپت",
+        "ترفند کدنویسی",
+        "فرانت‌اند",
+        "تایپ‌اسکریپت"
+      ],
       "publishedAt": "دیروز",
       "readingOrWatchTime": "۶۰ ثانیه ریلز",
       "likesCount": 310,
@@ -156,7 +185,7 @@
       "url": "https://www.youtube.com/watch?v=LDB4uaJ87e0",
       "platform": "youtube",
       "embedUrl": "https://www.youtube.com/embed/LDB4uaJ87e0",
-      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/yt_react_fullstack.jpg",
+      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_221950_07283f17.jpg",
       "author": {
         "name": "فرهاد نصیری",
         "avatar": "https://upc.geekclub.ir/s1/contents/2026/10/avatar_farhad_dev.jpg",
@@ -164,7 +193,12 @@
         "isVerified": true
       },
       "category": "programming",
-      "tags": ["ری‌اکت", "Tailwind CSS", "فول استک", "آموزش پروژه محور"],
+      "tags": [
+        "ری‌اکت",
+        "Tailwind CSS",
+        "فول استک",
+        "آموزش پروژه محور"
+      ],
       "publishedAt": "۲ روز پیش",
       "readingOrWatchTime": "۳۵ دقیقه",
       "likesCount": 224,
@@ -188,7 +222,12 @@
         "isVerified": true
       },
       "category": "tech",
-      "tags": ["پایگاه داده", "مقیاس‌پذیری", "Redis", "معماری سیستم"],
+      "tags": [
+        "پایگاه داده",
+        "مقیاس‌پذیری",
+        "Redis",
+        "معماری سیستم"
+      ],
       "publishedAt": "۳ روز پیش",
       "readingOrWatchTime": "۱۲ دقیقه مطالعه",
       "likesCount": 165,
@@ -213,7 +252,12 @@
         "isVerified": false
       },
       "category": "entertainment",
-      "tags": ["تولید محتوا", "پادکست", "تجهیزات استودیو", "اینستاگرام"],
+      "tags": [
+        "تولید محتوا",
+        "پادکست",
+        "تجهیزات استودیو",
+        "اینستاگرام"
+      ],
       "publishedAt": "۴ روز پیش",
       "readingOrWatchTime": "پست اسلایدی",
       "likesCount": 420,
@@ -229,7 +273,7 @@
       "url": "https://www.youtube.com/watch?v=SqcY0GlETPk",
       "platform": "youtube",
       "embedUrl": "https://www.youtube.com/embed/SqcY0GlETPk",
-      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/yt_prompt_engineering.jpg",
+      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/cover_yt-3.jpg",
       "author": {
         "name": "دکتر مانی دانشور",
         "avatar": "https://upc.geekclub.ir/s1/contents/2026/10/avatar_mani_ai_lab.jpg",
@@ -237,7 +281,12 @@
         "isVerified": true
       },
       "category": "ai",
-      "tags": ["مهندسی پرامپت", "هوش مصنوعی", "پرامپت نویسی", "تکنولوژی"],
+      "tags": [
+        "مهندسی پرامپت",
+        "هوش مصنوعی",
+        "پرامپت نویسی",
+        "تکنولوژی"
+      ],
       "publishedAt": "۵ روز پیش",
       "readingOrWatchTime": "۲۲ دقیقه",
       "likesCount": 380,
@@ -261,7 +310,12 @@
         "isVerified": true
       },
       "category": "business",
-      "tags": ["استارتاپ", "کسب و کار", "مدیریت محصول", "MVP"],
+      "tags": [
+        "استارتاپ",
+        "کسب و کار",
+        "مدیریت محصول",
+        "MVP"
+      ],
       "publishedAt": "۱ هفته پیش",
       "readingOrWatchTime": "۹ دقیقه مطالعه",
       "likesCount": 205,

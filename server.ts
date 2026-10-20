@@ -651,7 +651,9 @@ async function syncPlatformCoverImages() {
         }
       }
 
-      if (sourceImageUrl) {
+      // Only download if thumbnail is missing, is external, or needs initial sync
+      const isAlreadySynced = item.thumbnail && (item.thumbnail.includes('upc.geekclub.ir') || item.thumbnail.startsWith('/uploads/'));
+      if (sourceImageUrl && !isAlreadySynced) {
         console.log(`📥 Downloading original ${item.platform} cover for ${item.id} from ${sourceImageUrl}...`);
         const cdnOrLocalUrl = await downloadAndCacheImage(sourceImageUrl, `cover_${item.id}`);
         if (cdnOrLocalUrl && cdnOrLocalUrl !== item.thumbnail) {
