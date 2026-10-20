@@ -4,10 +4,10 @@
       "id": "yt-pending-1",
       "title": "بررسی فریم‌ورک جدید Astro 5 و بهینه‌سازی سرعت بارگذاری صفحات وب",
       "description": "در این ویدیو به بررسی قابلیت‌های معماری جزیره‌ای (Islands Architecture) و رندرینگ هیبریدی در نسخه جدید استرو پرداخته می‌شود.",
-      "url": "https://www.youtube.com/watch?v=5kFfqpQ3_iI",
+      "url": "https://www.youtube.com/watch?v=i7gxLKpn1h0",
       "platform": "youtube",
-      "embedUrl": "https://www.youtube.com/embed/5kFfqpQ3_iI",
-      "thumbnail": "https://img.youtube.com/vi/5kFfqpQ3_iI/hqdefault.jpg",
+      "embedUrl": "https://www.youtube.com/embed/i7gxLKpn1h0",
+      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230334_29545f1c.jpg",
       "author": {
         "name": "سارا ناصری (کاربر عضو)",
         "avatar": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" rx=\"50\" fill=\"%233b82f6\"/><text x=\"50\" y=\"63\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"42\" font-weight=\"bold\" fill=\"%23ffffff\" text-anchor=\"middle\" dominant-baseline=\"middle\">س</text></svg>",
@@ -15,7 +15,11 @@
         "isVerified": false
       },
       "category": "programming",
-      "tags": ["Astro", "فرانت‌اند", "بهینه‌سازی"],
+      "tags": [
+        "Astro",
+        "فرانت‌اند",
+        "بهینه‌سازی"
+      ],
       "publishedAt": "۱۰ دقیقه پیش",
       "readingOrWatchTime": "۱۴ دقیقه",
       "likesCount": 0,
@@ -33,7 +37,7 @@
       "url": "https://www.youtube.com/watch?v=bMknfKXIFA8",
       "platform": "youtube",
       "embedUrl": "https://www.youtube.com/embed/bMknfKXIFA8",
-      "thumbnail": "https://img.youtube.com/vi/bMknfKXIFA8/hqdefault.jpg",
+      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_9b7ad12d.jpg",
       "author": {
         "name": "آکادمی کد و فناوری",
         "avatar": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" rx=\"50\" fill=\"%238b5cf6\"/><text x=\"50\" y=\"63\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"42\" font-weight=\"bold\" fill=\"%23ffffff\" text-anchor=\"middle\" dominant-baseline=\"middle\">آ</text></svg>",
@@ -41,7 +45,12 @@
         "isVerified": true
       },
       "category": "ai",
-      "tags": ["هوش مصنوعی", "برنامه‌نویسی", "تکنولوژی", "LLM"],
+      "tags": [
+        "هوش مصنوعی",
+        "برنامه‌نویسی",
+        "تکنولوژی",
+        "LLM"
+      ],
       "publishedAt": "۲ ساعت پیش",
       "readingOrWatchTime": "۱۸ دقیقه",
       "likesCount": 142,
@@ -65,7 +74,12 @@
         "isVerified": true
       },
       "category": "design",
-      "tags": ["طراحی رابط کاربری", "UI/UX", "طراحی محصول", "ترندهای دیزاین"],
+      "tags": [
+        "طراحی رابط کاربری",
+        "UI/UX",
+        "طراحی محصول",
+        "ترندهای دیزاین"
+      ],
       "publishedAt": "۵ ساعت پیش",
       "readingOrWatchTime": "۷ دقیقه مطالعه",
       "likesCount": 89,
@@ -90,7 +104,12 @@
         "isVerified": true
       },
       "category": "tech",
-      "tags": ["گجت", "میز کار", "برنامه‌نویسی", "اینستاگرام"],
+      "tags": [
+        "گجت",
+        "میز کار",
+        "برنامه‌نویسی",
+        "اینستاگرام"
+      ],
       "publishedAt": "همین الان",
       "readingOrWatchTime": "ریلز اینستاگرام",
       "likesCount": 128,
@@ -104,10 +123,10 @@
       "id": "aparat-1",
       "title": "آموزش جامع هوش مصنوعی و یادگیری ماشین به زبان ساده",
       "description": "در این ویدیو از آپارات، مبانی اساسی شبکه‌های عصبی و یادگیری عمیق همراه با مثال‌های عملی در پایتون توضیح داده شده است.",
-      "url": "https://www.aparat.com/v/m435165",
+      "url": "https://www.aparat.com/v/kulb1i9",
       "platform": "aparat",
-      "embedUrl": "https://www.aparat.com/video/video/embed/videohash/m435165/vt/frame",
-      "thumbnail": "https://static.cdn.asset.aparat.com/avt/m435165-big.jpg",
+      "embedUrl": "https://www.aparat.com/video/video/embed/videohash/kulb1i9/vt/frame",
+      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230336_d9a4e772.jpg",
       "author": {
         "name": "کانال هوش مصنوعی ایران",
         "avatar": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" rx=\"50\" fill=\"%23ed145b\"/><text x=\"50\" y=\"63\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"42\" font-weight=\"bold\" fill=\"%23ffffff\" text-anchor=\"middle\" dominant-baseline=\"middle\">ک</text></svg>",
@@ -115,7 +134,12 @@
         "isVerified": true
       },
       "category": "ai",
-      "tags": ["آپارات", "هوش مصنوعی", "پایتون", "آموزش"],
+      "tags": [
+        "آپارات",
+        "هوش مصنوعی",
+        "پایتون",
+        "آموزش"
+      ],
       "publishedAt": "۳ ساعت پیش",
       "readingOrWatchTime": "۲۲ دقیقه ویدیو",
       "likesCount": 164,
@@ -140,7 +164,12 @@
         "isVerified": true
       },
       "category": "programming",
-      "tags": ["جاوااسکریپت", "ترفند کدنویسی", "فرانت‌اند", "تایپ‌اسکریپت"],
+      "tags": [
+        "جاوااسکریپت",
+        "ترفند کدنویسی",
+        "فرانت‌اند",
+        "تایپ‌اسکریپت"
+      ],
       "publishedAt": "دیروز",
       "readingOrWatchTime": "۶۰ ثانیه ریلز",
       "likesCount": 310,
@@ -156,7 +185,7 @@
       "url": "https://www.youtube.com/watch?v=LDB4uaJ87e0",
       "platform": "youtube",
       "embedUrl": "https://www.youtube.com/embed/LDB4uaJ87e0",
-      "thumbnail": "https://img.youtube.com/vi/LDB4uaJ87e0/hqdefault.jpg",
+      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_af47b80a.jpg",
       "author": {
         "name": "فرهاد نصیری",
         "avatar": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" rx=\"50\" fill=\"%2306b6d4\"/><text x=\"50\" y=\"63\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"42\" font-weight=\"bold\" fill=\"%23ffffff\" text-anchor=\"middle\" dominant-baseline=\"middle\">ف</text></svg>",
@@ -164,7 +193,12 @@
         "isVerified": true
       },
       "category": "programming",
-      "tags": ["ری‌اکت", "Tailwind CSS", "فول استک", "آموزش پروژه محور"],
+      "tags": [
+        "ری‌اکت",
+        "Tailwind CSS",
+        "فول استک",
+        "آموزش پروژه محور"
+      ],
       "publishedAt": "۲ روز پیش",
       "readingOrWatchTime": "۳۵ دقیقه",
       "likesCount": 224,
@@ -188,7 +222,12 @@
         "isVerified": true
       },
       "category": "tech",
-      "tags": ["پایگاه داده", "مقیاس‌پذیری", "Redis", "معماری سیستم"],
+      "tags": [
+        "پایگاه داده",
+        "مقیاس‌پذیری",
+        "Redis",
+        "معماری سیستم"
+      ],
       "publishedAt": "۳ روز پیش",
       "readingOrWatchTime": "۱۲ دقیقه مطالعه",
       "likesCount": 165,
@@ -213,7 +252,12 @@
         "isVerified": false
       },
       "category": "entertainment",
-      "tags": ["تولید محتوا", "پادکست", "تجهیزات استودیو", "اینستاگرام"],
+      "tags": [
+        "تولید محتوا",
+        "پادکست",
+        "تجهیزات استودیو",
+        "اینستاگرام"
+      ],
       "publishedAt": "۴ روز پیش",
       "readingOrWatchTime": "پست اسلایدی",
       "likesCount": 420,
@@ -229,7 +273,7 @@
       "url": "https://www.youtube.com/watch?v=SqcY0GlETPk",
       "platform": "youtube",
       "embedUrl": "https://www.youtube.com/embed/SqcY0GlETPk",
-      "thumbnail": "https://img.youtube.com/vi/SqcY0GlETPk/hqdefault.jpg",
+      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_da3d8448.jpg",
       "author": {
         "name": "دکتر مانی دانشور",
         "avatar": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" rx=\"50\" fill=\"%23ec4899\"/><text x=\"50\" y=\"63\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"42\" font-weight=\"bold\" fill=\"%23ffffff\" text-anchor=\"middle\" dominant-baseline=\"middle\">د</text></svg>",
@@ -237,7 +281,12 @@
         "isVerified": true
       },
       "category": "ai",
-      "tags": ["مهندسی پرامپت", "هوش مصنوعی", "پرامپت نویسی", "تکنولوژی"],
+      "tags": [
+        "مهندسی پرامپت",
+        "هوش مصنوعی",
+        "پرامپت نویسی",
+        "تکنولوژی"
+      ],
       "publishedAt": "۵ روز پیش",
       "readingOrWatchTime": "۲۲ دقیقه",
       "likesCount": 380,
@@ -261,7 +310,12 @@
         "isVerified": true
       },
       "category": "business",
-      "tags": ["استارتاپ", "کسب و کار", "مدیریت محصول", "MVP"],
+      "tags": [
+        "استارتاپ",
+        "کسب و کار",
+        "مدیریت محصول",
+        "MVP"
+      ],
       "publishedAt": "۱ هفته پیش",
       "readingOrWatchTime": "۹ دقیقه مطالعه",
       "likesCount": 205,

@@ -100,6 +100,34 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
   const cleanUrl = rawUrl.trim();
   const parsed = parseContentUrl(cleanUrl);
 
+  // 1. PRIMARY STEP: Use Server-side Proxy (/api/extract-metadata)
+  // This bypasses client-side censorship/filtering in Iran, CORS restrictions,
+  // and automatically downloads the real YouTube/Aparat cover image and uploads it to upc.geekclub.ir CDN!
+  try {
+    const res = await fetch(`/api/extract-metadata?url=${encodeURIComponent(cleanUrl)}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && (data.title || data.thumbnail)) {
+        const platform = data.platform || parsed.platform;
+        const inferredCat = inferCategoryFromContent(data.title || '', data.description || '', data.tags || []);
+        return {
+          platform,
+          title: data.title || '',
+          description: data.description || '',
+          authorName: data.authorName || '',
+          thumbnail: data.thumbnail || '',
+          embedUrl: data.embedUrl || parsed.embedUrl,
+          tags: Array.isArray(data.tags) && data.tags.length > 0 ? data.tags : ['محتوا', 'فناوری'],
+          category: data.category || inferredCat,
+          readingOrWatchTime: data.readingOrWatchTime || (platform === 'youtube' ? 'ویدیو یوتیوب' : '۵ دقیقه'),
+          sourceDomain: parsed.sourceDomain
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('Server metadata extract request error, falling back to local heuristic extraction:', err);
+  }
+
   // Default fallback values
   let title = '';
   let description = '';

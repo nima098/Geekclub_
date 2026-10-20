@@ -106,9 +106,18 @@ export default function App() {
       const merged = [...missingInitial, ...parsedSaved];
       const itemsToProcess = merged.length > 0 ? merged : INITIAL_CONTENT;
 
+      // Verified CDN covers on upc.geekclub.ir
+      const VERIFIED_CDN_COVERS: Record<string, string> = {
+        'yt-pending-1': 'https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230334_29545f1c.jpg',
+        'yt-1': 'https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_9b7ad12d.jpg',
+        'yt-2': 'https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_af47b80a.jpg',
+        'yt-3': 'https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_da3d8448.jpg',
+        'aparat-1': 'https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230336_d9a4e772.jpg'
+      };
+
       // Clean up old /s1/s1/ subpaths and ensure all items have valid working images
       return itemsToProcess.map((item) => {
-        let cleanThumb = (item.thumbnail || '').replace('/s1/s1/', '/s1/');
+        let cleanThumb = VERIFIED_CDN_COVERS[item.id] || (item.thumbnail || '').replace('/s1/s1/', '/s1/');
         if (!cleanThumb || cleanThumb.includes('avatar_.')) {
           cleanThumb = getPlatformFallbackImage(item.platform, item.url);
         }

@@ -119,6 +119,26 @@ export const ImageCDNUpload: React.FC<ImageCDNUploadProps> = ({
         )}
       </div>
 
+      {/* Live Cover Preview Box */}
+      {currentUrl && (
+        <div className="relative aspect-video w-full max-h-48 rounded-xl overflow-hidden border border-slate-700/80 bg-slate-950 flex items-center justify-center shadow-lg">
+          <img
+            src={currentUrl}
+            alt="پیش‌نمایش تصویر کاور"
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              if (!currentUrl.includes('/api/proxy-image') && !currentUrl.startsWith('data:')) {
+                e.currentTarget.src = `/api/proxy-image?url=${encodeURIComponent(currentUrl)}`;
+              }
+            }}
+          />
+          <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/75 text-[10px] text-amber-300 font-mono flex items-center gap-1 backdrop-blur-sm border border-amber-500/30">
+            <CheckCircle2 className="w-3 h-3 text-amber-400" />
+            <span>{currentUrl.includes('upc.geekclub.ir') ? 'هاست شده روی CDN' : 'پیش‌نمایش تصویر'}</span>
+          </div>
+        </div>
+      )}
+
       {/* Drag & Drop Upload Zone */}
       <div
         onDragOver={(e) => e.preventDefault()}

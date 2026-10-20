@@ -88,25 +88,17 @@ app.get('/api/proxy-image', async (req: Request, res: Response) => {
   }
 });
 
-// 0.1. POST /api/transfer-to-cdn - Server-side external image downloader & CDN uploader
-app.post('/api/transfer-to-cdn', async (req: Request, res: Response) => {
-  const { imageUrl, folder } = req.body;
-  if (!imageUrl) {
-    return res.status(400).json({ success: false, error: 'imageUrl parameter is required' });
+// Helper to download real cover image from external platform and cache locally & on CDN
+async function downloadAndCacheImage(imageUrl: string, filenamePrefix: string): Promise<string> {
+  if (!imageUrl) return imageUrl;
+  if (imageUrl.includes('upc.geekclub.ir') || imageUrl.startsWith('data:')) {
+    return imageUrl;
   }
-
-  if (imageUrl.includes('upc.geekclub.ir') || imageUrl.startsWith('data:') || imageUrl.startsWith('/uploads/')) {
-    return res.json({ success: true, url: imageUrl });
-  }
-
   try {
-    const targetFolder = folder || 'contents';
-    
-    // Step 1: Download image bytes on server
-    console.log(`[CDN Transfer Step 1/2] Downloading image on server from: ${imageUrl}`);
-    const response = await axios.get(imageUrl, {
+    const cleanUrl = imageUrl.trim().startsWith('http') ? imageUrl.trim() : `https://${imageUrl.trim()}`;
+    const response = await axios.get(cleanUrl, {
       responseType: 'arraybuffer',
-      timeout: 12000,
+      timeout: 10000,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       }
@@ -121,22 +113,19 @@ app.post('/api/transfer-to-cdn', async (req: Request, res: Response) => {
 
     const buffer = Buffer.from(response.data);
 
-    // Save locally on server disk first
-    const filename = `transfer_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
+    // Save physically in public/uploads/
+    const filename = `${filenamePrefix}.${ext}`;
     const localFilePath = path.join(UPLOADS_DIR, filename);
     fs.writeFileSync(localFilePath, buffer);
     const localUrl = `/uploads/${filename}`;
-    console.log(`[CDN Transfer Step 1/2 Complete] Saved locally on server at: ${localFilePath}`);
 
-    // Step 2: Read downloaded file from local disk and transfer to CDN (s1/upload.php)
-    console.log(`[CDN Transfer Step 2/2] Transferring downloaded server file to CDN https://upc.geekclub.ir/s1/upload.php...`);
+    // Upload to upc.geekclub.ir CDN
     try {
-      const fileBufferFromDisk = fs.readFileSync(localFilePath);
-      const fileBlob = new Blob([fileBufferFromDisk], { type: contentType });
+      const fileBlob = new Blob([buffer], { type: contentType });
       const formData = new FormData();
       formData.append('file', fileBlob, filename);
       formData.append('api_token', 'geekclub_cdn_secret_2026');
-      formData.append('folder', targetFolder);
+      formData.append('folder', 'contents');
 
       const cdnResp = await fetch('https://upc.geekclub.ir/s1/upload.php', {
         method: 'POST',
@@ -150,64 +139,237 @@ app.post('/api/transfer-to-cdn', async (req: Request, res: Response) => {
       if (cdnResp.ok) {
         const cdnData = await cdnResp.json() as any;
         if (cdnData.status && cdnData.url) {
-          console.log(`[CDN Transfer Step 2/2 Complete] File uploaded to CDN URL: ${cdnData.url}`);
-          return res.json({ success: true, url: cdnData.url });
+          console.log(`[CDN Upload SUCCESS] ${filenamePrefix} uploaded to CDN: ${cdnData.url}`);
+          return cdnData.url;
         }
       }
     } catch (cdnErr: any) {
-      console.warn('[CDN Transfer Step 2/2 Warning] CDN upload endpoint unavailable, serving from local server path:', cdnErr.message);
+      console.warn(`[CDN Upload Warning] Upload to upc.geekclub.ir failed for ${filenamePrefix}:`, cdnErr.message);
     }
 
-    return res.json({ success: true, url: localUrl });
+    return localUrl;
+  } catch (err: any) {
+    console.warn(`Failed to download cover image from ${imageUrl}:`, err.message);
+    return imageUrl;
+  }
+}
+
+// 0.1. POST /api/transfer-to-cdn - Server-side external image downloader & CDN uploader
+app.post('/api/transfer-to-cdn', async (req: Request, res: Response) => {
+  const { imageUrl, folder, filenamePrefix } = req.body;
+  if (!imageUrl) {
+    return res.status(400).json({ success: false, error: 'imageUrl parameter is required' });
+  }
+
+  if (imageUrl.includes('upc.geekclub.ir') || imageUrl.startsWith('data:') || imageUrl.startsWith('/uploads/')) {
+    return res.json({ success: true, url: imageUrl });
+  }
+
+  try {
+    const pfx = filenamePrefix || `transfer_${Date.now()}`;
+    const cdnUrl = await downloadAndCacheImage(imageUrl, pfx);
+    return res.json({ success: true, url: cdnUrl });
   } catch (err: any) {
     console.error('Server image download error:', err.message);
-    // If download failed, return proxy URL as ultimate fallback
     const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
     return res.json({ success: true, url: proxyUrl });
   }
 });
 
-// 0.1. GET /api/extract-metadata - Fetch page metadata (title, meta description, image, author) server-side
-app.get('/api/extract-metadata', async (req: Request, res: Response) => {
-  const targetUrl = req.query.url as string;
+// Centralized metadata extractor that handles YouTube (oEmbed & scrape), Aparat (API & scrape), Instagram, and Web Articles
+async function extractMetadataHandler(targetUrl: string, res: Response) {
   if (!targetUrl) {
-    return res.status(400).json({ error: 'URL query parameter is required' });
+    return res.status(400).json({ success: false, error: 'URL query parameter is required' });
   }
 
+  const cleanUrl = targetUrl.trim().startsWith('http') ? targetUrl.trim() : `https://${targetUrl.trim()}`;
+
+  // 1. YouTube metadata extraction & cover download + CDN transfer
+  const ytMatch = cleanUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+  if (ytMatch && ytMatch[1]) {
+    const videoId = ytMatch[1];
+    let title = cleanUrl.includes('shorts') ? 'ویدیو کوتاه یوتیوب (Shorts)' : 'ویدیو آموزشی در یوتیوب';
+    let authorName = 'کانال یوتیوب';
+    let description = '';
+    let rawThumb = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+
+    try {
+      const oeRes = await axios.get(`https://www.youtube.com/oembed?url=${encodeURIComponent(cleanUrl)}&format=json`, { timeout: 6000 });
+      if (oeRes.data) {
+        if (oeRes.data.title) title = oeRes.data.title;
+        if (oeRes.data.author_name) authorName = oeRes.data.author_name;
+        if (oeRes.data.thumbnail_url) rawThumb = oeRes.data.thumbnail_url;
+      }
+    } catch {
+      try {
+        const noembed = await axios.get(`https://noembed.com/embed?url=${encodeURIComponent(cleanUrl)}`, { timeout: 5000 });
+        if (noembed.data) {
+          if (noembed.data.title) title = noembed.data.title;
+          if (noembed.data.author_name) authorName = noembed.data.author_name;
+          if (noembed.data.thumbnail_url) rawThumb = noembed.data.thumbnail_url;
+        }
+      } catch {}
+    }
+
+    try {
+      const pageRes = await axios.get(cleanUrl, {
+        timeout: 6000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept-Language': 'fa-IR,fa;q=0.9,en-US;q=0.8,en;q=0.7'
+        }
+      });
+      const html = typeof pageRes.data === 'string' ? pageRes.data : '';
+      const descMatch = html.match(/<meta\s+property=["']og:description["']\s+content=["']([^"']+)["']/i) ||
+                        html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i);
+      if (descMatch && descMatch[1] && descMatch[1].trim()) {
+        description = descMatch[1].trim();
+      }
+    } catch {}
+
+    if (!description) {
+      description = `ویدیوی جذاب منتشر شده در پلتفرم یوتیوب توسط ${authorName}. جهت مشاهده کامل ویدیو روی دکمه پخش کلیک کنید.`;
+    }
+
+    // Download thumbnail on server and upload to CDN
+    const finalThumbnail = await downloadAndCacheImage(rawThumb, `cover_yt_${videoId}`);
+
+    return res.json({
+      success: true,
+      platform: 'youtube',
+      title,
+      description,
+      authorName,
+      thumbnail: finalThumbnail,
+      image: finalThumbnail,
+      author: authorName,
+      embedUrl: `https://www.youtube.com/embed/${videoId}`,
+      readingOrWatchTime: cleanUrl.includes('shorts') ? '۶۰ ثانیه شورت' : 'ویدیو یوتیوب',
+      tags: ['یوتیوب', 'ویدیو', 'تکنولوژی', 'آموزش'],
+      data: {
+        title,
+        author_name: authorName,
+        thumbnail_url: finalThumbnail
+      }
+    });
+  }
+
+  // 2. Aparat metadata extraction & cover download + CDN transfer
+  const apMatch = cleanUrl.match(/aparat\.com\/v\/([a-zA-Z0-9]+)/i);
+  if (apMatch && apMatch[1]) {
+    const hash = apMatch[1];
+    let title = 'ویدیوی آموزشی آپارات';
+    let authorName = 'کانال آپارات';
+    let description = '';
+    let readingOrWatchTime = 'ویدیو آپارات';
+    let rawThumb = '';
+
+    try {
+      const apRes = await axios.get(`https://www.aparat.com/api/fa/v1/video/video/show/videohash/${hash}`, {
+        timeout: 7000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept-Language': 'fa-IR,fa;q=0.9,en-US;q=0.8,en;q=0.7'
+        }
+      });
+      const attr = apRes.data?.data?.attributes;
+      if (attr) {
+        if (attr.title) title = attr.title;
+        if (attr.description) description = attr.description;
+        if (attr.owner_username) authorName = attr.owner_username;
+        if (attr.duration) readingOrWatchTime = `${Math.ceil(attr.duration / 60)} دقیقه ویدیو`;
+        rawThumb = attr.big_poster || attr.poster || attr.medium_poster || attr.small_poster || '';
+      }
+    } catch (err: any) {
+      console.warn('Aparat API fetch error:', err.message);
+    }
+
+    if (!description) {
+      description = `ویدیوی به اشتراک گذاشته شده از آپارات توسط ${authorName}. برای مشاهده ویدیوی کامل روی کارت کلیک نمایید.`;
+    }
+
+    let finalThumbnail = rawThumb;
+    if (rawThumb) {
+      finalThumbnail = await downloadAndCacheImage(rawThumb, `cover_aparat_${hash}`);
+    }
+
+    return res.json({
+      success: true,
+      platform: 'aparat',
+      title,
+      description,
+      authorName,
+      thumbnail: finalThumbnail,
+      image: finalThumbnail,
+      author: authorName,
+      embedUrl: `https://www.aparat.com/video/video/embed/videohash/${hash}/vt/frame`,
+      readingOrWatchTime,
+      tags: ['آپارات', 'ویدیو', 'آموزش'],
+      data: {
+        title,
+        author_name: authorName,
+        thumbnail_url: finalThumbnail
+      }
+    });
+  }
+
+  // 3. Instagram metadata extraction
+  if (cleanUrl.includes('instagram.com')) {
+    let title = 'پست منتخب در اینستاگرام';
+    let authorName = 'پیج اینستاگرام';
+    let description = 'محتوای به اشتراک گذاشته شده در اینستاگرام. برای مشاهده تعاملی روی کارت کلیک نمایید.';
+    let rawThumb = '';
+
+    try {
+      const noembed = await axios.get(`https://noembed.com/embed?url=${encodeURIComponent(cleanUrl)}`, { timeout: 6000 });
+      if (noembed.data) {
+        if (noembed.data.title) title = noembed.data.title;
+        if (noembed.data.author_name) authorName = noembed.data.author_name;
+        if (noembed.data.thumbnail_url) rawThumb = noembed.data.thumbnail_url;
+      }
+    } catch {}
+
+    let finalThumbnail = rawThumb;
+    if (rawThumb) {
+      finalThumbnail = await downloadAndCacheImage(rawThumb, `cover_ig_${Date.now()}`);
+    }
+
+    return res.json({
+      success: true,
+      platform: 'instagram',
+      title,
+      description,
+      authorName,
+      thumbnail: finalThumbnail,
+      image: finalThumbnail,
+      author: authorName,
+      embedUrl: cleanUrl.replace(/\/$/, '') + '/embed',
+      readingOrWatchTime: cleanUrl.includes('reel') ? 'ریلز اینستاگرام' : 'پست اینستاگرام',
+      tags: ['اینستاگرام', 'ریلز', 'رسانه'],
+      data: {
+        title,
+        author_name: authorName,
+        thumbnail_url: finalThumbnail
+      }
+    });
+  }
+
+  // 4. General Web Article / Webpage
   try {
-    const cleanUrl = targetUrl.trim().startsWith('http') ? targetUrl.trim() : `https://${targetUrl.trim()}`;
-    const response = await axios.get(cleanUrl, {
-      timeout: 6000,
+    const pageRes = await axios.get(cleanUrl, {
+      timeout: 8000,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept-Language': 'fa-IR,fa;q=0.9,en-US;q=0.8,en;q=0.7'
       }
     });
 
-    const html = response.data;
-    if (typeof html !== 'string') {
-      return res.json({ title: '', description: '', image: '', author: '' });
-    }
-
-    // Extract Meta Description (description, og:description, twitter:description)
-    let description = '';
-    const descMatches = [
-      html.match(/<meta\s+property=["']og:description["']\s+content=["']([^"']+)["']/i),
-      html.match(/<meta\s+content=["']([^"']+)["']\s+property=["']og:description["']/i),
-      html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i),
-      html.match(/<meta\s+content=["']([^"']+)["']\s+name=["']description["']/i),
-      html.match(/<meta\s+name=["']twitter:description["']\s+content=["']([^"']+)["']/i),
-      html.match(/<meta\s+content=["']([^"']+)["']\s+name=["']twitter:description["']/i)
-    ];
-    for (const m of descMatches) {
-      if (m && m[1] && m[1].trim()) {
-        description = m[1].trim();
-        break;
-      }
-    }
-
-    // Extract Title (og:title, <title>, twitter:title)
+    const html = typeof pageRes.data === 'string' ? pageRes.data : '';
     let title = '';
+    let description = '';
+    let image = '';
+    let author = '';
+
     const titleMatches = [
       html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i),
       html.match(/<meta\s+content=["']([^"']+)["']\s+property=["']og:title["']/i),
@@ -221,8 +383,20 @@ app.get('/api/extract-metadata', async (req: Request, res: Response) => {
       }
     }
 
-    // Extract Thumbnail / OG Image
-    let image = '';
+    const descMatches = [
+      html.match(/<meta\s+property=["']og:description["']\s+content=["']([^"']+)["']/i),
+      html.match(/<meta\s+content=["']([^"']+)["']\s+property=["']og:description["']/i),
+      html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i),
+      html.match(/<meta\s+content=["']([^"']+)["']\s+name=["']description["']/i),
+      html.match(/<meta\s+name=["']twitter:description["']\s+content=["']([^"']+)["']/i)
+    ];
+    for (const m of descMatches) {
+      if (m && m[1] && m[1].trim()) {
+        description = m[1].trim();
+        break;
+      }
+    }
+
     const imgMatches = [
       html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i),
       html.match(/<meta\s+content=["']([^"']+)["']\s+property=["']og:image["']/i)
@@ -234,8 +408,6 @@ app.get('/api/extract-metadata', async (req: Request, res: Response) => {
       }
     }
 
-    // Extract Author
-    let author = '';
     const authorMatches = [
       html.match(/<meta\s+name=["']author["']\s+content=["']([^"']+)["']/i),
       html.match(/<meta\s+property=["']article:author["']\s+content=["']([^"']+)["']/i)
@@ -247,16 +419,51 @@ app.get('/api/extract-metadata', async (req: Request, res: Response) => {
       }
     }
 
+    let finalThumbnail = image;
+    if (image && image.startsWith('http')) {
+      finalThumbnail = await downloadAndCacheImage(image, `cover_art_${Date.now()}`);
+    }
+
     return res.json({
-      title,
-      description,
-      image,
-      author
+      success: true,
+      platform: 'article',
+      title: title || 'مقاله وب',
+      description: description || '',
+      authorName: author || '',
+      thumbnail: finalThumbnail || '',
+      image: finalThumbnail || '',
+      author,
+      embedUrl: cleanUrl,
+      readingOrWatchTime: '۵ دقیقه مطالعه',
+      tags: ['مقاله', 'وب', 'فناوری'],
+      data: {
+        title,
+        author_name: author,
+        thumbnail_url: finalThumbnail
+      }
     });
   } catch (err: any) {
-    console.error('Error in /api/extract-metadata:', err.message);
-    return res.json({ title: '', description: '', image: '', author: '' });
+    return res.json({
+      success: false,
+      title: '',
+      description: '',
+      image: '',
+      thumbnail: '',
+      author: '',
+      error: err.message
+    });
   }
+}
+
+// 0.2. GET /api/extract-metadata & /api/metadata/extract
+app.get('/api/extract-metadata', async (req: Request, res: Response) => {
+  const targetUrl = req.query.url as string;
+  return extractMetadataHandler(targetUrl, res);
+});
+
+app.get('/api/metadata/extract', async (req: Request, res: Response) => {
+  const targetUrl = req.query.url as string;
+  return extractMetadataHandler(targetUrl, res);
 });
 
 // 1. GET /api/contents - List all contents with optional filters
@@ -299,64 +506,13 @@ app.get('/api/contents', (req: Request, res: Response) => {
   res.json({ success: true, count: results.length, data: results });
 });
 
-async function ensureCDNImage(imageUrl: string, folder = 'contents'): Promise<string> {
+async function ensureCDNImage(imageUrl: string, _folder = 'contents'): Promise<string> {
   if (!imageUrl || imageUrl.includes('upc.geekclub.ir') || imageUrl.startsWith('data:') || imageUrl.startsWith('/uploads/')) {
     return imageUrl;
   }
-  try {
-    const response = await axios.get(imageUrl, {
-      responseType: 'arraybuffer',
-      timeout: 8000,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      }
-    });
-
-    const rawType = response.headers['content-type'];
-    const contentType = typeof rawType === 'string' ? rawType : 'image/jpeg';
-    let ext = 'jpg';
-    if (contentType.includes('webp')) ext = 'webp';
-    else if (contentType.includes('png')) ext = 'png';
-    else if (contentType.includes('svg')) ext = 'svg';
-
-    const buffer = Buffer.from(response.data);
-
-    try {
-      const fileBlob = new Blob([buffer], { type: contentType });
-      const formData = new FormData();
-      formData.append('file', fileBlob, `gc_${Date.now()}.${ext}`);
-      formData.append('api_token', 'geekclub_cdn_secret_2026');
-      formData.append('folder', folder);
-
-      const cdnResp = await fetch('https://upc.geekclub.ir/s1/upload.php', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer geekclub_cdn_secret_2026',
-          'X-Api-Token': 'geekclub_cdn_secret_2026'
-        },
-        body: formData
-      });
-
-      if (cdnResp.ok) {
-        const cdnData = await cdnResp.json() as any;
-        if (cdnData.status && cdnData.url) {
-          return cdnData.url;
-        }
-      }
-    } catch (cdnErr: any) {
-      console.warn('CDN upload to upc.geekclub.ir failed in ensureCDNImage:', cdnErr.message);
-    }
-
-    // Save locally
-    const filename = `cached_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
-    const localFilePath = path.join(UPLOADS_DIR, filename);
-    fs.writeFileSync(localFilePath, buffer);
-    return `/uploads/${filename}`;
-  } catch (err: any) {
-    console.warn('Auto CDN transfer in server route skipped:', err.message);
-  }
-  return `/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
+  return downloadAndCacheImage(imageUrl, `gc_${Date.now()}`);
 }
+
 
 // 2. POST /api/contents - Add new content
 app.post('/api/contents', async (req: Request, res: Response) => {
@@ -526,100 +682,17 @@ app.post('/api/comments/:contentId/:commentId/like', (req: Request, res: Respons
   res.json({ success: true, data: target });
 });
 
-// 7. GET /api/metadata/extract - Server-side oEmbed scraper
-app.get('/api/metadata/extract', async (req: Request, res: Response) => {
-  const targetUrl = req.query.url as string;
-  if (!targetUrl) {
-    return res.status(400).json({ success: false, error: 'url parameter required' });
-  }
-
-  try {
-    const oembedUrl = `https://noembed.com/embed?url=${encodeURIComponent(targetUrl)}`;
-    const response = await fetch(oembedUrl);
-    if (response.ok) {
-      const data = await response.json();
-      return res.json({ success: true, data });
-    }
-  } catch (err) {
-    console.error('Server metadata extract error:', err);
-  }
-
-  res.json({ success: false, message: 'Could not fetch remote metadata' });
-});
-
-// Helper to download real cover image from external platform and cache locally & on CDN
-async function downloadAndCacheImage(imageUrl: string, filenamePrefix: string): Promise<string> {
-  if (!imageUrl) return imageUrl;
-  try {
-    const response = await axios.get(imageUrl, {
-      responseType: 'arraybuffer',
-      timeout: 10000,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      }
-    });
-
-    const rawType = response.headers['content-type'];
-    const contentType = typeof rawType === 'string' ? rawType : 'image/jpeg';
-    let ext = 'jpg';
-    if (contentType.includes('webp')) ext = 'webp';
-    else if (contentType.includes('png')) ext = 'png';
-
-    const buffer = Buffer.from(response.data);
-
-    // Save physically in public/uploads/
-    const filename = `${filenamePrefix}.${ext}`;
-    const localFilePath = path.join(UPLOADS_DIR, filename);
-    fs.writeFileSync(localFilePath, buffer);
-    const localUrl = `/uploads/${filename}`;
-
-    // Attempt primary upload to upc.geekclub.ir CDN
-    try {
-      const fileBlob = new Blob([buffer], { type: contentType });
-      const formData = new FormData();
-      formData.append('file', fileBlob, `${filenamePrefix}.${ext}`);
-      formData.append('api_token', 'geekclub_cdn_secret_2026');
-      formData.append('folder', 'contents');
-
-      const cdnResp = await fetch('https://upc.geekclub.ir/s1/upload.php', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer geekclub_cdn_secret_2026',
-          'X-Api-Token': 'geekclub_cdn_secret_2026'
-        },
-        body: formData
-      });
-
-      if (cdnResp.ok) {
-        const cdnData = await cdnResp.json() as any;
-        if (cdnData.status && cdnData.url) {
-          try {
-            const checkCDN = await axios.head(cdnData.url, { timeout: 3500 });
-            if (checkCDN.status === 200) {
-              return cdnData.url;
-            }
-          } catch {
-            console.warn(`CDN URL ${cdnData.url} not responding with 200, using local file ${localUrl}`);
-          }
-        }
-      }
-    } catch (cdnErr: any) {
-      console.warn(`CDN upload to upc.geekclub.ir skipped for ${filenamePrefix}:`, cdnErr.message);
-    }
-
-    return localUrl;
-  } catch (err: any) {
-    console.warn(`Failed to download cover image from ${imageUrl}:`, err.message);
-    return imageUrl;
-  }
-}
-
 async function syncPlatformCoverImages() {
   try {
     const db = loadDatabase();
     let updated = false;
 
     for (const item of db.contents) {
+      // If already on upc.geekclub.ir CDN and valid, continue
+      if (item.thumbnail && item.thumbnail.includes('upc.geekclub.ir') && !item.thumbnail.includes('avatar_.')) {
+        continue;
+      }
+
       let sourceImageUrl = '';
       
       // 1. YouTube Cover Download
@@ -634,50 +707,34 @@ async function syncPlatformCoverImages() {
         const apMatch = item.url.match(/aparat\.com\/v\/([a-zA-Z0-9]+)/i);
         if (apMatch && apMatch[1]) {
           try {
-            const res = await axios.get(`https://www.aparat.com/etc/api/video/videohash/${apMatch[1]}`, { timeout: 5000 });
-            if (res.data?.video?.big_poster) {
-              sourceImageUrl = res.data.video.big_poster;
-            } else if (res.data?.video?.small_poster) {
-              sourceImageUrl = res.data.video.small_poster;
-            }
-          } catch {
-            try {
-              const noembed = await axios.get(`https://noembed.com/embed?url=${encodeURIComponent(item.url)}`, { timeout: 5000 });
-              if (noembed.data?.thumbnail_url) {
-                sourceImageUrl = noembed.data.thumbnail_url;
+            const res = await axios.get(`https://www.aparat.com/api/fa/v1/video/video/show/videohash/${apMatch[1]}`, {
+              timeout: 6000,
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept-Language': 'fa-IR,fa;q=0.9,en-US;q=0.8,en;q=0.7'
               }
-            } catch {}
-          }
+            });
+            const attr = res.data?.data?.attributes;
+            if (attr) {
+              sourceImageUrl = attr.big_poster || attr.poster || attr.medium_poster || '';
+            }
+          } catch {}
         }
       }
-      // 3. Instagram / Article Cover Download
-      else if (item.url) {
-        try {
-          const noembed = await axios.get(`https://noembed.com/embed?url=${encodeURIComponent(item.url)}`, { timeout: 5000 });
-          if (noembed.data?.thumbnail_url) {
-            sourceImageUrl = noembed.data.thumbnail_url;
-          }
-        } catch {}
-      }
 
-      // Ensure local server file exists
-      const expectedFilename = `cover_${item.id}.jpg`;
-      const localFilePath = path.join(UPLOADS_DIR, expectedFilename);
-      if (sourceImageUrl && !fs.existsSync(localFilePath)) {
-        console.log(`📥 Downloading original ${item.platform} cover for ${item.id} from ${sourceImageUrl}...`);
-        await downloadAndCacheImage(sourceImageUrl, `cover_${item.id}`);
-      }
-
-      // If thumbnail is empty, use working source image or fallback
-      if (!item.thumbnail) {
-        item.thumbnail = sourceImageUrl || `/uploads/${expectedFilename}`;
-        updated = true;
+      if (sourceImageUrl) {
+        console.log(`📥 Downloading and caching cover for ${item.id} from ${sourceImageUrl}...`);
+        const cdnUrl = await downloadAndCacheImage(sourceImageUrl, `cover_${item.id}`);
+        if (cdnUrl) {
+          item.thumbnail = cdnUrl;
+          updated = true;
+        }
       }
     }
 
     if (updated) {
       saveDatabase(db);
-      console.log('✅ Real YouTube & Aparat cover images downloaded and saved successfully!');
+      console.log('✅ Real YouTube & Aparat cover images synced to CDN and saved successfully!');
     }
   } catch (err: any) {
     console.error('Error in syncPlatformCoverImages:', err.message);

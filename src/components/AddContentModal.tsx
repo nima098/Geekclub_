@@ -193,6 +193,18 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
       if (!description && fetchedMeta.description) {
         setDescription(fetchedMeta.description);
       }
+      if (!thumbnail && fetchedMeta.thumbnail) {
+        setThumbnail(fetchedMeta.thumbnail);
+      }
+      if (!authorName && fetchedMeta.authorName) {
+        setAuthorName(fetchedMeta.authorName);
+      }
+      if (!readingOrWatchTime && fetchedMeta.readingOrWatchTime) {
+        setReadingOrWatchTime(fetchedMeta.readingOrWatchTime);
+      }
+      if (!tagsInput && fetchedMeta.tags && fetchedMeta.tags.length > 0) {
+        setTagsInput(fetchedMeta.tags.join(', '));
+      }
     }
   }, [fetchedMeta]);
 
