@@ -83,6 +83,7 @@ export interface ContentItem {
   authorUid?: string;
   approvalStatus?: 'approved' | 'pending' | 'rejected';
   moderationReason?: string;
+  needsEnrichment?: boolean;
 }
 
 export interface UserProfile {

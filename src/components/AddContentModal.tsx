@@ -341,9 +341,12 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
           : FALLBACK_IMAGES.article
       );
 
+      // Check if user submitted very quickly without waiting for metadata extraction
+      const isQuickSubmit = !fetchedMeta || isLoadingMeta || !title.trim();
+
       // Auto transfer cover photo (YouTube, Aparat, Instagram, Article) to personal CDN on upc.geekclub.ir/s1/
       let finalThumbnail = rawThumbnail;
-      if (rawThumbnail && !rawThumbnail.includes('upc.geekclub.ir')) {
+      if (!isQuickSubmit && rawThumbnail && !rawThumbnail.includes('upc.geekclub.ir')) {
         try {
           finalThumbnail = await transferExternalUrlToCDN(rawThumbnail, 'contents', `cover_${finalPlatform}`);
         } catch (err) {
@@ -399,7 +402,8 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
         tags: finalTags,
         readingOrWatchTime: finalDuration,
         articleContent: articleContent.trim() || finalDescription,
-        sourceDomain: parsed.sourceDomain
+        sourceDomain: parsed.sourceDomain,
+        needsEnrichment: isQuickSubmit
       });
 
       // Reset form

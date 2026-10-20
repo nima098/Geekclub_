@@ -177,9 +177,38 @@ app.post('/api/transfer-to-cdn', async (req: Request, res: Response) => {
 });
 
 // Centralized metadata extractor that handles YouTube (oEmbed & scrape), Aparat (API & scrape), Instagram, and Web Articles
-async function extractMetadataHandler(targetUrl: string, res: Response) {
+export interface ExtractedMetaResult {
+  success: boolean;
+  platform: 'youtube' | 'aparat' | 'instagram' | 'article';
+  title: string;
+  description: string;
+  authorName: string;
+  thumbnail: string;
+  image: string;
+  author: string;
+  embedUrl: string;
+  readingOrWatchTime: string;
+  tags: string[];
+  data?: any;
+  error?: string;
+}
+
+export async function extractMetadataForUrl(targetUrl: string): Promise<ExtractedMetaResult> {
   if (!targetUrl) {
-    return res.status(400).json({ success: false, error: 'URL query parameter is required' });
+    return {
+      success: false,
+      platform: 'article',
+      title: '',
+      description: '',
+      authorName: '',
+      thumbnail: '',
+      image: '',
+      author: '',
+      embedUrl: '',
+      readingOrWatchTime: '',
+      tags: [],
+      error: 'URL query parameter is required'
+    };
   }
 
   const cleanUrl = targetUrl.trim().startsWith('http') ? targetUrl.trim() : `https://${targetUrl.trim()}`;
@@ -234,7 +263,7 @@ async function extractMetadataHandler(targetUrl: string, res: Response) {
     // Download thumbnail on server and upload to CDN
     const finalThumbnail = await downloadAndCacheImage(rawThumb, `cover_yt_${videoId}`);
 
-    return res.json({
+    return {
       success: true,
       platform: 'youtube',
       title,
@@ -251,7 +280,7 @@ async function extractMetadataHandler(targetUrl: string, res: Response) {
         author_name: authorName,
         thumbnail_url: finalThumbnail
       }
-    });
+    };
   }
 
   // 2. Aparat metadata extraction & cover download + CDN transfer
@@ -293,7 +322,7 @@ async function extractMetadataHandler(targetUrl: string, res: Response) {
       finalThumbnail = await downloadAndCacheImage(rawThumb, `cover_aparat_${hash}`);
     }
 
-    return res.json({
+    return {
       success: true,
       platform: 'aparat',
       title,
@@ -310,7 +339,7 @@ async function extractMetadataHandler(targetUrl: string, res: Response) {
         author_name: authorName,
         thumbnail_url: finalThumbnail
       }
-    });
+    };
   }
 
   // 3. Instagram metadata extraction
@@ -334,7 +363,7 @@ async function extractMetadataHandler(targetUrl: string, res: Response) {
       finalThumbnail = await downloadAndCacheImage(rawThumb, `cover_ig_${Date.now()}`);
     }
 
-    return res.json({
+    return {
       success: true,
       platform: 'instagram',
       title,
@@ -351,7 +380,7 @@ async function extractMetadataHandler(targetUrl: string, res: Response) {
         author_name: authorName,
         thumbnail_url: finalThumbnail
       }
-    });
+    };
   }
 
   // 4. General Web Article / Webpage
@@ -424,7 +453,7 @@ async function extractMetadataHandler(targetUrl: string, res: Response) {
       finalThumbnail = await downloadAndCacheImage(image, `cover_art_${Date.now()}`);
     }
 
-    return res.json({
+    return {
       success: true,
       platform: 'article',
       title: title || 'مقاله وب',
@@ -441,17 +470,104 @@ async function extractMetadataHandler(targetUrl: string, res: Response) {
         author_name: author,
         thumbnail_url: finalThumbnail
       }
-    });
+    };
   } catch (err: any) {
-    return res.json({
+    return {
       success: false,
+      platform: 'article',
       title: '',
       description: '',
       image: '',
       thumbnail: '',
       author: '',
+      authorName: '',
+      embedUrl: cleanUrl,
+      readingOrWatchTime: '۵ دقیقه مطالعه',
+      tags: ['وب'],
       error: err.message
-    });
+    };
+  }
+}
+
+// Helper to handle express extract metadata route
+async function extractMetadataHandler(targetUrl: string, res: Response) {
+  if (!targetUrl) {
+    return res.status(400).json({ success: false, error: 'URL query parameter is required' });
+  }
+  const result = await extractMetadataForUrl(targetUrl);
+  return res.json(result);
+}
+
+// Background enrichment helper: When a user registers a link quickly without waiting for metadata,
+// the server extracts source metadata, downloads the cover image to the CDN, and updates the database record.
+async function enrichDatabaseContent(id: string, url: string) {
+  try {
+    const meta = await extractMetadataForUrl(url);
+    if (!meta || !meta.success) {
+      return null;
+    }
+
+    const db = loadDatabase();
+    const item = db.contents.find((c: any) => c.id === id);
+    if (!item) return null;
+
+    const isGenericTitle = !item.title || 
+      item.title === 'ویدیوی یوتیوب' || 
+      item.title === 'ویدیوی آپارات' || 
+      item.title === 'پست اینستاگرام' || 
+      item.title === 'محتوای اشتراک‌گذاری شده' || 
+      item.title === 'مقاله وب' ||
+      item.title.startsWith('مقاله در ');
+
+    const isGenericDesc = !item.description || 
+      item.description.includes('به اشتراک گذاشته شده') ||
+      item.description.length < 10;
+
+    const needsThumbnailUpdate = !item.thumbnail || 
+      !item.thumbnail.includes('upc.geekclub.ir') || 
+      item.thumbnail.startsWith('data:') ||
+      item.thumbnail.includes('unsplash');
+
+    let changed = false;
+
+    if (isGenericTitle && meta.title) {
+      item.title = meta.title;
+      changed = true;
+    }
+    if (isGenericDesc && meta.description) {
+      item.description = meta.description;
+      changed = true;
+    }
+    if (needsThumbnailUpdate && meta.thumbnail) {
+      item.thumbnail = meta.thumbnail;
+      changed = true;
+    }
+    if (meta.authorName && (!item.author?.name || item.author.name === 'کاربر گیک کلاب')) {
+      if (!item.author) item.author = { name: meta.authorName, handle: `@${meta.authorName.replace(/\s+/g, '_')}` };
+      else item.author.name = meta.authorName;
+      changed = true;
+    }
+    if (meta.readingOrWatchTime && (!item.readingOrWatchTime || item.readingOrWatchTime === '۵ دقیقه')) {
+      item.readingOrWatchTime = meta.readingOrWatchTime;
+      changed = true;
+    }
+    if (meta.tags && meta.tags.length > 0 && (!item.tags || item.tags.length <= 2)) {
+      item.tags = Array.from(new Set([...(item.tags || []), ...meta.tags]));
+      changed = true;
+    }
+    if (meta.embedUrl && (!item.embedUrl || item.embedUrl === item.url)) {
+      item.embedUrl = meta.embedUrl;
+      changed = true;
+    }
+
+    if (changed) {
+      saveDatabase(db);
+      console.log(`[Background Enrich] Content ${id} updated: Title="${item.title}", Cover="${item.thumbnail}"`);
+    }
+    return item;
+  } catch (err: any) {
+    console.warn(`[Background Enrich] Error for content ${id}:`, err.message);
+    return null;
   }
 }
 
@@ -569,7 +685,84 @@ app.post('/api/contents', async (req: Request, res: Response) => {
   db.contents.unshift(newItem);
   saveDatabase(db);
 
+  // Background enrichment: If the user didn't wait and submitted quickly with generic title/thumbnail
+  const isGenericTitle = !newItem.title || 
+    newItem.title === 'ویدیوی یوتیوب' || 
+    newItem.title === 'ویدیوی آپارات' || 
+    newItem.title === 'پست اینستاگرام' || 
+    newItem.title === 'محتوای اشتراک‌گذاری شده' || 
+    newItem.title === 'مقاله وب' ||
+    newItem.title.startsWith('مقاله در ');
+
+  const needsThumbnail = !newItem.thumbnail || 
+    !newItem.thumbnail.includes('upc.geekclub.ir') || 
+    newItem.thumbnail.startsWith('data:') ||
+    newItem.thumbnail.includes('unsplash');
+
+  if (isGenericTitle || needsThumbnail || req.body.needsEnrichment) {
+    setImmediate(async () => {
+      try {
+        await enrichDatabaseContent(newItem.id, newItem.url);
+      } catch (err: any) {
+        console.warn(`[Background Enrich] Post-create enrich failed for ${newItem.id}:`, err.message);
+      }
+    });
+  }
+
   res.status(201).json({ success: true, data: newItem });
+});
+
+// 2.1 POST /api/contents/:id/enrich & GET /api/contents/:id/enrich - Synchronize/enrich content metadata & CDN cover
+app.post('/api/contents/:id/enrich', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const db = loadDatabase();
+  const item = db.contents.find((c) => c.id === id);
+  const targetUrl = item?.url || req.body?.url;
+
+  if (!targetUrl) {
+    return res.status(400).json({ success: false, error: 'Target URL is missing' });
+  }
+
+  const enriched = await enrichDatabaseContent(id, targetUrl);
+  if (enriched) {
+    return res.json({ success: true, data: enriched });
+  }
+
+  const meta = await extractMetadataForUrl(targetUrl);
+  return res.json({ success: true, data: meta });
+});
+
+app.get('/api/contents/:id/enrich', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const db = loadDatabase();
+  const item = db.contents.find((c) => c.id === id);
+  const targetUrl = item?.url || (req.query.url as string);
+
+  if (!targetUrl) {
+    return res.status(400).json({ success: false, error: 'Target URL is missing' });
+  }
+
+  const enriched = await enrichDatabaseContent(id, targetUrl);
+  if (enriched) {
+    return res.json({ success: true, data: enriched });
+  }
+
+  const meta = await extractMetadataForUrl(targetUrl);
+  return res.json({ success: true, data: meta });
+});
+
+// 2.2 PATCH /api/contents/:id - Update content fields in local db
+app.patch('/api/contents/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const updates = req.body;
+  const db = loadDatabase();
+  const index = db.contents.findIndex((c) => c.id === id);
+  if (index === -1) {
+    return res.status(404).json({ success: false, error: 'Content not found' });
+  }
+  db.contents[index] = { ...db.contents[index], ...updates };
+  saveDatabase(db);
+  res.json({ success: true, data: db.contents[index] });
 });
 
 // 3. POST /api/contents/:id/reaction - Like or Dislike
@@ -685,56 +878,23 @@ app.post('/api/comments/:contentId/:commentId/like', (req: Request, res: Respons
 async function syncPlatformCoverImages() {
   try {
     const db = loadDatabase();
-    let updated = false;
-
     for (const item of db.contents) {
-      // If already on upc.geekclub.ir CDN and valid, continue
-      if (item.thumbnail && item.thumbnail.includes('upc.geekclub.ir') && !item.thumbnail.includes('avatar_.')) {
-        continue;
-      }
+      const isGenericTitle = !item.title || 
+        item.title === 'ویدیوی یوتیوب' || 
+        item.title === 'ویدیوی آپارات' || 
+        item.title === 'پست اینستاگرام' || 
+        item.title === 'محتوای اشتراک‌گذاری شده' || 
+        item.title === 'مقاله وب' ||
+        item.title.startsWith('مقاله در ');
 
-      let sourceImageUrl = '';
-      
-      // 1. YouTube Cover Download
-      if (item.platform === 'youtube' && item.url) {
-        const ytMatch = item.url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
-        if (ytMatch && ytMatch[1]) {
-          sourceImageUrl = `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`;
-        }
-      } 
-      // 2. Aparat Cover Download
-      else if (item.platform === 'aparat' && item.url) {
-        const apMatch = item.url.match(/aparat\.com\/v\/([a-zA-Z0-9]+)/i);
-        if (apMatch && apMatch[1]) {
-          try {
-            const res = await axios.get(`https://www.aparat.com/api/fa/v1/video/video/show/videohash/${apMatch[1]}`, {
-              timeout: 6000,
-              headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept-Language': 'fa-IR,fa;q=0.9,en-US;q=0.8,en;q=0.7'
-              }
-            });
-            const attr = res.data?.data?.attributes;
-            if (attr) {
-              sourceImageUrl = attr.big_poster || attr.poster || attr.medium_poster || '';
-            }
-          } catch {}
-        }
-      }
+      const needsThumb = !item.thumbnail || 
+        !item.thumbnail.includes('upc.geekclub.ir') || 
+        item.thumbnail.startsWith('data:') ||
+        item.thumbnail.includes('unsplash');
 
-      if (sourceImageUrl) {
-        console.log(`📥 Downloading and caching cover for ${item.id} from ${sourceImageUrl}...`);
-        const cdnUrl = await downloadAndCacheImage(sourceImageUrl, `cover_${item.id}`);
-        if (cdnUrl) {
-          item.thumbnail = cdnUrl;
-          updated = true;
-        }
+      if (isGenericTitle || needsThumb) {
+        await enrichDatabaseContent(item.id, item.url);
       }
-    }
-
-    if (updated) {
-      saveDatabase(db);
-      console.log('✅ Real YouTube & Aparat cover images synced to CDN and saved successfully!');
     }
   } catch (err: any) {
     console.error('Error in syncPlatformCoverImages:', err.message);

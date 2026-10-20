@@ -673,6 +673,90 @@ export default function App() {
     setContents((prev) => [newItem, ...prev]);
     api.addContent(newItem);
 
+    // Check if user submitted very quickly before metadata / CDN cover arrived
+    const isGenericTitle = !newItem.title || 
+      newItem.title === 'ویدیوی یوتیوب' || 
+      newItem.title === 'ویدیوی آپارات' || 
+      newItem.title === 'پست اینستاگرام' || 
+      newItem.title === 'محتوای اشتراک‌گذاری شده' || 
+      newItem.title === 'مقاله وب' ||
+      newItem.title.startsWith('مقاله در ');
+
+    const needsThumb = !newItem.thumbnail || 
+      !newItem.thumbnail.includes('upc.geekclub.ir') || 
+      newItem.thumbnail.startsWith('data:') ||
+      newItem.thumbnail.includes('unsplash');
+
+    const shouldEnrichInBackground = itemData.needsEnrichment || isGenericTitle || needsThumb;
+
+    if (shouldEnrichInBackground) {
+      addToast('info', 'لینک ثبت شد؛ در حال دریافت اطلاعات و عکس از سایت مبدا در پس‌زمینه...');
+
+      (async () => {
+        try {
+          const res = await fetch(`/api/contents/${newItem.id}/enrich`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: newItem.url })
+          });
+
+          let enriched: any = null;
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.data) {
+              enriched = data.data;
+            }
+          }
+
+          if (!enriched || !enriched.title) {
+            const metaRes = await fetch(`/api/extract-metadata?url=${encodeURIComponent(newItem.url)}`);
+            if (metaRes.ok) {
+              const metaData = await metaRes.json();
+              if (metaData.success) {
+                enriched = metaData;
+              }
+            }
+          }
+
+          if (enriched && (enriched.title || enriched.thumbnail)) {
+            setContents((prev) =>
+              prev.map((c) => {
+                if (c.id !== newItem.id) return c;
+                const canUpdateTitle = isGenericTitle && enriched.title;
+                const canUpdateDesc = (!c.description || c.description.includes('به اشتراک گذاشته شده')) && enriched.description;
+                const canUpdateThumb = (!c.thumbnail || !c.thumbnail.includes('upc.geekclub.ir') || c.thumbnail.startsWith('data:') || c.thumbnail.includes('unsplash')) && enriched.thumbnail;
+
+                return {
+                  ...c,
+                  title: canUpdateTitle ? enriched.title : c.title,
+                  description: canUpdateDesc ? enriched.description : c.description,
+                  thumbnail: canUpdateThumb ? enriched.thumbnail : c.thumbnail,
+                  readingOrWatchTime: enriched.readingOrWatchTime || c.readingOrWatchTime,
+                  embedUrl: enriched.embedUrl || c.embedUrl,
+                  author: {
+                    ...c.author,
+                    name: (c.author.name === 'کاربر گیک کلاب' && enriched.authorName) ? enriched.authorName : c.author.name
+                  }
+                };
+              })
+            );
+
+            await api.updateContent(newItem.id, {
+              ...(enriched.title ? { title: enriched.title } : {}),
+              ...(enriched.description ? { description: enriched.description } : {}),
+              ...(enriched.thumbnail ? { thumbnail: enriched.thumbnail } : {}),
+              ...(enriched.readingOrWatchTime ? { readingOrWatchTime: enriched.readingOrWatchTime } : {}),
+              ...(enriched.embedUrl ? { embedUrl: enriched.embedUrl } : {})
+            });
+
+            addToast('success', 'اطلاعات کامل و کاور محتوا با موفقیت از سایت مبدا فراخوانی و ذخیره شد ✨');
+          }
+        } catch (err) {
+          console.warn('Background metadata enrichment failed:', err);
+        }
+      })();
+    }
+
     if (isAutoApproved) {
       addToast('success', 'محتوای شما به عنوان کاربر عضو با موفقیت در صفحه اصلی منتشر گردید!');
     } else {
