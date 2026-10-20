@@ -103,12 +103,12 @@ export const FALLBACK_IMAGES = {
  * Returns a reliable fallback image URL based on platform or URL content.
  */
 export const getPlatformFallbackImage = (platform?: Platform | string, rawUrl?: string): string => {
+  // If rawUrl is an external image link like YouTube thumbnail, proxy it via server
+  if (rawUrl && rawUrl.startsWith('http') && !rawUrl.includes('/api/proxy-image') && !rawUrl.includes('upc.geekclub.ir') && !rawUrl.startsWith('data:')) {
+    return `/api/proxy-image?url=${encodeURIComponent(rawUrl)}`;
+  }
+
   if (platform === 'youtube' || (rawUrl && (rawUrl.includes('youtube.com') || rawUrl.includes('youtu.be')))) {
-    // Extract video ID if available
-    const ytMatch = rawUrl?.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
-    if (ytMatch && ytMatch[1]) {
-      return `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`;
-    }
     return FALLBACK_IMAGES.youtube;
   }
 
@@ -128,16 +128,40 @@ export const getPlatformFallbackImage = (platform?: Platform | string, rawUrl?: 
 };
 
 /**
- * Image onError handler to replace broken or unreachable image URLs with reliable SVG fallbacks.
+ * Image onError handler to replace broken or unreachable image URLs with server proxy or SVG Data URI.
  */
 export const handleImageError = (
   e: React.SyntheticEvent<HTMLImageElement, Event>,
   fallbackUrl?: string,
-  platform?: Platform | string
+  platform?: Platform | string,
+  itemId?: string
 ) => {
   const target = e.currentTarget;
-  const safeFallback = fallbackUrl || getPlatformFallbackImage(platform, target.src);
-  if (target.src !== safeFallback) {
-    target.src = safeFallback;
+  const currentSrc = target.src;
+
+  // Stop if already an inline Data URI
+  if (currentSrc.startsWith('data:image')) {
+    return;
+  }
+
+  // 1. If CDN URL or external URL failed, try local downloaded server copy
+  if (!currentSrc.includes('/uploads/') && itemId) {
+    target.src = `/uploads/cover_${itemId}.jpg`;
+    return;
+  }
+
+  // 2. If failed on a direct external URL (like img.youtube.com), try proxy route
+  if (currentSrc.startsWith('http') && !currentSrc.includes('/api/proxy-image')) {
+    target.src = `/api/proxy-image?url=${encodeURIComponent(currentSrc)}`;
+    return;
+  }
+
+  // 3. Final fallback: Clean inline SVG Data URI
+  const safeSvg = (fallbackUrl && fallbackUrl.startsWith('data:')) 
+    ? fallbackUrl 
+    : getPlatformFallbackImage(platform);
+
+  if (target.src !== safeSvg) {
+    target.src = safeSvg;
   }
 };

@@ -3,6 +3,8 @@
  * Targets custom PHP host: upc.geekclub.ir
  */
 
+import { FALLBACK_IMAGES } from '../utils/imageHelper';
+
 export interface CDNConfig {
   endpointUrl: string;
   apiToken: string;
@@ -254,51 +256,50 @@ export const transferExternalUrlToCDN = async (
   folder = 'contents',
   filenamePrefix = 'migrated'
 ): Promise<string> => {
-  if (!imageUrl || imageUrl.includes('upc.geekclub.ir')) {
-    return imageUrl; // Already on CDN
+  if (!imageUrl || imageUrl.includes('upc.geekclub.ir') || imageUrl.startsWith('data:')) {
+    return imageUrl; // Already on CDN or Data URI
   }
 
+  // 1. First attempt: Call server proxy endpoint (bypasses browser CORS restrictions completely)
   try {
-    // Attempt fetch blob
-    const response = await fetch(imageUrl, { mode: 'cors' });
-    if (!response.ok) {
-      throw new Error(`HTTP error ${response.status}`);
-    }
-    const blob = await response.blob();
-    const file = new File([blob], `${filenamePrefix}_${Date.now()}.jpg`, { type: blob.type || 'image/jpeg' });
-    const result = await uploadImageToCDN(file, folder);
-    return result.url;
-  } catch {
-    // Fallback via Image element & Canvas if CORS permits
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = async () => {
-        try {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) return resolve(imageUrl);
-          ctx.drawImage(img, 0, 0);
-          canvas.toBlob(async (blob) => {
-            if (!blob) return resolve(imageUrl);
-            const file = new File([blob], `${filenamePrefix}_${Date.now()}.webp`, { type: 'image/webp' });
-            try {
-              const res = await uploadImageToCDN(file, folder);
-              resolve(res.url);
-            } catch {
-              resolve(imageUrl);
-            }
-          }, 'image/webp', 0.85);
-        } catch {
-          resolve(imageUrl);
-        }
-      };
-      img.onerror = () => resolve(imageUrl);
-      img.src = imageUrl;
+    const apiRes = await fetch('/api/transfer-to-cdn', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageUrl, folder, filenamePrefix })
     });
+    if (apiRes.ok) {
+      const data = await apiRes.json();
+      if (data.success && data.url) {
+        return data.url;
+      }
+    }
+  } catch (err) {
+    console.warn('Server transfer endpoint unavailable, trying direct client upload...', err);
   }
+
+  // 2. Client-side fallback
+  try {
+    const response = await fetch(imageUrl, { mode: 'cors' });
+    if (response.ok) {
+      const blob = await response.blob();
+      const file = new File([blob], `${filenamePrefix}_${Date.now()}.jpg`, { type: blob.type || 'image/jpeg' });
+      const result = await uploadImageToCDN(file, folder);
+      return result.url;
+    }
+  } catch {
+    //
+  }
+
+  // 3. Fallback to clean SVG Data URI if CDN upload is unavailable, avoiding blocked domains (like img.youtube.com or unsplash)
+  if (imageUrl.includes('youtube') || imageUrl.includes('ytimg') || filenamePrefix.includes('youtube')) {
+    return FALLBACK_IMAGES.youtube;
+  } else if (imageUrl.includes('instagram') || filenamePrefix.includes('instagram')) {
+    return FALLBACK_IMAGES.instagram;
+  } else if (imageUrl.includes('aparat') || filenamePrefix.includes('aparat')) {
+    return FALLBACK_IMAGES.aparat;
+  }
+
+  return FALLBACK_IMAGES.article;
 };
 
 /**

@@ -5,6 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>گیک کلاب - اشتراک و مرور محتوا</title>
     <script>
+      // Immediately unregister Service Workers & purge CacheStorage on HTML load to prevent stale app caching
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          for (var i = 0; i < regs.length; i++) {
+            regs[i].unregister();
+          }
+        });
+      }
+      if ('caches' in window) {
+        caches.keys().then(function(names) {
+          for (var i = 0; i < names.length; i++) {
+            caches.delete(names[i]);
+          }
+        });
+      }
+    </script>
+    <script>
       (function() {
         var OriginalWebSocket = window.WebSocket;
         if (OriginalWebSocket) {

@@ -130,7 +130,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   alt={item.title}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover/media:scale-105 opacity-90 group-hover/media:opacity-100"
                   loading="lazy"
-                  onError={(e) => handleImageError(e, getPlatformFallbackImage('youtube', item.url))}
+                  onError={(e) => handleImageError(e, getPlatformFallbackImage('youtube', item.url), 'youtube', item.id)}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-black/30" />
                 
@@ -165,7 +165,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   alt={item.title}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover/ig:scale-105 opacity-90 group-hover/ig:opacity-100"
                   loading="lazy"
-                  onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url))}
+                  onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent flex flex-col justify-end p-4">
                   {/* Play Button Overlay */}
@@ -200,7 +200,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   alt={item.title}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover/media:scale-105 opacity-90 group-hover/media:opacity-100"
                   loading="lazy"
-                  onError={(e) => handleImageError(e, getPlatformFallbackImage('aparat', item.url))}
+                  onError={(e) => handleImageError(e, getPlatformFallbackImage('aparat', item.url), 'aparat', item.id)}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-black/30" />
                 
@@ -225,7 +225,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               alt={item.title}
               className="w-full h-full object-cover transition-transform duration-500 group-hover/art:scale-105 opacity-85 group-hover/art:opacity-100"
               loading="lazy"
-              onError={(e) => handleImageError(e, getPlatformFallbackImage('article', item.url))}
+              onError={(e) => handleImageError(e, getPlatformFallbackImage('article', item.url), 'article', item.id)}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-black/30" />
             
@@ -248,18 +248,6 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           </div>
         )}
 
-        {/* Bottom-Left Platform Source Link (Icon Only) */}
-        <a
-          href={item.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="absolute bottom-2 left-2 z-10 inline-flex items-center justify-center p-1 rounded-md bg-slate-800/80 hover:bg-slate-750 text-slate-200 hover:text-white border border-slate-700/60 backdrop-blur-md transition-all hover:scale-105 shadow-md"
-          title={`مشاهده منبع در ${meta.label}`}
-          aria-label={`مشاهده منبع در ${meta.label}`}
-        >
-          {meta.icon}
-        </a>
       </div>
 
       {/* Content Body */}

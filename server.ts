@@ -15,6 +15,12 @@ const DB_PATH = path.resolve(__dirname, 'data', 'database.json');
 
 app.use(express.json());
 
+const UPLOADS_DIR = path.resolve(__dirname, 'public', 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+app.use('/uploads', express.static(UPLOADS_DIR));
+
 // Disable caching for HTML and assets to ensure instant updates without CTRL+F5
 app.use((_req: Request, res: Response, next) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, proxy-revalidate, max-age=0');
@@ -56,7 +62,112 @@ function saveDatabase(db: DatabaseSchema) {
 
 // --- API Routes ---
 
-// 0. GET /api/extract-metadata - Fetch page metadata (title, meta description, image, author) server-side
+// 0. GET /api/proxy-image - Direct image proxy for blocked external images (YouTube, Instagram, etc.)
+app.get('/api/proxy-image', async (req: Request, res: Response) => {
+  const imageUrl = req.query.url as string;
+  if (!imageUrl) {
+    return res.status(400).send('URL is required');
+  }
+  try {
+    const cleanUrl = imageUrl.trim().startsWith('http') ? imageUrl.trim() : `https://${imageUrl.trim()}`;
+    const response = await axios.get(cleanUrl, {
+      responseType: 'arraybuffer',
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    });
+    const rawType = response.headers['content-type'];
+    const contentType = typeof rawType === 'string' ? rawType : 'image/jpeg';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.send(Buffer.from(response.data));
+  } catch (err: any) {
+    console.warn('Image proxy failed for:', imageUrl, err.message);
+    return res.status(404).send('Image unavailable');
+  }
+});
+
+// 0.1. POST /api/transfer-to-cdn - Server-side external image downloader & CDN uploader
+app.post('/api/transfer-to-cdn', async (req: Request, res: Response) => {
+  const { imageUrl, folder } = req.body;
+  if (!imageUrl) {
+    return res.status(400).json({ success: false, error: 'imageUrl parameter is required' });
+  }
+
+  if (imageUrl.includes('upc.geekclub.ir') || imageUrl.startsWith('data:') || imageUrl.startsWith('/uploads/')) {
+    return res.json({ success: true, url: imageUrl });
+  }
+
+  try {
+    const targetFolder = folder || 'contents';
+    
+    // Step 1: Download image bytes on server
+    console.log(`[CDN Transfer Step 1/2] Downloading image on server from: ${imageUrl}`);
+    const response = await axios.get(imageUrl, {
+      responseType: 'arraybuffer',
+      timeout: 12000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    });
+
+    const rawType = response.headers['content-type'];
+    const contentType = typeof rawType === 'string' ? rawType : 'image/jpeg';
+    let ext = 'jpg';
+    if (contentType.includes('webp')) ext = 'webp';
+    else if (contentType.includes('png')) ext = 'png';
+    else if (contentType.includes('svg')) ext = 'svg';
+
+    const buffer = Buffer.from(response.data);
+
+    // Save locally on server disk first
+    const filename = `transfer_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
+    const localFilePath = path.join(UPLOADS_DIR, filename);
+    fs.writeFileSync(localFilePath, buffer);
+    const localUrl = `/uploads/${filename}`;
+    console.log(`[CDN Transfer Step 1/2 Complete] Saved locally on server at: ${localFilePath}`);
+
+    // Step 2: Read downloaded file from local disk and transfer to CDN (s1/upload.php)
+    console.log(`[CDN Transfer Step 2/2] Transferring downloaded server file to CDN https://upc.geekclub.ir/s1/upload.php...`);
+    try {
+      const fileBufferFromDisk = fs.readFileSync(localFilePath);
+      const fileBlob = new Blob([fileBufferFromDisk], { type: contentType });
+      const formData = new FormData();
+      formData.append('file', fileBlob, filename);
+      formData.append('api_token', 'geekclub_cdn_secret_2026');
+      formData.append('folder', targetFolder);
+
+      const cdnResp = await fetch('https://upc.geekclub.ir/s1/upload.php', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer geekclub_cdn_secret_2026',
+          'X-Api-Token': 'geekclub_cdn_secret_2026'
+        },
+        body: formData
+      });
+
+      if (cdnResp.ok) {
+        const cdnData = await cdnResp.json() as any;
+        if (cdnData.status && cdnData.url) {
+          console.log(`[CDN Transfer Step 2/2 Complete] File uploaded to CDN URL: ${cdnData.url}`);
+          return res.json({ success: true, url: cdnData.url });
+        }
+      }
+    } catch (cdnErr: any) {
+      console.warn('[CDN Transfer Step 2/2 Warning] CDN upload endpoint unavailable, serving from local server path:', cdnErr.message);
+    }
+
+    return res.json({ success: true, url: localUrl });
+  } catch (err: any) {
+    console.error('Server image download error:', err.message);
+    // If download failed, return proxy URL as ultimate fallback
+    const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
+    return res.json({ success: true, url: proxyUrl });
+  }
+});
+
+// 0.1. GET /api/extract-metadata - Fetch page metadata (title, meta description, image, author) server-side
 app.get('/api/extract-metadata', async (req: Request, res: Response) => {
   const targetUrl = req.query.url as string;
   if (!targetUrl) {
@@ -188,8 +299,67 @@ app.get('/api/contents', (req: Request, res: Response) => {
   res.json({ success: true, count: results.length, data: results });
 });
 
+async function ensureCDNImage(imageUrl: string, folder = 'contents'): Promise<string> {
+  if (!imageUrl || imageUrl.includes('upc.geekclub.ir') || imageUrl.startsWith('data:') || imageUrl.startsWith('/uploads/')) {
+    return imageUrl;
+  }
+  try {
+    const response = await axios.get(imageUrl, {
+      responseType: 'arraybuffer',
+      timeout: 8000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    });
+
+    const rawType = response.headers['content-type'];
+    const contentType = typeof rawType === 'string' ? rawType : 'image/jpeg';
+    let ext = 'jpg';
+    if (contentType.includes('webp')) ext = 'webp';
+    else if (contentType.includes('png')) ext = 'png';
+    else if (contentType.includes('svg')) ext = 'svg';
+
+    const buffer = Buffer.from(response.data);
+
+    try {
+      const fileBlob = new Blob([buffer], { type: contentType });
+      const formData = new FormData();
+      formData.append('file', fileBlob, `gc_${Date.now()}.${ext}`);
+      formData.append('api_token', 'geekclub_cdn_secret_2026');
+      formData.append('folder', folder);
+
+      const cdnResp = await fetch('https://upc.geekclub.ir/s1/upload.php', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer geekclub_cdn_secret_2026',
+          'X-Api-Token': 'geekclub_cdn_secret_2026'
+        },
+        body: formData
+      });
+
+      if (cdnResp.ok) {
+        const cdnData = await cdnResp.json() as any;
+        if (cdnData.status && cdnData.url) {
+          return cdnData.url;
+        }
+      }
+    } catch (cdnErr: any) {
+      console.warn('CDN upload to upc.geekclub.ir failed in ensureCDNImage:', cdnErr.message);
+    }
+
+    // Save locally
+    const filename = `cached_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
+    const localFilePath = path.join(UPLOADS_DIR, filename);
+    fs.writeFileSync(localFilePath, buffer);
+    return `/uploads/${filename}`;
+  } catch (err: any) {
+    console.warn('Auto CDN transfer in server route skipped:', err.message);
+  }
+  return `/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
+}
+
 // 2. POST /api/contents - Add new content
-app.post('/api/contents', (req: Request, res: Response) => {
+app.post('/api/contents', async (req: Request, res: Response) => {
   const { 
     title, 
     description, 
@@ -209,6 +379,9 @@ app.post('/api/contents', (req: Request, res: Response) => {
     return res.status(400).json({ success: false, error: 'URL is required' });
   }
 
+  const rawThumbnail = thumbnail || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%230f172a"/><text x="400" y="235" font-family="Tahoma,sans-serif" font-size="22" fill="%23f8fafc" text-anchor="middle">GeekClub Media</text></svg>';
+  const finalThumbnail = await ensureCDNImage(rawThumbnail, 'contents');
+
   const db = loadDatabase();
   const newItem = {
     id: `content-${Date.now()}`,
@@ -217,7 +390,7 @@ app.post('/api/contents', (req: Request, res: Response) => {
     url,
     platform: platform || 'article',
     embedUrl: embedUrl || url,
-    thumbnail: thumbnail || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%230f172a"/><text x="400" y="235" font-family="Tahoma,sans-serif" font-size="22" fill="%23f8fafc" text-anchor="middle">GeekClub Media</text></svg>',
+    thumbnail: finalThumbnail,
     author: author || {
       name: 'کاربر گیک کلاب',
       avatar: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect width="200" height="200" rx="100" fill="%231e293b"/><circle cx="100" cy="75" r="38" fill="%233b82f6"/><path d="M 35 175 C 35 130, 165 130, 165 175 Z" fill="%233b82f6"/></svg>',
@@ -374,12 +547,153 @@ app.get('/api/metadata/extract', async (req: Request, res: Response) => {
   res.json({ success: false, message: 'Could not fetch remote metadata' });
 });
 
+// Helper to download real cover image from external platform and cache locally & on CDN
+async function downloadAndCacheImage(imageUrl: string, filenamePrefix: string): Promise<string> {
+  if (!imageUrl) return imageUrl;
+  try {
+    const response = await axios.get(imageUrl, {
+      responseType: 'arraybuffer',
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    });
+
+    const rawType = response.headers['content-type'];
+    const contentType = typeof rawType === 'string' ? rawType : 'image/jpeg';
+    let ext = 'jpg';
+    if (contentType.includes('webp')) ext = 'webp';
+    else if (contentType.includes('png')) ext = 'png';
+
+    const buffer = Buffer.from(response.data);
+
+    // Save physically in public/uploads/
+    const filename = `${filenamePrefix}.${ext}`;
+    const localFilePath = path.join(UPLOADS_DIR, filename);
+    fs.writeFileSync(localFilePath, buffer);
+    const localUrl = `/uploads/${filename}`;
+
+    // Attempt primary upload to upc.geekclub.ir CDN
+    try {
+      const fileBlob = new Blob([buffer], { type: contentType });
+      const formData = new FormData();
+      formData.append('file', fileBlob, `${filenamePrefix}.${ext}`);
+      formData.append('api_token', 'geekclub_cdn_secret_2026');
+      formData.append('folder', 'contents');
+
+      const cdnResp = await fetch('https://upc.geekclub.ir/s1/upload.php', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer geekclub_cdn_secret_2026',
+          'X-Api-Token': 'geekclub_cdn_secret_2026'
+        },
+        body: formData
+      });
+
+      if (cdnResp.ok) {
+        const cdnData = await cdnResp.json() as any;
+        if (cdnData.status && cdnData.url) {
+          try {
+            const checkCDN = await axios.head(cdnData.url, { timeout: 3500 });
+            if (checkCDN.status === 200) {
+              return cdnData.url;
+            }
+          } catch {
+            console.warn(`CDN URL ${cdnData.url} not responding with 200, using local file ${localUrl}`);
+          }
+        }
+      }
+    } catch (cdnErr: any) {
+      console.warn(`CDN upload to upc.geekclub.ir skipped for ${filenamePrefix}:`, cdnErr.message);
+    }
+
+    return localUrl;
+  } catch (err: any) {
+    console.warn(`Failed to download cover image from ${imageUrl}:`, err.message);
+    return imageUrl;
+  }
+}
+
+async function syncPlatformCoverImages() {
+  try {
+    const db = loadDatabase();
+    let updated = false;
+
+    for (const item of db.contents) {
+      let sourceImageUrl = '';
+      
+      // 1. YouTube Cover Download
+      if (item.platform === 'youtube' && item.url) {
+        const ytMatch = item.url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+        if (ytMatch && ytMatch[1]) {
+          sourceImageUrl = `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`;
+        }
+      } 
+      // 2. Aparat Cover Download
+      else if (item.platform === 'aparat' && item.url) {
+        const apMatch = item.url.match(/aparat\.com\/v\/([a-zA-Z0-9]+)/i);
+        if (apMatch && apMatch[1]) {
+          try {
+            const res = await axios.get(`https://www.aparat.com/etc/api/video/videohash/${apMatch[1]}`, { timeout: 5000 });
+            if (res.data?.video?.big_poster) {
+              sourceImageUrl = res.data.video.big_poster;
+            } else if (res.data?.video?.small_poster) {
+              sourceImageUrl = res.data.video.small_poster;
+            }
+          } catch {
+            try {
+              const noembed = await axios.get(`https://noembed.com/embed?url=${encodeURIComponent(item.url)}`, { timeout: 5000 });
+              if (noembed.data?.thumbnail_url) {
+                sourceImageUrl = noembed.data.thumbnail_url;
+              }
+            } catch {}
+          }
+        }
+      }
+
+      if (sourceImageUrl) {
+        console.log(`📥 Downloading original ${item.platform} cover for ${item.id} from ${sourceImageUrl}...`);
+        const cdnOrLocalUrl = await downloadAndCacheImage(sourceImageUrl, `cover_${item.id}`);
+        if (cdnOrLocalUrl && cdnOrLocalUrl !== item.thumbnail) {
+          item.thumbnail = cdnOrLocalUrl;
+          updated = true;
+        }
+      }
+    }
+
+    if (updated) {
+      saveDatabase(db);
+      console.log('✅ Real YouTube & Aparat cover images downloaded and saved successfully!');
+    }
+  } catch (err: any) {
+    console.error('Error in syncPlatformCoverImages:', err.message);
+  }
+}
+
 // --- Development & Production Middleware ---
 async function startServer() {
+  // Sync and download real YouTube and Aparat thumbnails on startup
+  await syncPlatformCoverImages();
+
   if (process.env.NODE_ENV === 'production') {
     const distPath = path.resolve(__dirname, 'dist');
-    app.use(express.static(distPath));
+    app.use(
+      express.static(distPath, {
+        setHeaders: (res, filepath) => {
+          if (filepath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, proxy-revalidate, max-age=0');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+          } else if (filepath.includes('/assets/')) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          }
+        }
+      })
+    );
     app.get('*', (_req: Request, res: Response) => {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, proxy-revalidate, max-age=0');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       res.sendFile(path.resolve(distPath, 'index.html'));
     });
   } else {

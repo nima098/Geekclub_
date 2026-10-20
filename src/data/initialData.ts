@@ -1,5 +1,62 @@
-import { ContentItem, CommentItem, UserProfile, SiteAdminSettings } from '../types/content';
-import { FALLBACK_IMAGES } from '../utils/imageHelper';
+import { 
+  ContentItem, 
+  CommentItem, 
+  UserProfile, 
+  SiteAdminSettings,
+  FeedbackItem,
+  InboxMessage,
+  ProfileComment
+} from '../types/content';
+
+export const SUPER_ADMIN_EMAIL = '3dsaz1990@gmail.com';
+
+export const SUPER_ADMIN_USER: UserProfile = {
+  uid: 'admin-super-uid',
+  displayName: 'مدیر کل سیستم',
+  username: 'admin',
+  email: SUPER_ADMIN_EMAIL,
+  hideEmail: false,
+  photoURL: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_admin.jpg',
+  bio: 'مدیریت ارشد پلتفرم اشتراک‌گذاری رسانه گیک‌کلاب',
+  allowProfileComments: true,
+  joinedAt: 'مهر ۱۴۰۴',
+  isAdmin: true,
+  autoApproveContent: true,
+  role: 'super_admin'
+};
+
+export const DEFAULT_USER: UserProfile = {
+  uid: 'usr-sara',
+  displayName: 'سارا ناصری',
+  username: 'sara_ux',
+  email: 'sara@geekclub.ir',
+  hideEmail: false,
+  photoURL: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_sara_ux.jpg',
+  bio: 'علاقه‌مند به توسعه فرانت‌اند و تجربه کاربری مدرن. عضو فعال گیک‌کلاب.',
+  allowProfileComments: true,
+  joinedAt: 'مهر ۱۴۰۴',
+  isAdmin: false,
+  autoApproveContent: false,
+  role: 'member'
+};
+
+export const INITIAL_REGISTERED_USERS: UserProfile[] = [
+  SUPER_ADMIN_USER,
+  DEFAULT_USER
+];
+
+export const DEFAULT_SITE_SETTINGS: SiteAdminSettings = {
+  requireContentApproval: true,
+  notifyOnPending: true,
+  allowYouTube: true,
+  allowInstagram: true,
+  allowArticles: true,
+  allowAparat: true,
+  enableCaptcha: false,
+  enableAutoModeration: true,
+  bannedKeywords: [],
+  bannedDomains: []
+};
 
 export const INITIAL_CONTENT: ContentItem[] = [
   {
@@ -9,10 +66,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.youtube.com/watch?v=5kFfqpQ3_iI',
     platform: 'youtube',
     embedUrl: 'https://www.youtube.com/embed/5kFfqpQ3_iI',
-    thumbnail: 'https://img.youtube.com/vi/5kFfqpQ3_iI/hqdefault.jpg',
+    thumbnail: 'https://upc.geekclub.ir/s1/contents/2026/10/yt_astro5_framework.jpg',
     author: {
       name: 'سارا ناصری (کاربر عضو)',
-      avatar: FALLBACK_IMAGES.avatar,
+      avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_sara_ux.jpg',
       handle: '@sara_ux',
       isVerified: false
     },
@@ -35,10 +92,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.youtube.com/watch?v=bMknfKXIFA8',
     platform: 'youtube',
     embedUrl: 'https://www.youtube.com/embed/bMknfKXIFA8',
-    thumbnail: 'https://img.youtube.com/vi/bMknfKXIFA8/hqdefault.jpg',
+    thumbnail: 'https://upc.geekclub.ir/s1/contents/2026/10/yt_ai_models.jpg',
     author: {
       name: 'آکادمی کد و فناوری',
-      avatar: FALLBACK_IMAGES.avatar,
+      avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_codetech.jpg',
       handle: '@codetech_fa',
       isVerified: true
     },
@@ -59,10 +116,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://virgool.io/@ux_design/modern-ui-principles',
     platform: 'article',
     embedUrl: 'https://virgool.io/@ux_design/modern-ui-principles',
-    thumbnail: FALLBACK_IMAGES.article,
+    thumbnail: 'https://upc.geekclub.ir/s1/contents/2026/10/art_modern_ui.jpg',
     author: {
       name: 'نیما ارجمند',
-      avatar: FALLBACK_IMAGES.avatar,
+      avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_nima_arjmand.jpg',
       handle: 'طراح ارشد محصول',
       isVerified: true
     },
@@ -92,10 +149,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.instagram.com/reel/DZfG1Nui61u/',
     platform: 'instagram',
     embedUrl: 'https://www.instagram.com/reel/DZfG1Nui61u/embed',
-    thumbnail: FALLBACK_IMAGES.instagram,
+    thumbnail: 'https://upc.geekclub.ir/s1/contents/2026/10/ig_geek_workspace.jpg',
     author: {
       name: 'گیک استودیو',
-      avatar: FALLBACK_IMAGES.avatar,
+      avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_geek_setup.jpg',
       handle: '@geek_setup',
       isVerified: true
     },
@@ -117,10 +174,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.aparat.com/v/m435165',
     platform: 'aparat',
     embedUrl: 'https://www.aparat.com/video/video/embed/videohash/m435165/vt/frame',
-    thumbnail: FALLBACK_IMAGES.aparat,
+    thumbnail: 'https://upc.geekclub.ir/s1/contents/2026/10/ap_ai_machine_learning.jpg',
     author: {
       name: 'کانال هوش مصنوعی ایران',
-      avatar: FALLBACK_IMAGES.avatar,
+      avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_ai_iran.jpg',
       handle: '@ai_iran',
       isVerified: true
     },
@@ -142,10 +199,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.instagram.com/reel/C8kP2qXyZa1/',
     platform: 'instagram',
     embedUrl: 'https://www.instagram.com/reel/C8kP2qXyZa1/embed',
-    thumbnail: FALLBACK_IMAGES.instagram,
+    thumbnail: 'https://upc.geekclub.ir/s1/contents/2026/10/ig_javascript_tricks.jpg',
     author: {
       name: 'کد با سارا',
-      avatar: FALLBACK_IMAGES.avatar,
+      avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_codewith_sara.jpg',
       handle: '@codewith_sara',
       isVerified: true
     },
@@ -166,10 +223,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.youtube.com/watch?v=LDB4uaJ87e0',
     platform: 'youtube',
     embedUrl: 'https://www.youtube.com/embed/LDB4uaJ87e0',
-    thumbnail: 'https://img.youtube.com/vi/LDB4uaJ87e0/hqdefault.jpg',
+    thumbnail: 'https://upc.geekclub.ir/s1/contents/2026/10/yt_react_fullstack.jpg',
     author: {
       name: 'فرهاد نصیری',
-      avatar: FALLBACK_IMAGES.avatar,
+      avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_farhad_dev.jpg',
       handle: '@farhad_dev',
       isVerified: true
     },
@@ -190,10 +247,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://medium.com/@techlead/high-scale-database-strategies',
     platform: 'article',
     embedUrl: 'https://medium.com/@techlead/high-scale-database-strategies',
-    thumbnail: FALLBACK_IMAGES.article,
+    thumbnail: 'https://upc.geekclub.ir/s1/contents/2026/10/art_database_scale.jpg',
     author: {
       name: 'مهندس آرش شریفی',
-      avatar: FALLBACK_IMAGES.avatar,
+      avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_arash_sharifi.jpg',
       handle: 'معمار نرم‌افزار',
       isVerified: true
     },
@@ -223,10 +280,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.instagram.com/p/C9ab12cdEFg/',
     platform: 'instagram',
     embedUrl: 'https://www.instagram.com/p/C9ab12cdEFg/embed',
-    thumbnail: FALLBACK_IMAGES.instagram,
+    thumbnail: 'https://upc.geekclub.ir/s1/contents/2026/10/ig_podcast_studio.jpg',
     author: {
       name: 'استودیو پادکس',
-      avatar: FALLBACK_IMAGES.avatar,
+      avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_podx_studio.jpg',
       handle: '@podx_studio',
       isVerified: false
     },
@@ -247,10 +304,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.youtube.com/watch?v=SqcY0GlETPk',
     platform: 'youtube',
     embedUrl: 'https://www.youtube.com/embed/SqcY0GlETPk',
-    thumbnail: 'https://img.youtube.com/vi/SqcY0GlETPk/hqdefault.jpg',
+    thumbnail: 'https://upc.geekclub.ir/s1/contents/2026/10/yt_prompt_engineering.jpg',
     author: {
       name: 'دکتر مانی دانشور',
-      avatar: FALLBACK_IMAGES.avatar,
+      avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_mani_ai_lab.jpg',
       handle: '@mani_ai_lab',
       isVerified: true
     },
@@ -271,10 +328,10 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://techcrunch.ir/startup-lean-validation-guide',
     platform: 'article',
     embedUrl: 'https://techcrunch.ir/startup-lean-validation-guide',
-    thumbnail: FALLBACK_IMAGES.article,
+    thumbnail: 'https://upc.geekclub.ir/s1/contents/2026/10/art_startup_lean.jpg',
     author: {
       name: 'الهام سعیدی',
-      avatar: FALLBACK_IMAGES.avatar,
+      avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_elham_saeedi.jpg',
       handle: 'مشاور استارتاپ‌ها',
       isVerified: true
     },
@@ -300,275 +357,75 @@ export const INITIAL_CONTENT: ContentItem[] = [
 export const INITIAL_COMMENTS: Record<string, CommentItem[]> = {
   'yt-1': [
     {
-      id: 'c-101',
+      id: 'c-1',
       contentId: 'yt-1',
       author: {
         name: 'رضا کمالی',
-        avatar: FALLBACK_IMAGES.avatar,
-        email: 'reza@example.com'
+        avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_reza_kamali.jpg'
       },
-      text: 'خیلی ویدیوی مفیدی بود! به خصوص بخش مربوط به ادغام ابزارهای هوش مصنوعی در محیط توسعه عالی توضیح داده شد. ممنون از سازنده محتوا.',
+      text: 'فوق‌العاده بود! بالاخره یه ویدیو پیدا کردم که عمیق به مقایسه این مدل‌ها بپردازه.',
       createdAt: '۱ ساعت پیش',
-      likes: 12,
-      userLiked: false
-    },
-    {
-      id: 'c-102',
-      contentId: 'yt-1',
-      author: {
-        name: 'مریم حسینی',
-        avatar: FALLBACK_IMAGES.avatar,
-        email: 'maryam@example.com'
-      },
-      text: 'آیا برای مدل‌های لوکال هم پارت دوم ضبط می‌کنید؟ خیلی مشتاقم بررسی کنید.',
-      createdAt: '۳۰ دقیقه پیش',
-      likes: 5,
-      userLiked: true
+      likes: 12
     }
   ],
   'art-1': [
     {
-      id: 'c-201',
+      id: 'c-2',
       contentId: 'art-1',
       author: {
-        name: 'پویا سلیمی',
-        avatar: FALLBACK_IMAGES.avatar,
-        email: 'pouya@example.com'
+        name: 'مریم حسینی',
+        avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_maryam_hoseini.jpg'
       },
-      text: 'کاملاً موافقم. دوران وب‌سایت‌های تخت و کپی‌پیستی به سر آمده و جزئیات ریز است که تفاوت ایجاد می‌کند.',
-      createdAt: '۲ ساعت پیش',
-      likes: 8,
-      userLiked: false
-    }
-  ],
-  'ig-1': [
-    {
-      id: 'c-301',
-      contentId: 'ig-1',
-      author: {
-        name: 'علیرضا داوودی',
-        avatar: FALLBACK_IMAGES.avatar,
-        email: 'alireza@example.com'
-      },
-      text: 'ترفند سوم واقعاً زمان زیادی رو در پروژه‌های روزمره صرفه‌جویی می‌کنه. دمت گرم!',
-      createdAt: '۴ ساعت پیش',
-      likes: 19,
-      userLiked: true
+      text: 'دقیقاً با نکته ریزانیمیشن‌ها موافقم. حس سرزنده‌بودن به اپ میده.',
+      createdAt: '۳ ساعت پیش',
+      likes: 8
     }
   ]
 };
 
-import { DEFAULT_BANNED_KEYWORDS, DEFAULT_BANNED_DOMAINS } from '../utils/moderation';
-
-export const DEFAULT_SITE_SETTINGS: SiteAdminSettings = {
-  requireContentApproval: false, // Direct publishing enabled for all users
-  notifyOnPending: true,
-  allowYouTube: true,
-  allowInstagram: true,
-  allowArticles: true,
-  allowAparat: true,
-  enableCaptcha: false,
-  bannedKeywords: DEFAULT_BANNED_KEYWORDS,
-  bannedDomains: DEFAULT_BANNED_DOMAINS,
-  enableAutoModeration: true
-};
-
-export const SUPER_ADMIN_EMAIL = '3dsaz1990@gmail.com';
-
-export const SUPER_ADMIN_USER: UserProfile = {
-  uid: 'admin-super-3dsaz',
-  displayName: 'مدیریت ارشد (3dsaz)',
-  username: 'admin_3dsaz',
-  email: '3dsaz1990@gmail.com',
-  hideEmail: false,
-  photoURL: FALLBACK_IMAGES.avatar,
-  bio: 'مدیر کل و صاحب امتیاز سامانه 👑',
-  allowProfileComments: true,
-  joinedAt: 'مهر ۱۴۰۵',
-  isAdmin: true,
-  autoApproveContent: true,
-  role: 'مدیر کل سایت (Super Admin)'
-};
-
-export const DEFAULT_USER: UserProfile = {
-  uid: 'user-google-101',
-  displayName: 'کاربر گیک (مهمان)',
-  username: 'geek_guest',
-  email: 'user.creative@gmail.com',
-  hideEmail: false,
-  photoURL: FALLBACK_IMAGES.avatar,
-  bio: 'علاقه‌مند به تکنولوژی، هوش مصنوعی و جامعه برنامه‌نویسان 🚀',
-  allowProfileComments: true,
-  joinedAt: 'مهر ۱۴۰۵',
-  isAdmin: false,
-  autoApproveContent: false,
-  role: 'کاربر عضو'
-};
-
-export const INITIAL_REGISTERED_USERS: UserProfile[] = [
-  SUPER_ADMIN_USER,
-  DEFAULT_USER,
-  {
-    uid: 'usr-farhad',
-    displayName: 'فرهاد نصیری',
-    username: 'farhad_dev',
-    email: 'farhad.dev@gmail.com',
-    hideEmail: false,
-    photoURL: FALLBACK_IMAGES.avatar,
-    bio: 'توسعه‌دهنده فول‌استک و محتوانویس تکنولوژی',
-    allowProfileComments: true,
-    joinedAt: 'شهریور ۱۴۰۵',
-    isAdmin: false,
-    autoApproveContent: true, // Trusted user with direct publishing rights!
-    role: 'کاربر معتمد (انتشار مستقیم)'
-  },
-  {
-    uid: 'usr-sara',
-    displayName: 'سارا ناصری',
-    username: 'sara_ux',
-    email: 'sara.ux@gmail.com',
-    hideEmail: true,
-    photoURL: FALLBACK_IMAGES.avatar,
-    bio: 'طراح رابط کاربری و تجربه کاربری (UI/UX)',
-    allowProfileComments: true,
-    joinedAt: 'مرداد ۱۴۰۵',
-    isAdmin: false,
-    autoApproveContent: false, // Normal user: content requires approval
-    role: 'کاربر عضو'
-  },
-  {
-    uid: 'usr-arash',
-    displayName: 'آرش شریفی',
-    username: 'arash_db',
-    email: 'arash.sh@yahoo.com',
-    hideEmail: false,
-    photoURL: FALLBACK_IMAGES.avatar,
-    bio: 'مهندس سیستم و دیتابیس',
-    allowProfileComments: true,
-    joinedAt: 'تیر ۱۴۰۵',
-    isAdmin: false,
-    autoApproveContent: true, // Trusted user with direct publishing rights!
-    role: 'نویسنده تخصصی'
-  },
-  {
-    uid: 'usr-kamran',
-    displayName: 'کامران بهرامی',
-    username: 'kamran_ai',
-    email: 'kamran.ai@gmail.com',
-    hideEmail: false,
-    photoURL: FALLBACK_IMAGES.avatar,
-    bio: 'علاقه‌مند به یادگیری ماشین و پردازش تصویر',
-    allowProfileComments: false,
-    joinedAt: 'مهر ۱۴۰۵',
-    isAdmin: false,
-    autoApproveContent: false, // Normal user: content requires approval
-    role: 'کاربر عضو'
-  }
-];
-
-export const INITIAL_INBOX = [
+export const INITIAL_INBOX: InboxMessage[] = [
   {
     id: 'msg-1',
     sender: {
-      name: 'تیم مدیریت گیک کلاب',
-      avatar: FALLBACK_IMAGES.avatar,
+      name: 'پشتیبانی گیک‌کلاب',
+      avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_admin.jpg',
       isSystemAdmin: true,
-      role: 'ادمین ارشد وبسایت'
+      role: 'سیستم'
     },
-    subject: 'خوش‌آمدگویی به جامعه گیک کلاب 🎉',
-    content: 'سلام و درود!\nبه جمع گیک‌های خلاق خوش آمدید. شما می‌توانید بهترین ویدیوها، ریلزها و مقالات تخصصی خود را به اشتراک بگذارید، در گفت‌وگوها شرکت کنید و نمایه کاربری خود را سفارشی‌سازی فرمایید.\nاگر سوال یا پیشنهادی داشتید با ما در ارتباط باشید.',
+    subject: 'خوش‌آمدگویی به پلتفرم گیک‌کلاب',
+    content: 'به جامعه برنامه‌نویسان و تولیدکنندگان محتوای تکنولوژی خوش آمدید! می‌توانید از بخش ارسال محتوا، لینک‌های آموزشی خود را اشتراک بگذارید.',
     createdAt: 'دیروز',
-    read: false,
-    type: 'admin' as const
-  },
-  {
-    id: 'msg-2',
-    sender: {
-      name: 'آرش شریفی',
-      avatar: FALLBACK_IMAGES.avatar,
-      isSystemAdmin: false,
-      role: 'کاربر ویژه'
-    },
-    subject: 'همکاری در پروژه مشترک هوش مصنوعی',
-    content: 'سلام دوست عزیز، محتوایی که درباره مدل‌های زبانی به اشتراک گذاشته بودید عالی بود. مشتاقم در صورت تمایل با هم روی یک پروژه تست همکاری داشته باشیم.',
-    createdAt: '۳ ساعت پیش',
-    read: false,
-    type: 'user' as const
-  },
-  {
-    id: 'msg-3',
-    sender: {
-      name: 'ربات سیستمی گیک کلاب',
-      avatar: FALLBACK_IMAGES.avatar,
-      isSystemAdmin: true,
-      role: 'اعلان سیستم'
-    },
-    subject: 'پست شما به بخش برگزیده‌ها اضافه شد 🌟',
-    content: 'تبریک می‌گوییم! محتوای اشتراک‌گذاری شده شما توانست بیش از ۱۰۰ واکنش مثبت از اعضای جامعه دریافت کند و در صفحه اصلی به عنوان محتوای برتر نمایش داده شود.',
-    createdAt: '۵ ساعت پیش',
     read: true,
-    type: 'system' as const
+    type: 'system'
   }
 ];
 
-export const INITIAL_PROFILE_COMMENTS = [
-  {
-    id: 'pc-1',
-    profileUserId: 'user-google-101',
-    author: {
-      name: 'نیما ارجمند',
-      avatar: FALLBACK_IMAGES.avatar,
-      username: 'nima_ux'
-    },
-    text: 'درود! سلیقه خیلی خوبی در انتخاب محتواها دارید. خوشحالم که در این جامعه همراه هستیم.',
-    createdAt: '۲ ساعت پیش'
-  },
-  {
-    id: 'pc-2',
-    profileUserId: 'user-google-101',
-    author: {
-      name: 'سارا ناصری',
-      avatar: FALLBACK_IMAGES.avatar,
-      username: 'sara_dev'
-    },
-    text: 'پروفایل فوق‌العاده‌ای چیدی! به امید محتواهای خفن بیشتر ✨',
-    createdAt: 'دیروز'
-  }
-];
+export const INITIAL_PROFILE_COMMENTS: Record<string, ProfileComment[]> = {
+  'usr-sara': [
+    {
+      id: 'pc-1',
+      profileUserId: 'usr-sara',
+      author: {
+        name: 'فرهاد نصیری',
+        avatar: 'https://upc.geekclub.ir/s1/contents/2026/10/avatar_farhad_dev.jpg',
+        username: 'farhad_dev'
+      },
+      text: 'پست‌های فوق‌العاده‌ای در حوزه UI/UX منتشر می‌کنی. موفق باشی!',
+      createdAt: '۲ روز پیش'
+    }
+  ]
+};
 
-export const INITIAL_FEEDBACK = [
+export const INITIAL_FEEDBACK: FeedbackItem[] = [
   {
     id: 'fb-1',
-    senderName: 'محمد رادمنش',
-    senderEmail: 'm.radmanesh@gmail.com',
+    senderName: 'امین',
+    senderEmail: 'amin@gmail.com',
     isGuest: false,
-    type: 'suggestion' as const,
-    title: 'اضافه کردن قابلیت پلی‌لیست برای ویدیوهای یوتیوب',
-    message: 'سلام به تیم خفن گیک کلاب، اگر امکان ساخت پلی‌لیست شخصی از ویدیوهای یوتیوب وجود داشته باشه فوق‌العاده میشه تا بتونیم آموزش‌ها رو دسته‌بندی کنیم.',
-    createdAt: '۳ ساعت پیش',
-    status: 'pending' as const
-  },
-  {
-    id: 'fb-2',
-    senderName: 'کاربر مهمان',
-    senderEmail: 'guest_reader@yahoo.com',
-    isGuest: true,
-    type: 'critique' as const,
-    title: 'بهبود فونت در حالت مطالعه مقاله',
-    message: 'فونت در حالت مطالعه عالیه اما اندازه سرتیترها اگر کمی بزرگ‌تر باشه خوانایی مقاله روی تبلت بهتر میشه.',
-    createdAt: 'دیروز',
-    status: 'reviewed' as const
-  },
-  {
-    id: 'fb-3',
-    senderName: 'سینا خلیلی',
-    senderEmail: 'sina.khalili@outlook.com',
-    isGuest: false,
-    type: 'bug' as const,
-    title: 'عدم بارگذاری کاور در برخی لینک‌های خاص اینستاگرام',
-    message: 'در برخی ریلزهای پرایوت اینستاگرام کاور به درستی لود نمیشه که البته میدونم محدودیت متا هست، اما اگر بشه کاور سفارشی آپلود کرد عالیه.',
-    createdAt: '۲ روز پیش',
-    status: 'resolved' as const,
-    adminReply: 'با تشکر از گزارش شما، امکان آپلود کاور سفارشی به فرم اشتراک محتوا اضافه شد.'
+    type: 'suggestion',
+    title: 'پیشنهاد افزودن حالت تاریک هوشمند',
+    message: 'اگر امکان سوئیتچ خودکار بین تم تاریک و روشن بر اساس ساعت وجود داشته باشد عالی است.',
+    createdAt: '۳ روز پیش',
+    status: 'reviewed'
   }
 ];

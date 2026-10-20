@@ -1,5 +1,6 @@
 import { Platform, Category, inferCategoryFromContent } from '../types/content';
 import { FALLBACK_IMAGES } from './imageHelper';
+import { transferExternalUrlToCDN } from '../services/cdnService';
 
 export interface ParsedUrlResult {
   platform: Platform;
@@ -150,6 +151,15 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
     }
 
     const inferredCat = inferCategoryFromContent(title, description, tags);
+
+    // Auto transfer cover photo to CDN or clean SVG fallback
+    if (thumbnail && !thumbnail.includes('upc.geekclub.ir') && !thumbnail.startsWith('data:')) {
+      try {
+        thumbnail = await transferExternalUrlToCDN(thumbnail, 'contents', 'yt_cover');
+      } catch {
+        thumbnail = FALLBACK_IMAGES.youtube;
+      }
+    }
 
     return {
       platform: 'youtube',

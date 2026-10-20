@@ -106,16 +106,17 @@ export default function App() {
       const merged = [...missingInitial, ...parsedSaved];
       const itemsToProcess = merged.length > 0 ? merged : INITIAL_CONTENT;
 
-      // Clean up old /s1/s1/ subpaths and replace broken unsplash URLs with SVG Data URIs or YouTube thumbnails
+      // Clean up old /s1/s1/ subpaths and ensure all thumbnails use CDN URLs on upc.geekclub.ir
       return itemsToProcess.map((item) => {
         let cleanThumb = (item.thumbnail || '').replace('/s1/s1/', '/s1/');
-        if (cleanThumb.includes('unsplash.com')) {
-          cleanThumb = getPlatformFallbackImage(item.platform, item.url);
+        if (!cleanThumb.includes('upc.geekclub.ir') && !cleanThumb.startsWith('/uploads/')) {
+          cleanThumb = `https://upc.geekclub.ir/s1/contents/2026/10/${item.id}_cover.jpg`;
         }
 
         let cleanAvatar = (item.author?.avatar || '').replace('/s1/s1/', '/s1/');
-        if (cleanAvatar.includes('unsplash.com')) {
-          cleanAvatar = FALLBACK_IMAGES.avatar;
+        if (!cleanAvatar.includes('upc.geekclub.ir') && !cleanAvatar.startsWith('/uploads/')) {
+          const handleClean = (item.author?.handle || 'user').replace(/[^a-zA-Z0-9_]/g, '');
+          cleanAvatar = `https://upc.geekclub.ir/s1/contents/2026/10/avatar_${handleClean}.jpg`;
         }
 
         return {
