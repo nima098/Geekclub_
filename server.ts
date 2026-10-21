@@ -1359,7 +1359,7 @@ app.post('/api/site-settings', (req: Request, res: Response) => {
   res.json({ success: true, data: db.settings });
 });
 
-// 9. GET /api/rss - Admin-only RSS Feed generator
+// 9. GET /api/rss - Public RSS Feed generator
 app.get('/api/rss', (req: Request, res: Response) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
