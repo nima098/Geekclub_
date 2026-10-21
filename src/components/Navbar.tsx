@@ -128,14 +128,16 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 min-w-0">
 
           {/* Feedback & Suggestions Button */}
-          <button
-            onClick={onOpenFeedbackModal}
-            className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-sky-300 border border-slate-700/60 font-medium text-xs flex items-center gap-1.5 transition cursor-pointer shrink-0"
-            title="ثبت انتقادات و پیشنهادات"
-          >
-            <MessageSquarePlus className="w-4 h-4 text-[#0077d9]" />
-            <span className="hidden lg:inline">انتقادات و پیشنهادات</span>
-          </button>
+          {user && (
+            <button
+              onClick={onOpenFeedbackModal}
+              className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-sky-300 border border-slate-700/60 font-medium text-xs flex items-center gap-1.5 transition cursor-pointer shrink-0"
+              title="ثبت انتقادات و پیشنهادات"
+            >
+              <MessageSquarePlus className="w-4 h-4 text-[#0077d9]" />
+              <span className="hidden lg:inline">انتقادات و پیشنهادات</span>
+            </button>
+          )}
 
           {/* RSS Feed Button - Admin Only */}
           {Boolean(user?.isAdmin || user?.email?.toLowerCase() === '3dsaz1990@gmail.com') && (
