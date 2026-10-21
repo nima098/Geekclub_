@@ -537,9 +537,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (confirm(`آیا از انتقال این محتوا به سطل زباله اطمینان دارید؟\n\n«${item.title}»\n\nاین محتوا به سطل زباله منتقل گردیده و بلافاصله از نمایش عمومی سایت حذف خواهد شد.`)) {
-                    onDeleteContent(item.id);
-                  }
+                  onDeleteContent(item.id);
                 }}
                 className="px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/30 active:scale-95 text-rose-300 hover:text-rose-100 border border-rose-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm group"
                 title="حذف و انتقال به سطل زباله (مخصوص مدیریت)"
@@ -569,9 +567,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (confirm(`آیا از حذف دائمی این محتوا از دیتابیس اطمینان دارید؟\nاین عمل غیرقابل بازگشت است.`)) {
-                    onPermanentDelete(item.id);
-                  }
+                  onPermanentDelete(item.id);
                 }}
                 className="p-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 hover:text-rose-100 border border-rose-500/40 transition cursor-pointer"
                 title="حذف دائمی از دیتابیس"

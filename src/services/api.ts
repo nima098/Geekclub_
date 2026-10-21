@@ -43,37 +43,6 @@ export const api = {
       // Server REST endpoint fallback
     }
 
-    // Secondary: Client-side Firestore fallback with silent error suppression for restricted networks
-    try {
-      const snapshot = await getDocs(collection(db, CONTENTS_COLLECTION));
-      if (!snapshot.empty) {
-        let results: ContentItem[] = snapshot.docs.map(docSnap => ({
-          id: docSnap.id,
-          ...docSnap.data()
-        } as ContentItem));
-
-        if (filters?.platform && filters.platform !== 'all') {
-          results = results.filter((c) => c.platform === filters.platform);
-        }
-        if (filters?.category && filters.category !== 'all') {
-          results = results.filter((c) => c.category === filters.category);
-        }
-        if (filters?.search && filters.search.trim()) {
-          const q = filters.search.toLowerCase().trim();
-          results = results.filter((c) => {
-            const matchTitle = c.title?.toLowerCase().includes(q);
-            const matchDesc = c.description?.toLowerCase().includes(q);
-            const matchAuthor = c.author?.name?.toLowerCase().includes(q);
-            const matchTags = c.tags?.some((t: string) => t.toLowerCase().includes(q));
-            return matchTitle || matchDesc || matchAuthor || matchTags;
-          });
-        }
-        return results;
-      }
-    } catch {
-      // Silent catch: Prevents 403 Google sanction logs in browser console
-    }
-
     return INITIAL_CONTENT;
   },
 

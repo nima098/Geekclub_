@@ -34,6 +34,7 @@ app.use((_req: Request, res: Response, next) => {
 interface DatabaseSchema {
   contents: any[];
   comments: Record<string, any[]>;
+  deletedIds?: string[];
   settings?: Record<string, any>;
 }
 
@@ -1097,11 +1098,17 @@ app.patch('/api/contents/:id', (req: Request, res: Response) => {
   const { id } = req.params;
   const updates = req.body;
   const db = loadDatabase();
-  const index = db.contents.findIndex((c) => c.id === id);
+  let index = db.contents.findIndex((c) => c.id === id);
+  
   if (index === -1) {
-    return res.status(404).json({ success: false, error: 'Content not found' });
+    // If item was not yet explicitly in database.json, add it with updates
+    const newItem = { id, ...updates };
+    db.contents.push(newItem);
+    index = db.contents.length - 1;
+  } else {
+    db.contents[index] = { ...db.contents[index], ...updates };
   }
-  db.contents[index] = { ...db.contents[index], ...updates };
+  
   saveDatabase(db);
   res.json({ success: true, data: db.contents[index] });
 });
@@ -1111,6 +1118,10 @@ app.delete('/api/contents/:id', (req: Request, res: Response) => {
   const { id } = req.params;
   const db = loadDatabase();
   db.contents = db.contents.filter((c) => c.id !== id);
+  if (!db.deletedIds) db.deletedIds = [];
+  if (!db.deletedIds.includes(id)) {
+    db.deletedIds.push(id);
+  }
   if (db.comments && db.comments[id]) {
     delete db.comments[id];
   }
@@ -1338,9 +1349,16 @@ async function startServer() {
     app.use(vite.middlewares);
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 GeekClub full-stack server running on http://0.0.0.0:${PORT}`);
-  });
+  if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 GeekClub full-stack server running on http://0.0.0.0:${PORT}`);
+    });
+  }
 }
 
-startServer();
+if (!process.env.VERCEL) {
+  startServer();
+}
+
+export default app;
+export { app };

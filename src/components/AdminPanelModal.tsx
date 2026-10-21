@@ -826,11 +826,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                               بازگردانی به فید
                             </button>
                             <button
-                              onClick={() => {
-                                if (confirm('آیا از حذف دائمی این محتوا از دیتابیس اطمینان دارید؟')) {
-                                  onPermanentDelete(item.id);
-                                }
-                              }}
+                              onClick={() => onPermanentDelete(item.id)}
                               className="p-2 rounded-xl bg-slate-800 hover:bg-rose-600/30 text-rose-400 hover:text-rose-200 transition cursor-pointer"
                               title="حذف کامل از دیتابیس"
                             >

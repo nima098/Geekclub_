@@ -199,13 +199,7 @@ export const handleImageError = (
     return;
   }
 
-  // 5. If failed on an external URL like img.youtube.com, try proxy route
-  if (currentSrc.startsWith('http') && !currentSrc.includes('/api/proxy-image')) {
-    target.src = `/api/proxy-image?url=${encodeURIComponent(currentSrc)}`;
-    return;
-  }
-
-  // 6. Ultimate fallback: Clean platform SVG
+  // 5. If failed on external image (Unsplash, YouTube, Instagram), fallback directly to offline SVG Data URI
   const safeSvg = (fallbackUrl && fallbackUrl.startsWith('data:')) 
     ? fallbackUrl 
     : getPlatformFallbackImage(platform);

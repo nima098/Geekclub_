@@ -104,11 +104,7 @@ export default function App() {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.CONTENT);
       const parsedSaved: ContentItem[] = saved ? JSON.parse(saved) : [];
-      // Ensure all initial content items exist in state
-      const existingIds = new Set(parsedSaved.map((c) => c.id));
-      const missingInitial = INITIAL_CONTENT.filter((c) => !existingIds.has(c.id));
-      const merged = [...missingInitial, ...parsedSaved];
-      const itemsToProcess = merged.length > 0 ? merged : INITIAL_CONTENT;
+      const itemsToProcess = parsedSaved.length > 0 ? parsedSaved : INITIAL_CONTENT;
 
       // Verified CDN covers on upc.geekclub.ir
       const VERIFIED_CDN_COVERS: Record<string, string> = {
