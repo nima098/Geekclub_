@@ -29,16 +29,17 @@ export const RSSModal: React.FC<RSSModalProps> = ({ isOpen, onClose }) => {
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://geekclub.ir';
   
   const getFeedUrl = (filter: string) => {
-    if (filter === 'all') return `${origin}/rss.xml`;
+    const secretKey = 'key=geekclub_admin_secure_key';
+    if (filter === 'all') return `${origin}/api/rss?${secretKey}`;
     if (filter.startsWith('platform:')) {
       const p = filter.replace('platform:', '');
-      return `${origin}/api/rss?platform=${p}`;
+      return `${origin}/api/rss?platform=${p}&${secretKey}`;
     }
     if (filter.startsWith('category:')) {
       const c = filter.replace('category:', '');
-      return `${origin}/api/rss?category=${c}`;
+      return `${origin}/api/rss?category=${c}&${secretKey}`;
     }
-    return `${origin}/rss.xml`;
+    return `${origin}/api/rss?${secretKey}`;
   };
 
   const activeUrl = getFeedUrl(selectedFilter);

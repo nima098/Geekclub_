@@ -1176,7 +1176,7 @@ export default function App() {
         isLoggingIn={isLoggingInWithGoogle}
         onOpenProfileModal={() => setIsProfileModalOpen(true)}
         onOpenFeedbackModal={() => setIsFeedbackModalOpen(true)}
-        onOpenRSSModal={() => setIsRSSModalOpen(true)}
+        onOpenRSSModal={isAdmin ? () => setIsRSSModalOpen(true) : undefined}
         onOpenAdminModal={() => {
           if (isAdmin) {
             setIsAdminModalOpen(true);
@@ -1314,14 +1314,16 @@ export default function App() {
               انتقادات و پیشنهادات
             </button>
 
-            <button
-              onClick={() => setIsRSSModalOpen(true)}
-              className="flex items-center gap-1.5 text-slate-400 hover:text-amber-300 transition cursor-pointer"
-              title="مشاهده و دریافت آدرس فید خبرخوان RSS"
-            >
-              <Rss className="w-3.5 h-3.5 text-amber-400" />
-              فید RSS (خبرخوان)
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => setIsRSSModalOpen(true)}
+                className="flex items-center gap-1.5 text-slate-400 hover:text-amber-300 transition cursor-pointer"
+                title="مشاهده و دریافت آدرس فید خبرخوان RSS"
+              >
+                <Rss className="w-3.5 h-3.5 text-amber-400" />
+                فید RSS (خبرخوان)
+              </button>
+            )}
 
             <button
               onClick={() => {
