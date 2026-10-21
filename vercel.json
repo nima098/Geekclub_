@@ -2,11 +2,18 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "installCommand": "npm install --legacy-peer-deps",
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api"
+      "source": "/api/test",
+      "destination": "/api/test.ts"
+    },
+    {
+      "source": "/api/contents",
+      "destination": "/api/contents.ts"
+    },
+    {
+      "source": "/api/proxy-image",
+      "destination": "/api/proxy-image.ts"
     },
     {
       "source": "/((?!api/).*)",
