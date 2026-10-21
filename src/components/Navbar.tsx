@@ -17,7 +17,8 @@ import {
   Crown,
   Video,
   Sun,
-  Moon
+  Moon,
+  Rss
 } from 'lucide-react';
 import { UserProfile } from '../types/content';
 import { PWAInstallButton } from './PWAInstallButton';
@@ -31,6 +32,7 @@ interface NavbarProps {
   onOpenProfileModal: () => void;
   onOpenFeedbackModal: () => void;
   onOpenAdminModal: () => void;
+  onOpenRSSModal?: () => void;
   onLogout: () => void;
   savedCount: number;
   unreadInboxCount: number;
@@ -49,6 +51,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenProfileModal,
   onOpenFeedbackModal,
   onOpenAdminModal,
+  onOpenRSSModal,
   onLogout,
   savedCount,
   unreadInboxCount,
@@ -132,6 +135,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <MessageSquarePlus className="w-4 h-4 text-[#0077d9]" />
             <span className="hidden lg:inline">انتقادات و پیشنهادات</span>
+          </button>
+
+          {/* RSS Feed Button */}
+          <button
+            onClick={onOpenRSSModal}
+            className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-amber-400 border border-slate-700/60 font-medium text-xs flex items-center gap-1.5 transition cursor-pointer shrink-0"
+            title="فید خبرخوان RSS سایت"
+          >
+            <Rss className="w-4 h-4 text-amber-400" />
+            <span className="hidden xl:inline">فید RSS</span>
           </button>
 
           {/* PWA Install Button */}

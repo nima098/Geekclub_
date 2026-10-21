@@ -1,4 +1,4 @@
-export default async function handler(req: any, res: any) {
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
 
@@ -33,7 +33,7 @@ export default async function handler(req: any, res: any) {
     res.setHeader('Content-Type', contentType);
     res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800');
     return res.status(200).send(Buffer.from(buffer));
-  } catch (err: any) {
+  } catch (err) {
     console.warn('Proxy image fetch failed:', err.message);
     res.setHeader('Content-Type', 'image/svg+xml');
     return res.status(200).send(fallbackSvg);

@@ -42,6 +42,9 @@ import {
   AdminPortalLoginModal 
 } from './components/AdminPortalLoginModal';
 import { 
+  RSSModal 
+} from './components/RSSModal';
+import { 
   Toast, 
   ToastMessage 
 } from './components/Toast';
@@ -86,7 +89,8 @@ import {
   Video,
   PlusCircle,
   Trash2,
-  RotateCcw
+  RotateCcw,
+  Rss
 } from 'lucide-react';
 import { api } from './services/api';
 import { fetchMetadataFromUrl } from './utils/urlHelper';
@@ -263,6 +267,7 @@ export default function App() {
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [isAdminPortalModalOpen, setIsAdminPortalModalOpen] = useState(false);
+  const [isRSSModalOpen, setIsRSSModalOpen] = useState(false);
 
   // Check URL query parameters (?admin=true, ?admin=login) and hash (#admin)
   useEffect(() => {
@@ -1171,6 +1176,7 @@ export default function App() {
         isLoggingIn={isLoggingInWithGoogle}
         onOpenProfileModal={() => setIsProfileModalOpen(true)}
         onOpenFeedbackModal={() => setIsFeedbackModalOpen(true)}
+        onOpenRSSModal={() => setIsRSSModalOpen(true)}
         onOpenAdminModal={() => {
           if (isAdmin) {
             setIsAdminModalOpen(true);
@@ -1306,6 +1312,15 @@ export default function App() {
             >
               <MessageSquarePlus className="w-3.5 h-3.5 text-pink-400" />
               انتقادات و پیشنهادات
+            </button>
+
+            <button
+              onClick={() => setIsRSSModalOpen(true)}
+              className="flex items-center gap-1.5 text-slate-400 hover:text-amber-300 transition cursor-pointer"
+              title="مشاهده و دریافت آدرس فید خبرخوان RSS"
+            >
+              <Rss className="w-3.5 h-3.5 text-amber-400" />
+              فید RSS (خبرخوان)
             </button>
 
             <button
@@ -1456,6 +1471,11 @@ export default function App() {
         onOpenAdminPanel={() => setIsAdminModalOpen(true)}
       />
 
+      {/* RSS Feed & Newsreader Modal */}
+      <RSSModal
+        isOpen={isRSSModalOpen}
+        onClose={() => setIsRSSModalOpen(false)}
+      />
 
       {/* Toast Notifications */}
       <Toast toasts={toasts} onDismiss={handleDismissToast} />
