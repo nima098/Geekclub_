@@ -27,18 +27,18 @@ export const SUPER_ADMIN_USER: UserProfile = {
 };
 
 export const DEFAULT_USER: UserProfile = {
-  uid: 'usr-sara',
-  displayName: 'سارا ناصری',
-  username: 'sara_ux',
-  email: 'sara@geekclub.ir',
+  uid: 'admin-super-uid',
+  displayName: 'مدیر کل سیستم (3dsaz)',
+  username: 'admin',
+  email: SUPER_ADMIN_EMAIL,
   hideEmail: false,
-  photoURL: getAuthorAvatar('سارا ناصری'),
-  bio: 'علاقه‌مند به توسعه فرانت‌اند و تجربه کاربری مدرن. عضو فعال گیک‌کلاب.',
+  photoURL: getAuthorAvatar('مدیر کل سیستم'),
+  bio: 'مدیریت ارشد پلتفرم اشتراک‌گذاری رسانه گیک‌کلاب',
   allowProfileComments: true,
   joinedAt: 'مهر ۱۴۰۴',
-  isAdmin: false,
-  autoApproveContent: false,
-  role: 'member'
+  isAdmin: true,
+  autoApproveContent: true,
+  role: 'super_admin'
 };
 
 export const INITIAL_REGISTERED_USERS: UserProfile[] = [
@@ -60,6 +60,46 @@ export const DEFAULT_SITE_SETTINGS: SiteAdminSettings = {
 };
 
 export const INITIAL_CONTENT: ContentItem[] = [
+  {
+    id: 'ig-da7z2zvjklL',
+    title: 'پست آلبومی و چند اسلایدی اینستاگرام',
+    description: 'پست چند اسلایدی اینستاگرام شامل عکس‌ها و ویدیوهای دریافت شده از طریق Apify و آپلود شده روی CDN اختصاصی upc.geekclub.ir/s1/instagram/.',
+    url: 'https://www.instagram.com/p/Da7Z2zvjklL/?utm_source=ig_web_copy_link&mdxt=MzRlODBiNWFlZA==&srtk=MzRlODBiNWFlZA==',
+    platform: 'instagram',
+    embedUrl: 'https://www.instagram.com/p/Da7Z2zvjklL/embed',
+    thumbnail: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
+    mediaType: 'carousel',
+    slides: [
+      {
+        type: 'image',
+        url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80'
+      },
+      {
+        type: 'image',
+        url: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80'
+      },
+      {
+        type: 'image',
+        url: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=800&q=80'
+      }
+    ],
+    author: {
+      name: 'پیج اینستاگرام گیک',
+      avatar: getAuthorAvatar('پیج اینستاگرام گیک'),
+      handle: '@geek_instagram',
+      isVerified: true
+    },
+    category: 'tech',
+    tags: ['اینستاگرام', 'آلبوم', 'اسلایدر', 'CDN'],
+    publishedAt: 'همین الان',
+    readingOrWatchTime: '۳ اسلاید چندرسانه‌ای',
+    likesCount: 15,
+    dislikesCount: 0,
+    commentsCount: 2,
+    userReaction: 'like',
+    sourceDomain: 'instagram.com',
+    approvalStatus: 'approved'
+  },
   {
     id: 'yt-pending-1',
     title: 'بررسی فریم‌ورک جدید Astro 5 و بهینه‌سازی سرعت بارگذاری صفحات وب',

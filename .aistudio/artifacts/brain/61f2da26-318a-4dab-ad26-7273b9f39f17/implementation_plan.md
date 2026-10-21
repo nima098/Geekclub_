@@ -1,38 +1,30 @@
-# طرح پیاده‌سازی CDN هاست جداگانه (upc.geekclub.ir)
+# Implementation Plan - Apify Instagram Scraper & CDN Media Pipeline
 
-بر اساس پاسخ‌های شما، سرویس آپلود و مدیریت تصاویر به هاست اختصاصی CDN روی دامنه `https://upc.geekclub.ir` با پشتیبانی از اسکریپت واسط PHP، توکن امنیتی و فشرده‌سازی خودکار تصاویر به فرمت WebP پیاده‌سازی خواهد شد.
+This plan outlines the architecture and steps to integrate Apify.com Instagram scraping API when a user publishes an Instagram link, downloading video and photo assets to the Vercel backend, transferring them to CDN/storage, and serving them seamlessly in the web app.
 
----
+## Proposed Changes
 
-## 1. اسکریپت واسط PHP (قابل قرارگیری در هاست upc.geekclub.ir)
+### 1. Backend API & Apify Integration (`server.ts` / `src/services/api.ts`)
+- **Apify Client Service**: Implement an API helper function in the backend (`server.ts`) to trigger or call Apify's Instagram Scraper actor (or REST run dataset endpoint) when an Instagram URL is submitted.
+- **Media Download & CDN Pipeline**:
+  - Fetch post details (media URLs, videos, images, captions, author info) from Apify dataset results.
+  - Download video/photo binaries to temporary server storage (`/tmp` or buffer).
+  - Upload/transfer downloaded assets to CDN storage or serve via local cached server endpoint (`/api/media/...` or public CDN assets folder) ensuring reliable playback and display without external CORS/expiry blocks.
+- **Background Async Enrichment**:
+  - Update `enrichDatabaseContent` to handle Instagram links using Apify when `needsEnrichment` is true.
+  - Update content item in Firestore with permanent CDN media URLs (`videoUrl`, `thumbnail`, `mediaType`, etc.) and set `needsEnrichment: false`.
 
-یک فایل آماده `upload.php` همراه با راهنمای نصب ارائه می‌شود که شامل موارد زیر است:
-- **بررسی توکن امنیتی (Bearer Token / Secret Key)** برای جلوگیری از آپلود غیرمجاز.
-- **اعتبارسنجی نوع فایل و پسوند** (پشتیبانی از webp, jpg, png, gif).
-- **نام‌گذاری یکتا و تاریخ‌دار** برای فایل‌ها جهت جلوگیری از اوررایت شدن.
-- **بازگرداندن پاسخ JSON** شامل لینک مستقیم عکس (مانند `https://upc.geekclub.ir/uploads/2026/10/img_xxxx.webp`).
+### 2. Frontend UX & Status Tracking (`src/components/AddContentModal.tsx`, `src/components/ContentCard.tsx`, `src/App.tsx`)
+- **Quick Submission**: When user pastes an Instagram link and clicks publish, immediately create the item with `needsEnrichment: true` and show a live processing state badge ("در حال پردازش رسانه از اینستاگرام...").
+- **Polling / Realtime Updates**: Listen to Firestore snapshots via `onSnapshot` so that once the backend completes Apify scraping and CDN transfer, the card updates automatically with the playable video and high-res image.
+- **Video & Media Player**: Ensure `ContentCard` supports playing downloaded MP4 videos and viewing photos served from CDN.
 
----
+## Verification Plan
 
-## 2. تغییرات و قابلیت‌های فرانت‌اند و بک‌اند برنامه
+### Automated Tests
+- Run `compile_applet` and `lint_applet` to ensure TypeScript compilation and zero build errors.
 
-### الف) سرویس پردازش و آپلود عکس (`src/services/cdnService.ts`)
-- **فشرده‌سازی و تبدیل به WebP در سمت کلاینت**: استفاده از Canvas API جهت کاهش حجم عکس بدون افت کیفیت محسوس و تبدیل به فرمت سریع WebP قبل از ارسال.
-- **ارسال ایمن به CDN**: ارسال Multipart FormData به همراه Header توکن امنیتی.
-- **پشتیبانی از آدرس دامنه**: تنظیم آدرس پیش‌فرض `https://upc.geekclub.ir` با قابلیت تغییر از طریق تنظیمات/متغیر محیطی.
-
-### ب) به‌روزرسانی فرم‌ها و مدال‌های آپلود (`AddContentModal.tsx` و `ProfileModal.tsx`)
-- اضافه کردن بخش آپلود تصویر با قابلیت Drag & Drop یا انتخاب فایل.
-- نمایش درصد پیشرفت آپلود و پیش‌نمایش تصویر خروجی.
-- قرار گرفتن خودکار لینک CDN در فیلدهای مربوط به کاور محتوا و تصویر نمایه کاربر.
-
-### ج) بخش تنظیمات ادمین و راهنمای راه اندازی CDN
-- افزودن تب یا بخش تنظیمات CDN در پنل ادمین جهت مشاهده و کپی کردن فایل `upload.php` و تنظیم توکن امنیتی.
-
----
-
-## 3. مراحل تست و راستی‌آزمایی
-
-1. **بررسی کمپایل و لنت پروژه**: اجرای `compile_applet` و `lint_applet` جهت اطمینان از عدم وجود خطای سینتکسی یا تایپ اسکریپت.
-2. **تست فشرده‌سازی WebP**: حصول اطمینان از تبدیل صحیح عکس‌ها به WebP در کلاینت.
-3. **تست ارتباطی API**: بررسی ارسال درست درخواست به انpoint آپلود و مدیریت خطاها در صورت قطع بودن سرور CDN.
+### Manual Verification
+- Simulate submitting an Instagram link via the UI.
+- Verify backend logs show Apify request, media download, and CDN processing.
+- Verify feed updates with processing badge and subsequently shows playable video and cached image.

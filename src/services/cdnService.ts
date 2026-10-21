@@ -355,15 +355,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' || (isset($_GET['ping']) || isset($_POS
 }
 
 // 3. Folder & Directory Setup inside 's1' folder
-$folderCategory = isset($_POST['folder']) ? preg_replace('/[^a-zA-Z0-9_\\-]/', '', $_POST['folder']) : 'contents';
+$rawFolder = isset($_POST['folder']) ? $_POST['folder'] : 'contents';
+$folderCategory = preg_replace('/[^a-zA-Z0-9_\\-\\/]/', '', $rawFolder);
+$folderCategory = trim($folderCategory, '/');
 if (empty($folderCategory)) {
     $folderCategory = 'contents';
 }
 
-$yearMonth = date('Y/m');
+// If folder specifies instagram/username (or custom subfolder), save directly under s1/instagram/username/; otherwise append YYYY/MM date
+if (strpos($folderCategory, 'instagram/') === 0 || strpos($folderCategory, 'instagram') === 0) {
+    $uploadSubpath = $folderCategory;
+} else {
+    $uploadSubpath = $folderCategory . '/' . date('Y/m');
+}
 
-// Save file physically inside __DIR__/{folder}/{YYYY}/{MM}
-$uploadBaseDir = __DIR__ . '/' . $folderCategory . '/' . $yearMonth;
+// Save file physically inside __DIR__/{uploadSubpath}
+$uploadBaseDir = __DIR__ . '/' . $uploadSubpath;
 if (!file_exists($uploadBaseDir)) {
     @mkdir($uploadBaseDir, 0755, true);
 }
@@ -379,7 +386,7 @@ if ($scriptDir === '/' || $scriptDir === '.') {
     $scriptDir = '';
 }
 
-$baseUrl = $scheme . "://" . $host . $scriptDir . "/" . $folderCategory . "/" . $yearMonth . "/";
+$baseUrl = $scheme . "://" . $host . $scriptDir . "/" . $uploadSubpath . "/";
 
 // 5. File Validation
 if (!isset($_FILES['file'])) {
@@ -395,8 +402,8 @@ if ($file['error'] !== UPLOAD_ERR_OK) {
     exit;
 }
 
-// Allowed File Formats
-$allowedExts = ['webp', 'jpg', 'jpeg', 'png', 'gif', 'svg'];
+// Allowed File Formats (Images & Videos)
+$allowedExts = ['webp', 'jpg', 'jpeg', 'png', 'gif', 'svg', 'mp4', 'webm', 'mov'];
 $fileExt = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
 
 if (!in_array($fileExt, $allowedExts)) {

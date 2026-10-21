@@ -58,6 +58,12 @@ export interface CommentItem {
   userLiked?: boolean;
 }
 
+export interface MediaSlide {
+  type: 'image' | 'video';
+  url: string;
+  thumbnail?: string;
+}
+
 export interface ContentItem {
   id: string;
   title: string;
@@ -84,6 +90,11 @@ export interface ContentItem {
   approvalStatus?: 'approved' | 'pending' | 'rejected';
   moderationReason?: string;
   needsEnrichment?: boolean;
+  videoUrl?: string;
+  mediaType?: 'video' | 'image' | 'carousel';
+  images?: string[];
+  slides?: MediaSlide[];
+  apifyFetched?: boolean;
 }
 
 export interface UserProfile {
@@ -112,6 +123,9 @@ export interface SiteAdminSettings {
   bannedKeywords?: string[];
   bannedDomains?: string[];
   enableAutoModeration?: boolean;
+  apifyApiToken?: string;
+  apifyActorId?: string;
+  enableApifyInstagram?: boolean;
 }
 
 export interface FeedbackItem {

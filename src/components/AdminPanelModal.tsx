@@ -150,6 +150,69 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     }
   };
 
+  // Apify Configuration state
+  const [apifyToken, setApifyToken] = useState(() => siteSettings.apifyApiToken || '');
+  const [apifyActor, setApifyActor] = useState(() => siteSettings.apifyActorId || 'apify~instagram-scraper');
+  const [isTestingApify, setIsTestingApify] = useState(false);
+  const [apifyTestResult, setApifyTestResult] = useState<{ ok: boolean; message: string; details?: string } | null>(null);
+  const [apifySaveSuccess, setApifySaveSuccess] = useState(false);
+
+  const handleTestApify = async () => {
+    setIsTestingApify(true);
+    setApifyTestResult(null);
+    try {
+      const res = await fetch('/api/test-apify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: apifyToken, actorId: apifyActor })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setApifyTestResult({
+          ok: true,
+          message: data.message,
+          details: `شناسه کاربری: ${data.data?.username || 'تایید شده'} | اکتور: ${data.data?.actorId}`
+        });
+      } else {
+        setApifyTestResult({
+          ok: false,
+          message: data.message || 'خطا در اتصال به Apify',
+          details: 'لطفاً از صحت توکن API در apify.com اطمینان حاصل فرمایید.'
+        });
+      }
+    } catch (err: any) {
+      setApifyTestResult({
+        ok: false,
+        message: 'خطا در برقراری ارتباط با سرور تست',
+        details: err.message
+      });
+    } finally {
+      setIsTestingApify(false);
+    }
+  };
+
+  const handleSaveApifySettings = async () => {
+    onUpdateSiteSettings({
+      ...siteSettings,
+      apifyApiToken: apifyToken,
+      apifyActorId: apifyActor,
+      enableApifyInstagram: true
+    });
+    try {
+      await fetch('/api/site-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          apifyApiToken: apifyToken,
+          apifyActorId: apifyActor,
+          enableApifyInstagram: true
+        })
+      });
+    } catch {}
+    setApifySaveSuccess(true);
+    setTimeout(() => setApifySaveSuccess(false), 2500);
+  };
+
   const handleStartImageMigration = async () => {
     const unmigratedItems = contents.filter(
       (item) => item.thumbnail && !item.thumbnail.includes('upc.geekclub.ir')
@@ -1483,6 +1546,124 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Apify Instagram Media Scraper & CDN Integration */}
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-950/40 via-purple-950/20 to-slate-900 border border-indigo-500/30 space-y-4">
+                <div className="flex items-center justify-between border-b border-indigo-500/20 pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-400">
+                      <Instagram className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm sm:text-base font-bold text-indigo-200 flex items-center gap-2">
+                        اتصال به Apify (استخراج خودکار ویدیو و رسانه‌های اینستاگرام)
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                          Video & Media Pipeline
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-300">
+                        دانلود فایل‌های اصلی MP4 و تصاویر از اینستاگرام، ذخیره روی سرور و انتقال به CDN جهت پخش بدون تحریم
+                      </p>
+                    </div>
+                  </div>
+
+                  <a
+                    href="https://console.apify.com/account/integrations"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hidden sm:flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 underline font-medium"
+                  >
+                    دریافت API Token از Apify
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-200 mb-1.5">
+                      توکن اختصاصی API در Apify (APIFY_API_TOKEN)
+                    </label>
+                    <input
+                      type="password"
+                      value={apifyToken}
+                      onChange={(e) => setApifyToken(e.target.value)}
+                      placeholder="apify_api_xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 dir-ltr text-left font-mono focus:outline-none focus:border-indigo-500"
+                    />
+                    <span className="text-[11px] text-slate-400 mt-1 block">
+                      قابل تنظیم از طریق متغیر محیطی <code className="text-indigo-300 font-mono">APIFY_API_TOKEN</code> یا فیلد بالا
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-200 mb-1.5">
+                      شناسه اکتور استخراجگر (Actor ID)
+                    </label>
+                    <input
+                      type="text"
+                      value={apifyActor}
+                      onChange={(e) => setApifyActor(e.target.value)}
+                      placeholder="apify~instagram-scraper"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 dir-ltr text-left font-mono focus:outline-none focus:border-indigo-500"
+                    />
+                    <span className="text-[11px] text-slate-400 mt-1 block">
+                      پیش‌فرض: <code className="text-indigo-300 font-mono">apify~instagram-scraper</code>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSaveApifySettings}
+                      className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md shadow-indigo-600/30"
+                    >
+                      <Check className="w-4 h-4" />
+                      ذخیره تنظیمات Apify
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleTestApify}
+                      disabled={isTestingApify || !apifyToken.trim()}
+                      className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-indigo-300 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer border border-indigo-500/30 disabled:opacity-50"
+                    >
+                      <Clock className={`w-3.5 h-3.5 ${isTestingApify ? 'animate-spin text-indigo-400' : ''}`} />
+                      {isTestingApify ? 'در حال تست...' : 'تست اتصال به Apify'}
+                    </button>
+                  </div>
+
+                  {apifySaveSuccess && (
+                    <span className="text-xs text-emerald-400 font-bold flex items-center gap-1 animate-in fade-in duration-200">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      تنظیمات Apify با موفقیت ذخیره شد.
+                    </span>
+                  )}
+                </div>
+
+                {apifyTestResult && (
+                  <div
+                    className={`p-3 rounded-xl text-xs space-y-1 border animate-in fade-in duration-200 ${
+                      apifyTestResult.ok
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
+                        : 'bg-rose-500/10 border-rose-500/30 text-rose-200'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-bold">
+                      {apifyTestResult.ok ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      ) : (
+                        <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                      )}
+                      {apifyTestResult.message}
+                    </div>
+                    {apifyTestResult.details && (
+                      <p className="text-[11px] opacity-90">{apifyTestResult.details}</p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}

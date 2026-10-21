@@ -177,7 +177,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
       } finally {
         if (active) setIsLoadingMeta(false);
       }
-    }, 450);
+    }, 150);
 
     return () => {
       active = false;
@@ -341,8 +341,8 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
           : FALLBACK_IMAGES.article
       );
 
-      // Check if user submitted very quickly without waiting for metadata extraction
-      const isQuickSubmit = !fetchedMeta || isLoadingMeta || !title.trim();
+      // Check if user submitted very quickly without waiting for metadata extraction or if it's Instagram media
+      const isQuickSubmit = !fetchedMeta || isLoadingMeta || !title.trim() || finalPlatform === 'instagram';
 
       // Auto transfer cover photo (YouTube, Aparat, Instagram, Article) to personal CDN on upc.geekclub.ir/s1/
       let finalThumbnail = rawThumbnail;
@@ -403,7 +403,12 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
         readingOrWatchTime: finalDuration,
         articleContent: articleContent.trim() || finalDescription,
         sourceDomain: parsed.sourceDomain,
-        needsEnrichment: isQuickSubmit
+        needsEnrichment: isQuickSubmit,
+        slides: fetchedMeta?.slides || [],
+        videoUrl: fetchedMeta?.videoUrl || '',
+        mediaType: fetchedMeta?.mediaType || (fetchedMeta?.slides && fetchedMeta.slides.length > 1 ? 'carousel' : 'image'),
+        images: fetchedMeta?.images || [],
+        apifyFetched: Boolean(fetchedMeta?.data?.apify)
       });
 
       // Reset form

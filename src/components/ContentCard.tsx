@@ -13,9 +13,16 @@ import {
   Check, 
   BookOpen,
   Trash2,
-  Video
+  Video,
+  RotateCcw,
+  Loader2,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Layers,
+  Film
 } from 'lucide-react';
-import { ContentItem, ViewMode, UserProfile } from '../types/content';
+import { ContentItem, ViewMode, UserProfile, MediaSlide } from '../types/content';
 import { handleImageError, getPlatformFallbackImage } from '../utils/imageHelper';
 
 interface ContentCardProps {
@@ -30,6 +37,8 @@ interface ContentCardProps {
   onShare: (item: ContentItem) => void;
   onTagClick: (tag: string) => void;
   onDeleteContent?: (id: string) => void;
+  onRestoreContent?: (id: string) => void;
+  onPermanentDelete?: (id: string) => void;
 }
 
 export const ContentCard: React.FC<ContentCardProps> = ({
@@ -43,12 +52,24 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   onToggleSave,
   onShare,
   onTagClick,
-  onDeleteContent
+  onDeleteContent,
+  onRestoreContent,
+  onPermanentDelete
 }) => {
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [activeSlideIndex, setActiveSlideIndex] = useState(0);
 
-  // Check if current user is author of post or admin
+  // Check if current user is admin or author of post
+  const isAdmin = Boolean(
+    currentUser && (
+      currentUser.isAdmin === true ||
+      currentUser.role === 'super_admin' ||
+      currentUser.role?.includes('admin') ||
+      currentUser.email?.toLowerCase() === '3dsaz1990@gmail.com'
+    )
+  );
+
   const isAuthor = Boolean(
     currentUser && (
       currentUser.displayName === item.author.name ||
@@ -56,7 +77,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
       (item.authorUid && currentUser.uid === item.authorUid)
     )
   );
-  const canDelete = Boolean(currentUser && (currentUser.isAdmin || isAuthor));
+  const canDelete = isAdmin || isAuthor;
 
   const handleShare = () => {
     onShare(item);
@@ -146,39 +167,145 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           </>
         )}
 
-        {item.platform === 'instagram' && (
-          <>
-            {isPlayingVideo ? (
-              <iframe
-                src={`https://www.instagram.com/p/${item.url.split('/p/')[1]?.split('/')[0] || item.url.split('/reel/')[1]?.split('/')[0] || 'DZfG1Nui61u'}/embed`}
-                title={item.title}
-                className="w-full h-full border-0"
-                allowFullScreen
-              />
-            ) : (
-              <div 
-                className="relative w-full h-full cursor-pointer group/ig"
-                onClick={() => setIsPlayingVideo(true)}
-              >
-                <img
-                  src={item.thumbnail}
-                  alt={item.title}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover/ig:scale-105 opacity-90 group-hover/ig:opacity-100"
-                  loading="lazy"
-                  onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent flex flex-col justify-end p-4">
-                  {/* Play Button Overlay */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div style={{ backgroundColor: "oklch(0.592 0.249 0.584)" }} className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl text-white flex items-center justify-center shadow-xl shadow-[oklch(0.592_0.249_0.584)]/40 group-hover/ig:scale-110 transition-all duration-300 backdrop-blur-sm">
-                      <Play className="w-6 h-6 fill-white ml-0.5" />
+        {item.platform === 'instagram' && (() => {
+          // Normalize slides list
+          const slideList: MediaSlide[] = (item.slides && item.slides.length > 0)
+            ? item.slides
+            : (item.images && item.images.length > 1)
+              ? item.images.map((img) => ({ type: 'image' as const, url: img }))
+              : item.videoUrl
+                ? [{ type: 'video' as const, url: item.videoUrl, thumbnail: item.thumbnail }]
+                : [{ type: 'image' as const, url: item.thumbnail }];
+
+          const activeSlide = slideList[activeSlideIndex] || slideList[0];
+          const hasMultipleSlides = slideList.length > 1;
+
+          return (
+            <div className="relative w-full h-full bg-slate-950 flex items-center justify-center group/ig">
+              {/* Media Display */}
+              {activeSlide.type === 'video' ? (
+                isPlayingVideo ? (
+                  <div className="relative w-full h-full bg-black flex items-center justify-center">
+                    <video
+                      src={activeSlide.url}
+                      controls
+                      autoPlay
+                      playsInline
+                      className="w-full h-full object-contain"
+                    />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsPlayingVideo(false);
+                      }}
+                      className="absolute top-2 left-2 z-20 p-1.5 rounded-lg bg-black/70 hover:bg-black/90 text-white text-xs transition cursor-pointer backdrop-blur-md border border-white/20"
+                      title="بستن پخش ویدیو"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    className="relative w-full h-full cursor-pointer"
+                    onClick={() => setIsPlayingVideo(true)}
+                  >
+                    <img
+                      src={activeSlide.thumbnail || item.thumbnail}
+                      alt={item.title}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover/ig:scale-105 opacity-90 group-hover/ig:opacity-100"
+                      loading="lazy"
+                      onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-black/30" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div style={{ backgroundColor: "oklch(0.592 0.249 0.584)" }} className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl text-white flex items-center justify-center shadow-xl shadow-[oklch(0.592_0.249_0.584)]/40 group-hover/ig:scale-110 transition-all duration-300 backdrop-blur-sm">
+                        <Play className="w-6 h-6 fill-white ml-0.5" />
+                      </div>
                     </div>
                   </div>
+                )
+              ) : (
+                <div className="relative w-full h-full">
+                  <img
+                    src={activeSlide.url}
+                    alt={`${item.title} - اسلاید ${activeSlideIndex + 1}`}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover/ig:scale-105"
+                    loading="lazy"
+                    onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-black/30 pointer-events-none" />
                 </div>
+              )}
+
+              {/* Multi-Slide Navigation Controls */}
+              {hasMultipleSlides && (
+                <>
+                  {/* Previous Slide Button (Right side in RTL) */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsPlayingVideo(false);
+                      setActiveSlideIndex((prev) => (prev - 1 + slideList.length) % slideList.length);
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-20 p-1.5 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white border border-slate-700/80 shadow-lg backdrop-blur-md transition-all active:scale-95 cursor-pointer opacity-80 hover:opacity-100"
+                    title="اسلاید قبلی"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+
+                  {/* Next Slide Button (Left side in RTL) */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsPlayingVideo(false);
+                      setActiveSlideIndex((prev) => (prev + 1) % slideList.length);
+                    }}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-20 p-1.5 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white border border-slate-700/80 shadow-lg backdrop-blur-md transition-all active:scale-95 cursor-pointer opacity-80 hover:opacity-100"
+                    title="اسلاید بعدی"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+
+                  {/* Dots Indicator */}
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-950/75 border border-slate-800/80 backdrop-blur-md shadow-lg">
+                    {slideList.map((s, idx) => (
+                      <button
+                        key={idx}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsPlayingVideo(false);
+                          setActiveSlideIndex(idx);
+                        }}
+                        className={`transition-all rounded-full cursor-pointer ${
+                          idx === activeSlideIndex
+                            ? 'w-4 h-1.5 bg-pink-400'
+                            : 'w-1.5 h-1.5 bg-slate-500 hover:bg-slate-300'
+                        }`}
+                        title={`اسلاید ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Slide Counter Badge Top-Right */}
+                  <div className="absolute top-3 right-3 z-20 flex items-center gap-1">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-900/85 text-pink-300 border border-pink-500/30 flex items-center gap-1 shadow-md backdrop-blur-md">
+                      <Layers className="w-3 h-3 text-pink-400" />
+                      اسلاید {activeSlideIndex + 1} از {slideList.length}
+                    </span>
+                  </div>
+                </>
+              )}
+
+              {/* CDN Media Badge Top-Left */}
+              <div className="absolute top-3 left-3 z-10 flex items-center gap-1">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-600/90 text-white flex items-center gap-1 shadow-md backdrop-blur-md border border-emerald-400/30">
+                  <Video className="w-3 h-3 text-emerald-200" />
+                  {hasMultipleSlides ? 'اسلایدهای CDN' : (item.videoUrl ? 'ویدیو روی CDN' : 'عکس روی CDN')}
+                </span>
               </div>
-            )}
-          </>
-        )}
+            </div>
+          );
+        })()}
 
         {item.platform === 'aparat' && (
           <>
@@ -244,6 +371,18 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             <span className="text-[10px] font-bold px-2.5 py-1 rounded-xl bg-amber-500 text-slate-950 flex items-center gap-1 shadow-md animate-pulse">
               <Clock className="w-3 h-3 text-slate-950" />
               در انتظار بررسی
+            </span>
+          </div>
+        )}
+
+        {/* Top-Left Live Enriching Badge */}
+        {item.needsEnrichment && (
+          <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5">
+            <span className="text-[10px] font-bold px-2.5 py-1 rounded-xl bg-indigo-600/90 text-white flex items-center gap-1.5 shadow-md backdrop-blur-md animate-pulse border border-indigo-400/30">
+              <Loader2 className="w-3 h-3 animate-spin text-amber-300" />
+              {item.platform === 'instagram' 
+                ? 'در حال دریافت و ذخیره ویدیو از اینستاگرام...' 
+                : 'در حال دریافت عکس و اطلاعات مبدا...'}
             </span>
           </div>
         )}
@@ -393,18 +532,51 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               )}
             </button>
 
-            {/* Delete button (Author or Admin) */}
-            {canDelete && onDeleteContent && (
+            {/* Admin-Only Delete button (Moves content to Trash Bin) */}
+            {isAdmin && onDeleteContent && !item.isDeleted && (
               <button
-                onClick={() => {
-                  if (confirm('آیا از انتقال این محتوا به سطل بازیافت اطمینان دارید؟ (این محتوا در حافظه باقی می‌ماند و قابل بازگردانی است)')) {
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (confirm(`آیا از انتقال این محتوا به سطل زباله اطمینان دارید؟\n\n«${item.title}»\n\nاین محتوا به سطل زباله منتقل گردیده و بلافاصله از نمایش عمومی سایت حذف خواهد شد.`)) {
                     onDeleteContent(item.id);
                   }
                 }}
-                className="p-1.5 rounded-xl bg-slate-800/80 hover:bg-rose-600/20 text-slate-400 hover:text-rose-400 border border-slate-700/60 transition cursor-pointer"
-                title="حذف و انتقال به سطل بازیافت (قابل بازگردانی)"
+                className="px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/30 active:scale-95 text-rose-300 hover:text-rose-100 border border-rose-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm group"
+                title="حذف و انتقال به سطل زباله (مخصوص مدیریت)"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3.5 h-3.5 text-rose-400 group-hover:scale-110 transition-transform" />
+                <span>حذف</span>
+              </button>
+            )}
+
+            {/* Restore button (When viewing Trash as Admin) */}
+            {isAdmin && item.isDeleted && onRestoreContent && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRestoreContent(item.id);
+                }}
+                className="px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 hover:text-emerald-100 border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+                title="بازگردانی محتوا از سطل زباله به صفحه اصلی"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-emerald-400" />
+                <span>بازگردانی</span>
+              </button>
+            )}
+
+            {/* Permanent Delete button (When viewing Trash as Admin) */}
+            {isAdmin && item.isDeleted && onPermanentDelete && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (confirm(`آیا از حذف دائمی این محتوا از دیتابیس اطمینان دارید؟\nاین عمل غیرقابل بازگشت است.`)) {
+                    onPermanentDelete(item.id);
+                  }
+                }}
+                className="p-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 hover:text-rose-100 border border-rose-500/40 transition cursor-pointer"
+                title="حذف دائمی از دیتابیس"
+              >
+                <Trash2 className="w-4 h-4 text-rose-400" />
               </button>
             )}
           </div>

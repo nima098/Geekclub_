@@ -84,9 +84,13 @@ import {
   Crown,
   MessageSquarePlus,
   Video,
-  PlusCircle
+  PlusCircle,
+  Trash2,
+  RotateCcw
 } from 'lucide-react';
 import { api } from './services/api';
+import { fetchMetadataFromUrl } from './utils/urlHelper';
+import { transferExternalUrlToCDN } from './services/cdnService';
 
 const STORAGE_KEYS = {
   CONTENT: 'mediahub_content_v1',
@@ -208,6 +212,7 @@ export default function App() {
   const [sortOption, setSortOption] = useState<SortOption>('newest');
   const [viewMode, setViewMode] = useState<ViewMode>('grid3');
   const [showSavedOnly, setShowSavedOnly] = useState(false);
+  const [showTrashOnly, setShowTrashOnly] = useState(false);
 
 
 
@@ -673,83 +678,130 @@ export default function App() {
     setContents((prev) => [newItem, ...prev]);
     api.addContent(newItem);
 
-    // Check if user submitted very quickly before metadata / CDN cover arrived
     const isGenericTitle = !newItem.title || 
       newItem.title === 'ویدیوی یوتیوب' || 
       newItem.title === 'ویدیوی آپارات' || 
       newItem.title === 'پست اینستاگرام' || 
       newItem.title === 'محتوای اشتراک‌گذاری شده' || 
       newItem.title === 'مقاله وب' ||
-      newItem.title.startsWith('مقاله در ');
+      newItem.title.startsWith('مقاله در ') ||
+      newItem.title.startsWith('پست منتخب در') ||
+      newItem.title.startsWith('ویدیوی آموزشی');
 
     const needsThumb = !newItem.thumbnail || 
       !newItem.thumbnail.includes('upc.geekclub.ir') || 
       newItem.thumbnail.startsWith('data:') ||
       newItem.thumbnail.includes('unsplash');
 
-    const shouldEnrichInBackground = itemData.needsEnrichment || isGenericTitle || needsThumb;
+    const shouldEnrichInBackground = Boolean(itemData.needsEnrichment || isGenericTitle || needsThumb);
 
     if (shouldEnrichInBackground) {
-      addToast('info', 'لینک ثبت شد؛ در حال دریافت اطلاعات و عکس از سایت مبدا در پس‌زمینه...');
+      addToast('info', 'لینک ثبت گردید؛ در حال دریافت اطلاعات و عکس اصلی از سایت مبدا در پس‌زمینه...');
 
       (async () => {
         try {
-          const res = await fetch(`/api/contents/${newItem.id}/enrich`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: newItem.url })
-          });
-
           let enriched: any = null;
-          if (res.ok) {
-            const data = await res.json();
-            if (data.success && data.data) {
-              enriched = data.data;
+
+          // 1. Call server-side /api/contents/:id/enrich endpoint
+          try {
+            const res = await fetch(`/api/contents/${newItem.id}/enrich`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url: newItem.url })
+            });
+
+            if (res.ok) {
+              const data = await res.json();
+              if (data.success && data.data) {
+                enriched = data.data;
+              }
+            }
+          } catch (err) {
+            console.warn('POST /api/contents/:id/enrich fetch error:', err);
+          }
+
+          // 2. If enriched data is still generic or missing real title, call /api/extract-metadata directly
+          const hasRealTitle = enriched?.title && 
+            !['ویدیوی یوتیوب', 'ویدیوی آپارات', 'پست اینستاگرام', 'محتوای اشتراک‌گذاری شده', 'مقاله وب'].includes(enriched.title) &&
+            !enriched.title.startsWith('مقاله در ');
+
+          if (!enriched || !hasRealTitle || !enriched.thumbnail) {
+            try {
+              const metaRes = await fetch(`/api/extract-metadata?url=${encodeURIComponent(newItem.url)}`);
+              if (metaRes.ok) {
+                const metaData = await metaRes.json();
+                if (metaData.success && (metaData.title || metaData.thumbnail)) {
+                  enriched = { ...enriched, ...metaData };
+                }
+              }
+            } catch (err) {
+              console.warn('GET /api/extract-metadata fetch error:', err);
             }
           }
 
-          if (!enriched || !enriched.title) {
-            const metaRes = await fetch(`/api/extract-metadata?url=${encodeURIComponent(newItem.url)}`);
-            if (metaRes.ok) {
-              const metaData = await metaRes.json();
-              if (metaData.success) {
-                enriched = metaData;
+          // 3. Fallback to client-side oEmbed/heuristic parsing if server extraction was incomplete
+          if (!enriched || !enriched.title || !hasRealTitle) {
+            try {
+              const localMeta = await fetchMetadataFromUrl(newItem.url);
+              if (localMeta && (localMeta.title || localMeta.thumbnail)) {
+                enriched = { ...enriched, ...localMeta };
               }
+            } catch (err) {
+              console.warn('Local client metadata fetch error:', err);
             }
           }
 
           if (enriched && (enriched.title || enriched.thumbnail)) {
+            // Ensure thumbnail is stored on personal CDN
+            let finalCover = enriched.thumbnail || enriched.image;
+            if (finalCover && !finalCover.includes('upc.geekclub.ir') && !finalCover.startsWith('data:')) {
+              try {
+                const cdnUrl = await transferExternalUrlToCDN(finalCover, 'contents', `cover_${newItem.platform}`);
+                if (cdnUrl && cdnUrl.includes('upc.geekclub.ir')) {
+                  finalCover = cdnUrl;
+                }
+              } catch {}
+            }
+
+            const updates: Partial<ContentItem> = {
+              ...(enriched.title && enriched.title.trim() ? { title: enriched.title.trim() } : {}),
+              ...(enriched.description && enriched.description.trim() ? { description: enriched.description.trim() } : {}),
+              ...(finalCover ? { thumbnail: finalCover } : {}),
+              ...(enriched.videoUrl ? { videoUrl: enriched.videoUrl } : {}),
+              ...(enriched.mediaType ? { mediaType: enriched.mediaType } : {}),
+              ...(enriched.images && enriched.images.length > 0 ? { images: enriched.images } : {}),
+              ...(enriched.slides && enriched.slides.length > 0 ? { slides: enriched.slides } : {}),
+              ...(enriched.readingOrWatchTime ? { readingOrWatchTime: enriched.readingOrWatchTime } : {}),
+              ...(enriched.embedUrl ? { embedUrl: enriched.embedUrl } : {}),
+              ...(enriched.authorName && (!newItem.author?.name || newItem.author.name === 'کاربر گیک کلاب') ? {
+                author: {
+                  ...newItem.author,
+                  name: enriched.authorName,
+                  handle: `@${enriched.authorName.replace(/\s+/g, '_').toLowerCase()}`
+                }
+              } : {}),
+              needsEnrichment: false
+            };
+
+            // Update React state immediately so card reflects real title and cover photo
             setContents((prev) =>
               prev.map((c) => {
                 if (c.id !== newItem.id) return c;
-                const canUpdateTitle = isGenericTitle && enriched.title;
-                const canUpdateDesc = (!c.description || c.description.includes('به اشتراک گذاشته شده')) && enriched.description;
-                const canUpdateThumb = (!c.thumbnail || !c.thumbnail.includes('upc.geekclub.ir') || c.thumbnail.startsWith('data:') || c.thumbnail.includes('unsplash')) && enriched.thumbnail;
-
                 return {
                   ...c,
-                  title: canUpdateTitle ? enriched.title : c.title,
-                  description: canUpdateDesc ? enriched.description : c.description,
-                  thumbnail: canUpdateThumb ? enriched.thumbnail : c.thumbnail,
-                  readingOrWatchTime: enriched.readingOrWatchTime || c.readingOrWatchTime,
-                  embedUrl: enriched.embedUrl || c.embedUrl,
-                  author: {
-                    ...c.author,
-                    name: (c.author.name === 'کاربر گیک کلاب' && enriched.authorName) ? enriched.authorName : c.author.name
-                  }
+                  ...updates
                 };
               })
             );
 
-            await api.updateContent(newItem.id, {
-              ...(enriched.title ? { title: enriched.title } : {}),
-              ...(enriched.description ? { description: enriched.description } : {}),
-              ...(enriched.thumbnail ? { thumbnail: enriched.thumbnail } : {}),
-              ...(enriched.readingOrWatchTime ? { readingOrWatchTime: enriched.readingOrWatchTime } : {}),
-              ...(enriched.embedUrl ? { embedUrl: enriched.embedUrl } : {})
-            });
+            // Persist merged updates to Cloud Firestore & local DB
+            await api.updateContent(newItem.id, updates);
 
-            addToast('success', 'اطلاعات کامل و کاور محتوا با موفقیت از سایت مبدا فراخوانی و ذخیره شد ✨');
+            if (enriched.videoUrl) {
+              addToast('success', 'ویدیو و رسانه‌های اینستاگرام با موفقیت دریافت و روی CDN ذخیره گردید ✨');
+            } else {
+              addToast('success', 'اطلاعات کامل و کاور محتوا با موفقیت از سایت مبدا فراخوانی و ذخیره شد ✨');
+            }
           }
         } catch (err) {
           console.warn('Background metadata enrichment failed:', err);
@@ -1000,12 +1052,31 @@ export default function App() {
     setSelectedPlatform('all');
     setSelectedCategory('all');
     setShowSavedOnly(false);
+    setShowTrashOnly(false);
   };
+
+  const isAdmin = Boolean(
+    user && (
+      user.isAdmin ||
+      user.role === 'super_admin' ||
+      user.role?.includes('admin') ||
+      user.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()
+    )
+  );
+
+  const trashCount = useMemo(() => {
+    return contents.filter((c) => c.isDeleted).length;
+  }, [contents]);
 
   // --- Filtered & Sorted Content List ---
   const filteredContents = useMemo(() => {
     return contents
       .filter((item) => {
+        // Trash filter for admin
+        if (showTrashOnly) {
+          return Boolean(item.isDeleted);
+        }
+
         // Soft-delete filter: Exclude items in trash from public feed
         if (item.isDeleted) {
           return false;
@@ -1091,7 +1162,13 @@ export default function App() {
         isLoggingIn={isLoggingInWithGoogle}
         onOpenProfileModal={() => setIsProfileModalOpen(true)}
         onOpenFeedbackModal={() => setIsFeedbackModalOpen(true)}
-        onOpenAdminModal={() => setIsAdminModalOpen(true)}
+        onOpenAdminModal={() => {
+          if (isAdmin) {
+            setIsAdminModalOpen(true);
+          } else {
+            setIsAdminPortalModalOpen(true);
+          }
+        }}
         onLogout={handleLogout}
         savedCount={savedCount}
         unreadInboxCount={inbox.filter((m) => !m.read).length}
@@ -1146,7 +1223,39 @@ export default function App() {
           showSavedOnly={showSavedOnly}
           onToggleSavedOnly={() => setShowSavedOnly(!showSavedOnly)}
           savedCount={savedCount}
+          isAdmin={isAdmin}
+          showTrashOnly={showTrashOnly}
+          onToggleTrashOnly={() => setShowTrashOnly(!showTrashOnly)}
+          trashCount={trashCount}
         />
+
+        {/* Trash Notice Banner when Admin is viewing Trash */}
+        {showTrashOnly && (
+          <div className="p-4 sm:p-5 rounded-2xl bg-rose-950/60 border border-rose-800/80 text-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-rose-600/30 text-rose-300 shrink-0 border border-rose-500/40">
+                <Trash2 className="w-5 h-5 text-rose-400" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-sm font-bold text-rose-100 flex items-center gap-2">
+                  <span>سطل زباله محتواها</span>
+                  <span className="px-2 py-0.5 rounded-full bg-rose-500/30 text-rose-200 text-xs font-mono">
+                    {trashCount} مورد
+                  </span>
+                </h4>
+                <p className="text-xs text-rose-300/90 leading-relaxed">
+                  محتواهای منتقل شده به سطل زباله از صفحه اصلی پنهان هستند. در صورت تمایل می‌توانید هر مورد را با دکمه «بازگردانی» به صفحه اصلی بازگردانید یا با «حذف دائمی» کاملاً پاک کنید.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowTrashOnly(false)}
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs font-bold transition cursor-pointer shrink-0 border border-slate-700/80 shadow-md"
+            >
+              بازگشت به فید اصلی سایت
+            </button>
+          </div>
+        )}
 
         {/* Content Grid */}
         {filteredContents.length > 0 ? (
@@ -1165,6 +1274,8 @@ export default function App() {
                 onShare={handleShare}
                 onTagClick={(tag) => setSearchQuery(tag)}
                 onDeleteContent={(id) => handleToggleSoftDelete(id, true)}
+                onRestoreContent={(id) => handleToggleSoftDelete(id, false)}
+                onPermanentDelete={handlePermanentDelete}
               />
             ))}
           </div>
@@ -1209,17 +1320,21 @@ export default function App() {
               انتقادات و پیشنهادات
             </button>
 
-            {user?.isAdmin && (
-              <button
-                onClick={() => setIsAdminModalOpen(true)}
-                className="flex items-center gap-1.5 text-[#0077d9] hover:text-[#0066bd] font-bold transition cursor-pointer bg-[#0077d9]/10 hover:bg-[#0077d9]/20 px-2.5 py-1 rounded-lg border border-[#0077d9]/30"
-                style={{ color: '#0077d9' }}
-                title="ورود به پنل مدیریت سایت و بازیابی محتوا"
-              >
-                <Crown className="w-3.5 h-3.5 text-[#0077d9]" style={{ color: '#0077d9' }} />
-                <span style={{ color: '#0077d9' }}>پنل مدیریت سایت</span>
-              </button>
-            )}
+            <button
+              onClick={() => {
+                if (isAdmin) {
+                  setIsAdminModalOpen(true);
+                } else {
+                  setIsAdminPortalModalOpen(true);
+                }
+              }}
+              className="flex items-center gap-1.5 text-[#0077d9] hover:text-[#0066bd] font-bold transition cursor-pointer bg-[#0077d9]/10 hover:bg-[#0077d9]/20 px-2.5 py-1 rounded-lg border border-[#0077d9]/30"
+              style={{ color: '#0077d9' }}
+              title="ورود به پنل مدیریت سایت و سطل زباله"
+            >
+              <Crown className="w-3.5 h-3.5 text-[#0077d9]" style={{ color: '#0077d9' }} />
+              <span style={{ color: '#0077d9' }}>پنل مدیریت سایت</span>
+            </button>
 
             <button
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}

@@ -17,7 +17,8 @@ import {
   Sparkles,
   Video,
   Check,
-  Bookmark
+  Bookmark,
+  Trash2
 } from 'lucide-react';
 import { Platform, Category, SortOption, ViewMode } from '../types/content';
 
@@ -39,6 +40,10 @@ interface FilterBarProps {
   showSavedOnly?: boolean;
   onToggleSavedOnly?: () => void;
   savedCount?: number;
+  isAdmin?: boolean;
+  showTrashOnly?: boolean;
+  onToggleTrashOnly?: () => void;
+  trashCount?: number;
 }
 
 const CATEGORIES: { id: Category; label: string }[] = [
@@ -69,7 +74,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   activeFilterCount,
   showSavedOnly = false,
   onToggleSavedOnly,
-  savedCount = 0
+  savedCount = 0,
+  isAdmin = false,
+  showTrashOnly = false,
+  onToggleTrashOnly,
+  trashCount = 0
 }) => {
   return (
     <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-[1.75rem] p-4 sm:p-5 shadow-2xl shadow-slate-950/20 space-y-4">
@@ -270,6 +279,29 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 showSavedOnly ? 'bg-white text-[#0077d9]' : 'bg-[#0077d9] text-white'
               }`}>
                 {savedCount}
+              </span>
+            )}
+          </button>
+        )}
+
+        {/* Trash Filter Chip for Admin */}
+        {isAdmin && onToggleTrashOnly && (
+          <button
+            onClick={onToggleTrashOnly}
+            className={`px-3.5 py-1.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+              showTrashOnly
+                ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30 font-black ring-2 ring-rose-400/50'
+                : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 border border-slate-750 hover:text-rose-300'
+            }`}
+            title="نمایش محتواهای منتقل شده به سطل زباله"
+          >
+            <Trash2 className={`w-4 h-4 ${showTrashOnly ? 'text-white' : 'text-rose-400'}`} />
+            <span className={showTrashOnly ? 'text-white' : ''}>سطل زباله</span>
+            {trashCount !== undefined && trashCount > 0 && (
+              <span className={`px-1.5 py-0.2 rounded-full font-mono text-[10px] font-black ${
+                showTrashOnly ? 'bg-white text-rose-600' : 'bg-rose-600 text-white'
+              }`}>
+                {trashCount}
               </span>
             )}
           </button>

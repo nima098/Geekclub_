@@ -1,4 +1,4 @@
-import { Platform, Category, inferCategoryFromContent } from '../types/content';
+import { Platform, Category, MediaSlide, inferCategoryFromContent } from '../types/content';
 import { FALLBACK_IMAGES } from './imageHelper';
 import { transferExternalUrlToCDN } from '../services/cdnService';
 
@@ -20,6 +20,11 @@ export interface ExtractedMetadata {
   category: Category;
   readingOrWatchTime: string;
   sourceDomain: string;
+  slides?: MediaSlide[];
+  videoUrl?: string;
+  mediaType?: 'video' | 'image' | 'carousel';
+  images?: string[];
+  data?: any;
 }
 
 export function parseContentUrl(inputUrl: string): ParsedUrlResult {
@@ -206,16 +211,20 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
   // 2. Instagram metadata extraction
   if (parsed.platform === 'instagram') {
     thumbnail = FALLBACK_IMAGES.instagram;
-    tags = ['اینستاگرام', 'ریلز', 'رسانه'];
+    tags = ['اینستاگرام', 'رسانه', 'آلبوم'];
     category = 'entertainment';
     readingOrWatchTime = cleanUrl.includes('reel') ? 'ریلز اینستاگرام' : 'پست اینستاگرام';
     authorName = 'پیج اینستاگرام';
 
+    let slides: MediaSlide[] = [];
+    let videoUrl = '';
+    let mediaType: 'video' | 'image' | 'carousel' = 'image';
+    let images: string[] = [];
+
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
-
-      const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(cleanUrl)}`, {
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
+      const res = await fetch(`/api/extract-metadata?url=${encodeURIComponent(cleanUrl)}`, {
         signal: controller.signal
       });
       clearTimeout(timeoutId);
@@ -223,8 +232,14 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
       if (res.ok) {
         const data = await res.json();
         if (data.title) title = data.title;
-        if (data.author_name) authorName = data.author_name;
-        if (data.thumbnail_url) thumbnail = data.thumbnail_url;
+        if (data.description) description = data.description;
+        if (data.authorName) authorName = data.authorName;
+        if (data.thumbnail) thumbnail = data.thumbnail;
+        if (data.videoUrl) videoUrl = data.videoUrl;
+        if (data.mediaType) mediaType = data.mediaType;
+        if (data.slides && data.slides.length > 0) slides = data.slides;
+        if (data.images && data.images.length > 0) images = data.images;
+        if (data.readingOrWatchTime) readingOrWatchTime = data.readingOrWatchTime;
       }
     } catch {
       // Graceful fallback
@@ -249,7 +264,11 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
       tags,
       category: inferredIgCat,
       readingOrWatchTime,
-      sourceDomain: 'instagram.com'
+      sourceDomain: 'instagram.com',
+      slides,
+      videoUrl,
+      mediaType,
+      images
     };
   }
 

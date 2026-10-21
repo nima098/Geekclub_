@@ -263,17 +263,30 @@ export const Navbar: React.FC<NavbarProps> = ({
                         )}
                       </button>
 
-                      {user.isAdmin && (
+                      {user.isAdmin ? (
                         <button
                           onClick={() => {
                             setShowProfileMenu(false);
                             onOpenAdminModal();
                           }}
-                          className="w-full text-right px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-xl flex items-center justify-between transition cursor-pointer"
+                          className="w-full text-right px-3 py-2 text-xs text-amber-300 hover:text-amber-200 hover:bg-amber-500/10 rounded-xl flex items-center justify-between transition cursor-pointer font-bold border border-amber-500/20"
                         >
                           <span className="flex items-center gap-2">
-                            <Crown className="w-4 h-4 text-slate-300" />
-                            پنل ادمین و مدیریت سایت
+                            <Crown className="w-4 h-4 text-amber-400" />
+                            پنل مدیریت کل سایت
+                          </span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setShowProfileMenu(false);
+                            onOpenAdminModal();
+                          }}
+                          className="w-full text-right px-3 py-2 text-xs text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl flex items-center justify-between transition cursor-pointer"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Crown className="w-4 h-4 text-slate-400" />
+                            ورود به پنل مدیریت (Admin)
                           </span>
                         </button>
                       )}
