@@ -1188,28 +1188,7 @@ export default function App() {
         onToggleTheme={handleToggleTheme}
       />
 
-      {/* Material Flat Hero Welcome Kicker */}
-      <div className="relative border-b border-slate-800/80 bg-slate-950/40 pt-8 sm:pt-12 pb-4 sm:pb-6 overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="p-6 sm:p-8 rounded-[2rem] bg-slate-900/95 backdrop-blur-xl border border-slate-800/80 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            {/* Ambient Background Accent */}
-            <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-[#0077d9]/10 blur-3xl pointer-events-none" />
 
-            <div className="space-y-3 max-w-2xl relative z-10">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-2xl bg-slate-800/80 border border-slate-700/60 text-slate-200 text-xs font-bold">
-                <Sparkles className="w-3.5 h-3.5 text-slate-300" />
-                <span>بستر اشتراک محتوای کاربردی گیک ها</span>
-              </div>
-              <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-100 leading-tight sm:leading-tight">
-                مرجع برتر محتوای گلچین شده و پیشنهاد شده گیک ها به یکدیگر
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed sm:leading-loose">
-                محتواها را مستقیماً تماشا کنید، مقالات را در حالت خوانش بی‌پیرایه بخوانید، امتیاز دهید و دیدگاه خود را با دیگران به اشتراک بگذارید.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-6">

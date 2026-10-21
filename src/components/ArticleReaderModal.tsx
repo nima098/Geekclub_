@@ -53,44 +53,32 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
 
   if (!item) return null;
 
+  const getExternalSourceLabel = () => {
+    if (!item) return 'دیدن محتوا در وبسایت مبدا';
+    if (item.platform === 'youtube') return 'دیدن محتوا در یوتیوب';
+    if (item.platform === 'instagram') return 'دیدن محتوا در اینستاگرام';
+    if (item.platform === 'aparat') return 'دیدن محتوا در آپارات';
+
+    if (item.sourceDomain) {
+      const domain = item.sourceDomain.toLowerCase().replace(/^www\./, '');
+      if (domain.includes('virgool')) return 'دیدن محتوا در ویرگول';
+      if (domain.includes('zoomit')) return 'دیدن محتوا در زومیت';
+      if (domain.includes('digiato')) return 'دیدن محتوا در دیجیاتو';
+      if (domain.includes('medium')) return 'دیدن محتوا در مدیوم';
+      if (domain.includes('github')) return 'دیدن محتوا در گیت‌هاب';
+      return `دیدن محتوا در ${domain}`;
+    }
+
+    return 'دیدن محتوا در وبسایت مبدا';
+  };
+
   const handleShareClick = () => {
     onShare(item);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
   };
 
-  // Get Platform Badge Config
-  const getPlatformBadge = () => {
-    switch (item.platform) {
-      case 'youtube':
-        return {
-          icon: <Youtube className="w-3.5 h-3.5 text-red-400" />,
-          label: 'پخش هوشمند یوتیوب',
-          badgeBg: 'bg-red-500/15 text-red-300 border-red-500/30'
-        };
-      case 'instagram':
-        return {
-          icon: <Instagram className="w-3.5 h-3.5 text-pink-400" />,
-          label: 'نمایشگر محتوای اینستاگرام',
-          badgeBg: 'bg-pink-500/15 text-pink-300 border-pink-500/30'
-        };
-      case 'aparat':
-        return {
-          icon: <Video className="w-3.5 h-3.5 text-rose-400" />,
-          label: 'پخش هوشمند آپارات',
-          badgeBg: 'bg-rose-500/15 text-rose-300 border-rose-500/30'
-        };
-      case 'article':
-      default:
-        return {
-          icon: <BookOpen className="w-3.5 h-3.5 text-emerald-400" />,
-          label: 'حالت خوانش مقاله (Reader View)',
-          badgeBg: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-        };
-    }
-  };
 
-  const badge = getPlatformBadge();
 
   // Normalize slides for Instagram
   const slideList: MediaSlide[] = (item.slides && item.slides.length > 0)
@@ -116,16 +104,6 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
         {/* Modal Top Header Bar */}
         <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 backdrop-blur-xl shrink-0 gap-3">
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
-            <span className={`text-xs font-bold px-3 py-1.5 rounded-xl border flex items-center gap-1.5 shadow-sm ${badge.badgeBg}`}>
-              {badge.icon}
-              <span>{badge.label}</span>
-            </span>
-
-            {item.sourceDomain && (
-              <span className="text-xs text-slate-400 font-mono hidden sm:inline truncate max-w-[180px]">
-                منبع: {item.sourceDomain}
-              </span>
-            )}
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
@@ -400,11 +378,11 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
               href={item.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-2 rounded-xl bg-[#0077d9] hover:bg-[#0066bd] text-white text-xs font-bold flex items-center gap-1.5 transition shadow-lg shadow-[#0077d9]/30"
-              title="دیدن مطلب در سایت مبدا"
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+              title={getExternalSourceLabel()}
             >
-              <ExternalLink className="w-4 h-4 text-white" />
-              <span>دیدن مطلب در سایت مبدا</span>
+              <ExternalLink className="w-4 h-4 text-slate-300" />
+              <span>{getExternalSourceLabel()}</span>
             </a>
 
             <button

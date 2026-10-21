@@ -536,7 +536,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   e.stopPropagation();
                   onDeleteContent(item.id);
                 }}
-                className="px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/30 active:scale-95 text-rose-300 hover:text-rose-100 border border-rose-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm group"
+                className="px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 active:scale-95 text-rose-400 hover:text-rose-300 border border-slate-700/60 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm group"
                 title="حذف و انتقال به سطل زباله (مخصوص مدیریت)"
               >
                 <Trash2 className="w-3.5 h-3.5 text-rose-400 group-hover:scale-110 transition-transform" />
