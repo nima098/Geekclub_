@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { ContentItem, CommentItem, Platform, Category, SortOption } from '../types/content';
+import { FALLBACK_IMAGES, getAuthorAvatar } from '../utils/imageHelper';
 import { INITIAL_CONTENT, INITIAL_COMMENTS } from '../data/initialData';
 
 const CONTENTS_COLLECTION = 'contents';
@@ -85,10 +86,10 @@ export const api = {
       url: contentData.url || '',
       platform: contentData.platform || 'article',
       embedUrl: contentData.embedUrl || contentData.url || '',
-      thumbnail: contentData.thumbnail || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
+      thumbnail: contentData.thumbnail || FALLBACK_IMAGES.article,
       author: contentData.author || {
         name: 'کاربر گیک کلاب',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+        avatar: getAuthorAvatar('کاربر گیک کلاب'),
         handle: '@geek',
         isVerified: false
       },
@@ -255,7 +256,7 @@ export const api = {
       contentId,
       author: author || {
         name: 'کاربر گیک کلاب',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+        avatar: getAuthorAvatar('کاربر گیک کلاب'),
         email: 'user@geekclub.io'
       },
       text: text.trim(),

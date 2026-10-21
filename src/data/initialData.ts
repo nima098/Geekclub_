@@ -67,20 +67,20 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.instagram.com/p/Da7Z2zvjklL/?utm_source=ig_web_copy_link&mdxt=MzRlODBiNWFlZA==&srtk=MzRlODBiNWFlZA==',
     platform: 'instagram',
     embedUrl: 'https://www.instagram.com/p/Da7Z2zvjklL/embed',
-    thumbnail: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
+    thumbnail: FALLBACK_IMAGES.instagram,
     mediaType: 'carousel',
     slides: [
       {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80'
+        url: FALLBACK_IMAGES.instagram
       },
       {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80'
+        url: FALLBACK_IMAGES.instagram
       },
       {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=800&q=80'
+        url: FALLBACK_IMAGES.instagram
       }
     ],
     author: {

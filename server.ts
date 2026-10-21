@@ -5,19 +5,31 @@ import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { INITIAL_CONTENT, INITIAL_COMMENTS } from './src/data/initialData';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
-const DB_PATH = path.resolve(__dirname, 'data', 'database.json');
+const IS_VERCEL = Boolean(process.env.VERCEL || process.env.NOW_BUILDER);
+
+const DB_PATH = IS_VERCEL
+  ? path.resolve('/tmp', 'database.json')
+  : path.resolve(__dirname, 'data', 'database.json');
+
+const UPLOADS_DIR = IS_VERCEL
+  ? path.resolve('/tmp', 'uploads')
+  : path.resolve(__dirname, 'public', 'uploads');
 
 app.use(express.json());
 
-const UPLOADS_DIR = path.resolve(__dirname, 'public', 'uploads');
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+try {
+  if (!fs.existsSync(UPLOADS_DIR)) {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  }
+} catch (err) {
+  console.warn('[Storage Warning] Could not create uploads directory:', err);
 }
 app.use('/uploads', express.static(UPLOADS_DIR));
 
@@ -38,27 +50,46 @@ interface DatabaseSchema {
   settings?: Record<string, any>;
 }
 
+let cachedDb: DatabaseSchema | null = null;
+
 function loadDatabase(): DatabaseSchema {
+  if (cachedDb && cachedDb.contents && cachedDb.contents.length > 0) {
+    return cachedDb;
+  }
+
+  let dbData: DatabaseSchema = { contents: [], comments: {} };
+
   try {
     if (fs.existsSync(DB_PATH)) {
       const data = fs.readFileSync(DB_PATH, 'utf-8');
-      return JSON.parse(data);
+      dbData = JSON.parse(data);
     }
   } catch (err) {
-    console.error('Error reading database file:', err);
+    console.warn('[Database Warning] Error reading database file:', err);
   }
-  return { contents: [], comments: {} };
+
+  // Fallback to INITIAL_CONTENT if database is empty or missing
+  if (!dbData.contents || !Array.isArray(dbData.contents) || dbData.contents.length === 0) {
+    dbData.contents = Array.isArray(INITIAL_CONTENT) ? [...INITIAL_CONTENT] : [];
+    dbData.comments = INITIAL_COMMENTS || {};
+  } else if (dbData.deletedIds && dbData.deletedIds.length > 0) {
+    dbData.contents = dbData.contents.filter((c) => !dbData.deletedIds?.includes(c.id));
+  }
+
+  cachedDb = dbData;
+  return dbData;
 }
 
 function saveDatabase(db: DatabaseSchema) {
+  cachedDb = db;
   try {
     const dir = path.dirname(DB_PATH);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
     fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2), 'utf-8');
-  } catch (err) {
-    console.error('Error saving database file:', err);
+  } catch (err: any) {
+    console.warn('[Database Warning] Could not save database file to disk:', err.message);
   }
 }
 
@@ -83,10 +114,11 @@ app.get('/api/proxy-image', async (req: Request, res: Response) => {
     const contentType = typeof rawType === 'string' ? rawType : 'image/jpeg';
     res.setHeader('Content-Type', contentType);
     res.setHeader('Cache-Control', 'public, max-age=86400');
-    return res.send(Buffer.from(response.data));
   } catch (err: any) {
     console.warn('Image proxy failed for:', imageUrl, err.message);
-    return res.status(404).send('Image unavailable');
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.status(200).send('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450"><rect width="800" height="450" fill="#1e293b"/><text x="400" y="235" font-family="sans-serif" font-size="20" fill="#94a3b8" text-anchor="middle">GeekClub Media</text></svg>');
   }
 });
 
@@ -115,11 +147,16 @@ async function downloadAndCacheImage(imageUrl: string, filenamePrefix: string, c
 
     const buffer = Buffer.from(response.data);
 
-    // Save physically in public/uploads/
+    // Save physically in uploads/
     const filename = `${filenamePrefix}.${ext}`;
     const localFilePath = path.join(UPLOADS_DIR, filename);
-    fs.writeFileSync(localFilePath, buffer);
-    const localUrl = `/uploads/${filename}`;
+    let localUrl = `/uploads/${filename}`;
+    try {
+      fs.writeFileSync(localFilePath, buffer);
+    } catch (fsErr: any) {
+      console.warn(`[Storage Warning] Could not write image file to disk:`, fsErr.message);
+      localUrl = imageUrl;
+    }
 
     // Upload to upc.geekclub.ir CDN
     try {
@@ -178,9 +215,14 @@ async function downloadAndCacheVideo(videoUrl: string, filenamePrefix: string, c
     const buffer = Buffer.from(response.data);
     const filename = `${filenamePrefix}.mp4`;
     const localFilePath = path.join(UPLOADS_DIR, filename);
-    fs.writeFileSync(localFilePath, buffer);
-    const localUrl = `/uploads/${filename}`;
-    console.log(`[Video Pipeline] Video downloaded to local server storage: ${localUrl} (${Math.round(buffer.length / 1024)} KB)`);
+    let localUrl = `/uploads/${filename}`;
+    try {
+      fs.writeFileSync(localFilePath, buffer);
+      console.log(`[Video Pipeline] Video downloaded to local server storage: ${localUrl} (${Math.round(buffer.length / 1024)} KB)`);
+    } catch (fsErr: any) {
+      console.warn(`[Video Pipeline Warning] Could not write video file to disk:`, fsErr.message);
+      localUrl = videoUrl;
+    }
 
     // Transfer video to CDN (upc.geekclub.ir)
     try {
@@ -1316,8 +1358,9 @@ async function syncPlatformCoverImages() {
 
 // --- Development & Production Middleware ---
 async function startServer() {
-  // Sync and download real YouTube and Aparat thumbnails on startup
-  await syncPlatformCoverImages();
+  if (!IS_VERCEL) {
+    syncPlatformCoverImages().catch((err) => console.warn('Sync cover images warning:', err));
+  }
 
   if (process.env.NODE_ENV === 'production') {
     const distPath = path.resolve(__dirname, 'dist');
