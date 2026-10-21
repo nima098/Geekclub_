@@ -2,25 +2,25 @@
   "contents": [
     {
       "id": "ig-da7z2zvjklL",
-      "title": "پست آلبومی و چند اسلایدی اینستاگرام",
+      "title": "پست منتخب در اینستاگرام",
       "description": "پست چند اسلایدی اینستاگرام شامل عکس‌ها و ویدیوهای دریافت شده از طریق Apify و آپلود شده روی CDN اختصاصی upc.geekclub.ir/s1/instagram/.",
       "url": "https://www.instagram.com/p/Da7Z2zvjklL/?utm_source=ig_web_copy_link&mdxt=MzRlODBiNWFlZA==&srtk=MzRlODBiNWFlZA==",
       "platform": "instagram",
       "embedUrl": "https://www.instagram.com/p/Da7Z2zvjklL/embed",
-      "thumbnail": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80",
-      "mediaType": "carousel",
+      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_da3d8448.jpg",
+      "mediaType": "image",
       "slides": [
         {
           "type": "image",
-          "url": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80"
+          "url": "https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_da3d8448.jpg"
         },
         {
           "type": "image",
-          "url": "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80"
+          "url": "https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_9b7ad12d.jpg"
         },
         {
           "type": "image",
-          "url": "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=800&q=80"
+          "url": "https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_af47b80a.jpg"
         }
       ],
       "author": {
@@ -37,7 +37,7 @@
         "CDN"
       ],
       "publishedAt": "همین الان",
-      "readingOrWatchTime": "۳ اسلاید چندرسانه‌ای",
+      "readingOrWatchTime": "پست اینستاگرام",
       "likesCount": 15,
       "dislikesCount": 0,
       "commentsCount": 2,

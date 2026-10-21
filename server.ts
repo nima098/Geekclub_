@@ -76,6 +76,27 @@ function loadDatabase(): DatabaseSchema {
     dbData.contents = dbData.contents.filter((c) => !dbData.deletedIds?.includes(c.id));
   }
 
+  // Purge any remaining Unsplash URLs and replace with CDN assets
+  if (dbData.contents && Array.isArray(dbData.contents)) {
+    dbData.contents = dbData.contents.map((item: any) => {
+      if (item.thumbnail && item.thumbnail.includes('unsplash')) {
+        item.thumbnail = 'https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_da3d8448.jpg';
+      }
+      if (item.author && item.author.avatar && item.author.avatar.includes('unsplash')) {
+        item.author.avatar = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" rx="50" fill="%233b82f6"/><text x="50" y="63" font-family="Tahoma,sans-serif" font-size="42" font-weight="bold" fill="%23ffffff" text-anchor="middle" dominant-baseline="middle">گ</text></svg>`;
+      }
+      if (item.slides && Array.isArray(item.slides)) {
+        item.slides = item.slides.map((s: any) => {
+          if (s.url && s.url.includes('unsplash')) {
+            s.url = 'https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_da3d8448.jpg';
+          }
+          return s;
+        });
+      }
+      return item;
+    });
+  }
+
   cachedDb = dbData;
   return dbData;
 }

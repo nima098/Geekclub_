@@ -30,7 +30,7 @@ import {
   SiteAdminSettings
 } from '../types/content';
 import { parseContentUrl, fetchMetadataFromUrl, ExtractedMetadata } from '../utils/urlHelper';
-import { FALLBACK_IMAGES } from '../utils/imageHelper';
+import { FALLBACK_IMAGES, getAuthorAvatar } from '../utils/imageHelper';
 
 interface AddContentModalProps {
   isOpen: boolean;
@@ -394,7 +394,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
         thumbnail: finalThumbnail,
         author: {
           name: finalAuthorName,
-          avatar: user?.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+          avatar: user?.photoURL || getAuthorAvatar(finalAuthorName),
           handle: `@${finalAuthorName.replace(/\s+/g, '_').toLowerCase()}`,
           isVerified: false
         },

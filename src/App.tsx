@@ -115,22 +115,32 @@ export default function App() {
         'aparat-1': 'https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230336_d9a4e772.jpg'
       };
 
-      // Clean up old /s1/s1/ subpaths and ensure all items have valid working images
+      // Clean up old /s1/s1/ subpaths and replace all Unsplash URLs with CDN / Fallback SVG
       return itemsToProcess.map((item) => {
         let cleanThumb = VERIFIED_CDN_COVERS[item.id] || (item.thumbnail || '').replace('/s1/s1/', '/s1/');
-        if (!cleanThumb || cleanThumb.includes('avatar_.')) {
+        if (!cleanThumb || cleanThumb.includes('unsplash') || cleanThumb.includes('avatar_.')) {
           cleanThumb = getPlatformFallbackImage(item.platform, item.url);
         }
 
         let cleanAvatar = (item.author?.avatar || '').replace('/s1/s1/', '/s1/');
-        // If avatar points to non-existent upc.geekclub.ir or broken handle, use personalized SVG avatar
-        if (!cleanAvatar || cleanAvatar.includes('avatar_.jpg') || cleanAvatar.includes('upc.geekclub.ir')) {
+        if (!cleanAvatar || cleanAvatar.includes('unsplash') || cleanAvatar.includes('avatar_.jpg')) {
           cleanAvatar = getAuthorAvatar(item.author?.name || 'کاربر');
+        }
+
+        let cleanSlides = item.slides;
+        if (cleanSlides && cleanSlides.length > 0) {
+          cleanSlides = cleanSlides.map((s) => {
+            if (s.url && s.url.includes('unsplash')) {
+              return { ...s, url: getPlatformFallbackImage(item.platform, item.url) };
+            }
+            return s;
+          });
         }
 
         return {
           ...item,
           thumbnail: cleanThumb,
+          slides: cleanSlides,
           author: {
             ...item.author,
             avatar: cleanAvatar
@@ -156,6 +166,9 @@ export default function App() {
       const saved = localStorage.getItem(STORAGE_KEYS.USER);
       if (saved) {
         const parsed: UserProfile = JSON.parse(saved);
+        if (!parsed.photoURL || parsed.photoURL.includes('unsplash') || parsed.photoURL.includes('avatar_.')) {
+          parsed.photoURL = getAuthorAvatar(parsed.displayName || 'کاربر');
+        }
         // Only grant isAdmin if email matches the super admin email
         if (parsed.email && parsed.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
           parsed.isAdmin = true;

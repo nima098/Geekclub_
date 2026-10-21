@@ -67,20 +67,20 @@ export const INITIAL_CONTENT: ContentItem[] = [
     url: 'https://www.instagram.com/p/Da7Z2zvjklL/?utm_source=ig_web_copy_link&mdxt=MzRlODBiNWFlZA==&srtk=MzRlODBiNWFlZA==',
     platform: 'instagram',
     embedUrl: 'https://www.instagram.com/p/Da7Z2zvjklL/embed',
-    thumbnail: FALLBACK_IMAGES.instagram,
+    thumbnail: 'https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_da3d8448.jpg',
     mediaType: 'carousel',
     slides: [
       {
         type: 'image',
-        url: FALLBACK_IMAGES.instagram
+        url: 'https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_da3d8448.jpg'
       },
       {
         type: 'image',
-        url: FALLBACK_IMAGES.instagram
+        url: 'https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_9b7ad12d.jpg'
       },
       {
         type: 'image',
-        url: FALLBACK_IMAGES.instagram
+        url: 'https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_af47b80a.jpg'
       }
     ],
     author: {
