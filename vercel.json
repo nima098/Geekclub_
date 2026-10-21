@@ -4,19 +4,7 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
-      "source": "/api/test",
-      "destination": "/api/test.ts"
-    },
-    {
-      "source": "/api/contents",
-      "destination": "/api/contents.ts"
-    },
-    {
-      "source": "/api/proxy-image",
-      "destination": "/api/proxy-image.ts"
-    },
-    {
-      "source": "/((?!api/).*)",
+      "source": "/((?!api/|.*\\..*).*)",
       "destination": "/index.html"
     }
   ]
