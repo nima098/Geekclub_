@@ -201,6 +201,8 @@ export const UsernameSetupModal: React.FC<UsernameSetupModalProps> = ({
               </div>
               <input
                 type="text"
+                id="setupUsernameInput"
+                name="setupUsername"
                 required
                 value={username}
                 onChange={(e) => {
@@ -224,6 +226,8 @@ export const UsernameSetupModal: React.FC<UsernameSetupModalProps> = ({
             </label>
             <input
               type="text"
+              id="setupDisplayNameInput"
+              name="setupDisplayName"
               required
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}

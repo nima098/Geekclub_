@@ -114,6 +114,8 @@ export const RSSModal: React.FC<RSSModalProps> = ({ isOpen, onClose }) => {
             <div className="flex items-center gap-2 bg-slate-950/80 border border-slate-700/70 p-2 sm:p-2.5 rounded-xl">
               <input
                 type="text"
+                id="rssUrlInput"
+                name="rssUrl"
                 readOnly
                 value={activeUrl}
                 className="flex-1 bg-transparent text-amber-300 font-mono text-xs dir-ltr focus:outline-none select-all px-1 truncate"

@@ -98,6 +98,8 @@ export const ImageCDNUpload: React.FC<ImageCDNUploadProps> = ({
       <div className="relative flex items-center">
         <input
           type="url"
+          id="cdnUrlInput"
+          name="cdnUrl"
           value={currentUrl}
           onChange={(e) => {
             onUrlChange(e.target.value);

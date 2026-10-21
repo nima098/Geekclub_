@@ -244,6 +244,8 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
                 <div className="flex gap-2">
                   <input
                     type="password"
+                    id="securityPinInput"
+                    name="securityPin"
                     value={securityPin}
                     onChange={(e) => {
                       setSecurityPin(e.target.value);

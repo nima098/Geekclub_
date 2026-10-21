@@ -123,6 +123,8 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                 </label>
                 <input
                   type="text"
+                  id="feedbackNameInput"
+                  name="feedbackName"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="مثال: علی رضایی یا کاربر مهمان"
@@ -137,6 +139,8 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                 </label>
                 <input
                   type="text"
+                  id="feedbackEmailInput"
+                  name="feedbackEmail"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="جهت دریافت پاسخ مدیریت"
@@ -180,6 +184,8 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
               </label>
               <input
                 type="text"
+                id="feedbackTitleInput"
+                name="feedbackTitle"
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -194,6 +200,8 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                 شرح کامل پیشنهاد یا انتقاد *
               </label>
               <textarea
+                id="feedbackMessageTextarea"
+                name="feedbackMessage"
                 rows={4}
                 required
                 value={message}

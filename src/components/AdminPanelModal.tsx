@@ -726,6 +726,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   <Search className="w-3.5 h-3.5 absolute right-3 top-3 text-slate-400" />
                   <input
                     type="text"
+                    id="contentSearchInput"
+                    name="contentSearch"
                     value={contentSearch}
                     onChange={(e) => setContentSearch(e.target.value)}
                     placeholder="جستجو در عنوان یا نویسنده..."
@@ -917,6 +919,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   <Search className="w-3.5 h-3.5 absolute right-3 top-3 text-slate-400" />
                   <input
                     type="text"
+                    id="userSearchInput"
+                    name="userSearch"
                     value={userSearch}
                     onChange={(e) => setUserSearch(e.target.value)}
                     placeholder="جستجو بر اساس نام، نام کاربری یا ایمیل..."
@@ -1321,6 +1325,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     </label>
                     <input
                       type="url"
+                      id="cdnEndpointInput"
+                      name="cdnEndpoint"
                       value={cdnEndpoint}
                       onChange={(e) => setCdnEndpoint(e.target.value)}
                       placeholder="https://upc.geekclub.ir/upload.php"
@@ -1334,6 +1340,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     </label>
                     <input
                       type="text"
+                      id="cdnTokenInput"
+                      name="cdnToken"
                       value={cdnToken}
                       onChange={(e) => setCdnToken(e.target.value)}
                       placeholder="geekclub_cdn_secret_2026"
@@ -1396,6 +1404,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
                   <div className="relative">
                     <textarea
+                      id="phpCodeTextarea"
+                      name="phpCode"
                       readOnly
                       rows={6}
                       value={PHP_CDN_SCRIPT_CODE}
@@ -1582,6 +1592,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     </label>
                     <input
                       type="password"
+                      id="apifyTokenInput"
+                      name="apifyToken"
                       value={apifyToken}
                       onChange={(e) => setApifyToken(e.target.value)}
                       placeholder="apify_api_xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -1598,6 +1610,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     </label>
                     <input
                       type="text"
+                      id="apifyActorInput"
+                      name="apifyActor"
                       value={apifyActor}
                       onChange={(e) => setApifyActor(e.target.value)}
                       placeholder="apify~instagram-scraper"
@@ -1670,6 +1684,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               <div className="flex items-center justify-between text-xs text-slate-400">
                 <span>پیام‌های دریافتی از کاربران و مهمانان ({feedbackList.length})</span>
                 <select
+                  id="feedbackStatusSelect"
+                  name="feedbackStatusFilter"
                   value={feedbackStatusFilter}
                   onChange={(e) => setFeedbackStatusFilter(e.target.value)}
                   className="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 text-xs"
@@ -1773,6 +1789,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     </label>
                     <input
                       type="text"
+                      id="msgSubjectInput"
+                      name="msgSubject"
                       required
                       value={msgSubject}
                       onChange={(e) => setMsgSubject(e.target.value)}
@@ -1786,6 +1804,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       متن پیام *
                     </label>
                     <textarea
+                      id="msgContentTextarea"
+                      name="msgContent"
                       rows={5}
                       required
                       value={msgContent}

@@ -645,6 +645,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   </label>
                   <input
                     type="text"
+                    id="profileDisplayNameInput"
+                    name="profileDisplayName"
                     required
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
@@ -663,6 +665,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     </div>
                     <input
                       type="text"
+                      id="profileUsernameInput"
+                      name="profileUsername"
                       required
                       value={username}
                       onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
@@ -678,6 +682,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   درباره من (بیوگرافی)
                 </label>
                 <textarea
+                  id="profileBioTextarea"
+                  name="profileBio"
                   rows={2}
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
@@ -900,6 +906,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   </label>
                   <div className="flex gap-2">
                     <textarea
+                      id="profileCommentTextarea"
+                      name="profileComment"
                       rows={2}
                       value={newCommentText}
                       onChange={(e) => setNewCommentText(e.target.value)}

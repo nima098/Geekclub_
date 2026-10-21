@@ -170,6 +170,8 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
               />
               <div className="flex-1 relative">
                 <textarea
+                  id="commentTextarea"
+                  name="commentText"
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
                   placeholder="دیدگاه خود را بنویسید..."

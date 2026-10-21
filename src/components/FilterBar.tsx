@@ -91,6 +91,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           </div>
           <input
             type="text"
+            id="searchInput"
+            name="searchQuery"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="جستجو در عناوین، هشتگ‌ها، نام نویسنده یا متن..."

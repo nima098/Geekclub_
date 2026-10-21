@@ -121,6 +121,8 @@ export const DomainAuthHelpModal: React.FC<DomainAuthHelpModalProps> = ({
             <div className="space-y-2">
               <input
                 type="text"
+                id="manualNameInput"
+                name="manualName"
                 placeholder="نام شما"
                 value={manualName}
                 onChange={(e) => setManualName(e.target.value)}
@@ -128,6 +130,8 @@ export const DomainAuthHelpModal: React.FC<DomainAuthHelpModalProps> = ({
               />
               <input
                 type="email"
+                id="manualEmailInput"
+                name="manualEmail"
                 placeholder="ایمیل گوگل شما"
                 value={manualEmail}
                 onChange={(e) => setManualEmail(e.target.value)}
