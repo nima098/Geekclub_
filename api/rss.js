@@ -1,18 +1,36 @@
 import { INITIAL_CONTENT } from './data.js';
+import fs from 'fs';
+import path from 'path';
 
 export default function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Content-Type', 'application/rss+xml; charset=utf-8');
   res.setHeader('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=86400');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
-  const { platform, category } = req.query || {};
+  const { platform, category, key } = req.query || {};
+
+  if (key !== 'geekclub_admin_secure_key') {
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    return res.status(403).send('Access denied. Admin secure key required for RSS feed / دسترسی غیرمجاز. فید RSS فقط با کلید امنیتی مدیر کل مجاز است.');
+  }
+
+  res.setHeader('Content-Type', 'application/rss+xml; charset=utf-8');
 
   let items = INITIAL_CONTENT;
+  try {
+    const dbPath = path.resolve(process.cwd(), 'data', 'database.json');
+    if (fs.existsSync(dbPath)) {
+      const data = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
+      if (data && Array.isArray(data.contents) && data.contents.length > 0) {
+        items = data.contents;
+      }
+    }
+  } catch {}
+
   if (platform && platform !== 'all') {
     items = items.filter(i => i.platform === platform);
   }
