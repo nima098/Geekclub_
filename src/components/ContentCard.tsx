@@ -144,7 +144,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             ) : (
               <div 
                 className="relative w-full h-full cursor-pointer group/media"
-                onClick={() => setIsPlayingVideo(true)}
+                onClick={() => onOpenArticleReader(item)}
               >
                 <img
                   src={item.thumbnail}
@@ -207,7 +207,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 ) : (
                   <div
                     className="relative w-full h-full cursor-pointer"
-                    onClick={() => setIsPlayingVideo(true)}
+                    onClick={() => onOpenArticleReader(item)}
                   >
                     <img
                       src={activeSlide.thumbnail || item.thumbnail}
@@ -225,7 +225,10 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   </div>
                 )
               ) : (
-                <div className="relative w-full h-full">
+                <div 
+                  className="relative w-full h-full cursor-pointer"
+                  onClick={() => onOpenArticleReader(item)}
+                >
                   <img
                     src={activeSlide.url}
                     alt={`${item.title} - اسلاید ${activeSlideIndex + 1}`}
@@ -320,7 +323,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             ) : (
               <div 
                 className="relative w-full h-full cursor-pointer group/media"
-                onClick={() => setIsPlayingVideo(true)}
+                onClick={() => onOpenArticleReader(item)}
               >
                 <img
                   src={item.thumbnail}
@@ -428,13 +431,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           {/* Title */}
           <h3 
             className="text-base sm:text-lg font-black text-slate-100 group-hover:text-indigo-300 transition-colors line-clamp-2 leading-relaxed cursor-pointer"
-            onClick={() => {
-              if (item.platform === 'article') {
-                onOpenArticleReader(item);
-              } else if (item.platform === 'youtube' || item.platform === 'aparat') {
-                setIsPlayingVideo(true);
-              }
-            }}
+            onClick={() => onOpenArticleReader(item)}
           >
             {item.title}
           </h3>

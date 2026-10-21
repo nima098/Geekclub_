@@ -6,8 +6,16 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { INITIAL_CONTENT, INITIAL_COMMENTS } from './src/data/initialData';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const getDirname = (): string => {
+  try {
+    if (typeof import.meta !== 'undefined' && import.meta && import.meta.url) {
+      return path.dirname(fileURLToPath(import.meta.url));
+    }
+  } catch {}
+  return process.cwd();
+};
+
+const __dirname = getDirname();
 
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
