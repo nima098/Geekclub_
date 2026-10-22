@@ -1345,10 +1345,10 @@ app.get('/api/contents/:id/enrich', async (req: Request, res: Response) => {
   return res.json({ success: true, data: meta });
 });
 
-// 2.2 PATCH /api/contents/:id - Update content fields in local db
-app.patch('/api/contents/:id', (req: Request, res: Response) => {
+// 2.2 PATCH /api/contents/:id & POST /api/contents/:id/update - Update content fields in local db
+const handleContentUpdate = (req: Request, res: Response) => {
   const { id } = req.params;
-  const updates = req.body;
+  const updates = req.body || {};
   const db = loadDatabase();
   const cleanId = id.replace(/^(post|content)-/, '');
 
@@ -1361,7 +1361,6 @@ app.patch('/api/contents/:id', (req: Request, res: Response) => {
   }
   
   if (index === -1) {
-    // If item was not yet explicitly in database.json, add it with updates
     const newItem = { id, ...updates };
     db.contents.push(newItem);
     index = db.contents.length - 1;
@@ -1371,10 +1370,55 @@ app.patch('/api/contents/:id', (req: Request, res: Response) => {
   
   saveDatabase(db);
   res.json({ success: true, data: db.contents[index] });
+};
+
+app.patch('/api/contents/:id', handleContentUpdate);
+app.post('/api/contents/:id/update', handleContentUpdate);
+
+// Dedicated POST /api/contents/:id/soft-delete
+app.post('/api/contents/:id/soft-delete', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const db = loadDatabase();
+  const cleanId = id.replace(/^(post|content)-/, '');
+  const deletedAt = req.body?.deletedAt || new Date().toISOString();
+
+  let target = db.contents.find((c) => c.id === id || c.id === cleanId || c.id.endsWith(cleanId) || id.endsWith(c.id));
+  if (!target) {
+    target = { id, title: 'محتوای اشتراک‌گذاری شده', url: '', isDeleted: true, deletedAt };
+    db.contents.push(target);
+  } else {
+    target.isDeleted = true;
+    target.deletedAt = deletedAt;
+  }
+
+  saveDatabase(db);
+  res.json({ success: true, data: target, message: 'Content soft-deleted' });
 });
 
-// 2.3 DELETE /api/contents/:id - Permanently delete content
-app.delete('/api/contents/:id', (req: Request, res: Response) => {
+// Dedicated POST /api/contents/:id/restore
+app.post('/api/contents/:id/restore', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const db = loadDatabase();
+  const cleanId = id.replace(/^(post|content)-/, '');
+
+  let target = db.contents.find((c) => c.id === id || c.id === cleanId || c.id.endsWith(cleanId) || id.endsWith(c.id));
+  if (target) {
+    target.isDeleted = false;
+    target.isArchived = false;
+    delete target.deletedAt;
+    delete target.archivedAt;
+  }
+
+  if (db.deletedIds) {
+    db.deletedIds = db.deletedIds.filter((dId) => dId !== id && dId !== cleanId);
+  }
+
+  saveDatabase(db);
+  res.json({ success: true, data: target, message: 'Content restored to feed' });
+});
+
+// Dedicated POST & DELETE for permanent deletion
+const handlePermanentDelete = (req: Request, res: Response) => {
   const { id } = req.params;
   const db = loadDatabase();
   const cleanId = id.replace(/^(post|content)-/, '');
@@ -1392,7 +1436,11 @@ app.delete('/api/contents/:id', (req: Request, res: Response) => {
   }
   saveDatabase(db);
   res.json({ success: true, message: 'Content deleted permanently' });
-});
+};
+
+app.delete('/api/contents/:id', handlePermanentDelete);
+app.post('/api/contents/:id/permanent-delete', handlePermanentDelete);
+app.post('/api/contents/:id/delete', handlePermanentDelete);
 
 // 3. POST /api/contents/:id/reaction - Like or Dislike
 app.post('/api/contents/:id/reaction', (req: Request, res: Response) => {

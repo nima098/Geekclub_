@@ -192,15 +192,25 @@ export const api = {
 
   // 3. Update content (approval / edit / delete / reaction)
   async updateContent(id: string, updates: Partial<ContentItem>): Promise<void> {
+    const encodedId = encodeURIComponent(id);
+    const headers = getAdminHeaders();
 
-    // Primary: Express REST API endpoint
+    // Primary: Express REST API endpoint with POST and PATCH fallbacks
     try {
-      await fetch(`/api/contents/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+      await fetch(`/api/contents/${encodedId}/update`, {
+        method: 'POST',
+        headers,
         body: JSON.stringify(updates)
       });
-    } catch {}
+    } catch {
+      try {
+        await fetch(`/api/contents/${encodedId}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify(updates)
+        });
+      } catch {}
+    }
 
     // Secondary: Cloud Firestore
     try {
@@ -209,15 +219,81 @@ export const api = {
     } catch {}
   },
 
-  async deleteContent(id: string): Promise<void> {
-    addDeletedId(id);
+  async softDeleteContent(id: string, deletedAt?: string): Promise<void> {
+    const timeStr = deletedAt || new Date().toISOString();
+    const encodedId = encodeURIComponent(id);
+    const headers = getAdminHeaders();
 
     // Primary: Express REST API endpoint
     try {
-      await fetch(`/api/contents/${id}`, {
-        method: 'DELETE'
+      await fetch(`/api/contents/${encodedId}/soft-delete`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ isDeleted: true, deletedAt: timeStr })
       });
+    } catch {
+      try {
+        await fetch(`/api/contents/${encodedId}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ isDeleted: true, deletedAt: timeStr })
+        });
+      } catch {}
+    }
+
+    // Secondary: Cloud Firestore
+    try {
+      const docRef = doc(db, CONTENTS_COLLECTION, id);
+      await setDoc(docRef, { isDeleted: true, deletedAt: timeStr }, { merge: true });
     } catch {}
+  },
+
+  async restoreContent(id: string): Promise<void> {
+    const encodedId = encodeURIComponent(id);
+    const headers = getAdminHeaders();
+
+    // Primary: Express REST API endpoint
+    try {
+      await fetch(`/api/contents/${encodedId}/restore`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ isDeleted: false })
+      });
+    } catch {
+      try {
+        await fetch(`/api/contents/${encodedId}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ isDeleted: false })
+        });
+      } catch {}
+    }
+
+    // Secondary: Cloud Firestore
+    try {
+      const docRef = doc(db, CONTENTS_COLLECTION, id);
+      await setDoc(docRef, { isDeleted: false }, { merge: true });
+    } catch {}
+  },
+
+  async deleteContent(id: string): Promise<void> {
+    const encodedId = encodeURIComponent(id);
+    const headers = getAdminHeaders();
+
+    // Primary: Express REST API endpoint
+    try {
+      await fetch(`/api/contents/${encodedId}/permanent-delete`, {
+        method: 'POST',
+        headers
+      });
+    } catch {
+      try {
+        await fetch(`/api/contents/${encodedId}`, {
+          method: 'DELETE',
+          headers
+        });
+      } catch {}
+    }
 
     // Secondary: Cloud Firestore
     try {
@@ -456,18 +532,7 @@ export const api = {
     }
   },
 
-  // 14. Restore soft-deleted content
-  async restoreContent(id: string): Promise<boolean> {
-    try {
-      const res = await fetch(`/api/contents/${id}/restore`, {
-        method: 'POST',
-        headers: getAdminHeaders()
-      });
-      return res.ok;
-    } catch {
-      return false;
-    }
-  },
+
 
   // 15. Update user role (admin, editor, user)
   async updateUserRole(key: string, role: string): Promise<boolean> {

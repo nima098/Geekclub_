@@ -513,7 +513,23 @@ export default function App() {
     async function syncBackendData() {
       const serverContents = await api.getContents({ includeDeleted: true });
       if (Array.isArray(serverContents)) {
-        setContents(mergePreservingDeleted(serverContents));
+        setContents((prev) => {
+          const locallyDeletedIds = new Set(prev.filter((c) => c.isDeleted).map((c) => c.id));
+          const softDeletedMap = getSoftDeletedMap();
+          return serverContents.map((item) => {
+            const cleanId = item.id.replace(/^(post|content)-/, '');
+            const wasDeletedLocally = locallyDeletedIds.has(item.id) || locallyDeletedIds.has(cleanId);
+            const wasDeletedInMap = Boolean(softDeletedMap[item.id] || softDeletedMap[cleanId]);
+            if (wasDeletedLocally || wasDeletedInMap || item.isDeleted) {
+              return {
+                ...item,
+                isDeleted: true,
+                deletedAt: item.deletedAt || new Date().toLocaleDateString('fa-IR')
+              };
+            }
+            return item;
+          });
+        });
       }
     }
     syncBackendData();
@@ -521,7 +537,23 @@ export default function App() {
     // Subscribe to Cloud Firestore live contents updates across all users & Vercel
     const unsubscribe = api.subscribeContents((items) => {
       if (Array.isArray(items)) {
-        setContents(mergePreservingDeleted(items));
+        setContents((prev) => {
+          const locallyDeletedIds = new Set(prev.filter((c) => c.isDeleted).map((c) => c.id));
+          const softDeletedMap = getSoftDeletedMap();
+          return items.map((item) => {
+            const cleanId = item.id.replace(/^(post|content)-/, '');
+            const wasDeletedLocally = locallyDeletedIds.has(item.id) || locallyDeletedIds.has(cleanId);
+            const wasDeletedInMap = Boolean(softDeletedMap[item.id] || softDeletedMap[cleanId]);
+            if (wasDeletedLocally || wasDeletedInMap || item.isDeleted) {
+              return {
+                ...item,
+                isDeleted: true,
+                deletedAt: item.deletedAt || new Date().toLocaleDateString('fa-IR')
+              };
+            }
+            return item;
+          });
+        });
       }
     });
 
@@ -1140,7 +1172,7 @@ export default function App() {
   };
 
   // --- Soft-Delete & Trash Handlers ---
-  const handleToggleSoftDelete = (contentId: string, shouldDelete: boolean) => {
+  const handleToggleSoftDelete = async (contentId: string, shouldDelete: boolean) => {
     const deletedAtStr = shouldDelete ? new Date().toLocaleDateString('fa-IR') : undefined;
     const cleanId = contentId.replace(/^(post|content)-/, '');
 
@@ -1160,19 +1192,16 @@ export default function App() {
       })
     );
 
-    api.updateContent(contentId, {
-      isDeleted: shouldDelete,
-      deletedAt: deletedAtStr
-    });
-
     if (shouldDelete) {
+      await api.softDeleteContent(contentId, deletedAtStr);
       addToast('info', 'محتوا به سطل بازیافت منتقل شد و از فید پنهان گردید (قابل بازگردانی از پنل ادمین).');
     } else {
+      await api.restoreContent(contentId);
       addToast('success', 'محتوا با موفقیت از سطل بازیافت به فید عمومی بازگردانده شد.');
     }
   };
 
-  const handlePermanentDelete = (contentId: string) => {
+  const handlePermanentDelete = async (contentId: string) => {
     const cleanId = contentId.replace(/^(post|content)-/, '');
     setSoftDeletedStatus(contentId, false);
 
@@ -1182,7 +1211,7 @@ export default function App() {
         return c.id !== contentId && cCleanId !== cleanId && !c.id.endsWith(cleanId);
       })
     );
-    api.deleteContent(contentId);
+    await api.deleteContent(contentId);
     addToast('error', 'محتوا به طور کامل از حافظه دیتابیس حذف گردید.');
   };
 
