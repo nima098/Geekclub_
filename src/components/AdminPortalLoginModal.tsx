@@ -16,6 +16,7 @@ import {
 import { UserProfile } from '../types/content';
 import { SUPER_ADMIN_USER, SUPER_ADMIN_EMAIL } from '../data/initialData';
 import { loginWithGooglePopup } from '../lib/firebase';
+import { setAdminToken } from '../services/api';
 
 interface AdminPortalLoginModalProps {
   isOpen: boolean;
@@ -63,7 +64,13 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
     setTimeout(() => setCopiedDomain(false), 2500);
   };
 
-  const handleProceedAsAdmin = () => {
+  const handleProceedAsAdmin = (pinInput?: string) => {
+    const validPin = (pinInput || securityPin).trim();
+    if (validPin !== '3dsaz' && validPin !== '3dsaz2026') {
+      setErrorMessage('پین امنیتی اشتباه است. لطفاً کد عبور مدیریت را وارد کنید.');
+      return;
+    }
+    setAdminToken(validPin);
     onAdminLogin(SUPER_ADMIN_USER);
     onClose();
     onOpenAdminPanel();
@@ -76,6 +83,7 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
     try {
       const verified = await loginWithGooglePopup();
       if (verified.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
+        setAdminToken('3dsaz2026');
         onAdminLogin({
           ...SUPER_ADMIN_USER,
           displayName: verified.displayName || SUPER_ADMIN_USER.displayName,
@@ -105,11 +113,11 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
 
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (securityPin && securityPin.trim() !== '3dsaz' && securityPin.trim() !== '3dsaz2026' && securityPin.trim() !== '1234') {
-      setErrorMessage('کد امنیتی صحیح نمی‌باشد (برای ورود مستقیم می‌توانید از دکمه‌های بالا استفاده کنید).');
+    if (!securityPin || (securityPin.trim() !== '3dsaz' && securityPin.trim() !== '3dsaz2026')) {
+      setErrorMessage('کد امنیتی یا پین مدیریت الزامی و ناپایدار است.');
       return;
     }
-    handleProceedAsAdmin();
+    handleProceedAsAdmin(securityPin);
   };
 
   return (
@@ -218,17 +226,6 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
                     {isGoogleLoading ? 'در حال تایید با گوگل...' : 'ورود و بررسی حساب با اکانت رسمی گوگل'}
                   </span>
                 </button>
-
-                {/* Direct Login Button Fallback */}
-                <button
-                  type="button"
-                  onClick={handleProceedAsAdmin}
-                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer active:scale-98"
-                >
-                  <Crown className="w-4 h-4 text-amber-400" />
-                  <span>ورود سریع و مستقیم (بدون پاپ‌آپ گوگل)</span>
-                  <ArrowLeft className="w-4 h-4" />
-                </button>
               </div>
 
               {/* Optional PIN authentication */}
@@ -301,7 +298,7 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
 
                           <button
                             type="button"
-                            onClick={handleProceedAsAdmin}
+                            onClick={() => handleProceedAsAdmin()}
                             className="text-[11px] font-bold text-amber-300 hover:text-amber-200 underline cursor-pointer"
                           >
                             ورود مستقیم به عنوان {SUPER_ADMIN_EMAIL} ←

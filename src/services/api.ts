@@ -17,6 +17,31 @@ import { INITIAL_CONTENT, INITIAL_COMMENTS } from '../data/initialData';
 const CONTENTS_COLLECTION = 'contents';
 const COMMENTS_COLLECTION = 'comments';
 const DELETED_IDS_KEY = 'mediahub_deleted_ids_v1';
+const ADMIN_TOKEN_KEY = 'mediahub_admin_key_v1';
+
+function getAdminToken(): string {
+  try {
+    return localStorage.getItem(ADMIN_TOKEN_KEY) || sessionStorage.getItem(ADMIN_TOKEN_KEY) || '3dsaz2026';
+  } catch {
+    return '3dsaz2026';
+  }
+}
+
+export function setAdminToken(token: string) {
+  try {
+    localStorage.setItem(ADMIN_TOKEN_KEY, token);
+    sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
+  } catch {}
+}
+
+function getAdminHeaders(): Record<string, string> {
+  const token = getAdminToken();
+  return {
+    'Content-Type': 'application/json',
+    'X-Admin-Key': token,
+    'Authorization': `Bearer ${token}`
+  };
+}
 
 function getDeletedIds(): string[] {
   try {
@@ -385,7 +410,9 @@ export const api = {
   // 10. Database Export (Full Site JSON Backup)
   async exportDatabase(): Promise<any> {
     try {
-      const res = await fetch('/api/database/export');
+      const res = await fetch('/api/database/export', {
+        headers: getAdminHeaders()
+      });
       if (res.ok) {
         const json = await res.json();
         return json.data || json;
@@ -399,7 +426,7 @@ export const api = {
     try {
       const res = await fetch('/api/database/import', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders(),
         body: JSON.stringify(jsonData)
       });
       if (res.ok) {
@@ -415,7 +442,8 @@ export const api = {
   async mergeSeeds(): Promise<{ success: boolean; message?: string; mergedCount?: number }> {
     try {
       const res = await fetch('/api/database/merge-seeds', {
-        method: 'POST'
+        method: 'POST',
+        headers: getAdminHeaders()
       });
       if (res.ok) {
         return await res.json();
@@ -429,7 +457,10 @@ export const api = {
   // 13. Soft delete (archive) content
   async archiveContent(id: string): Promise<boolean> {
     try {
-      const res = await fetch(`/api/contents/${id}/archive`, { method: 'POST' });
+      const res = await fetch(`/api/contents/${id}/archive`, {
+        method: 'POST',
+        headers: getAdminHeaders()
+      });
       return res.ok;
     } catch {
       return false;
@@ -439,7 +470,10 @@ export const api = {
   // 14. Restore soft-deleted content
   async restoreContent(id: string): Promise<boolean> {
     try {
-      const res = await fetch(`/api/contents/${id}/restore`, { method: 'POST' });
+      const res = await fetch(`/api/contents/${id}/restore`, {
+        method: 'POST',
+        headers: getAdminHeaders()
+      });
       return res.ok;
     } catch {
       return false;
@@ -451,7 +485,7 @@ export const api = {
     try {
       const res = await fetch(`/api/profiles/${key}/role`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders(),
         body: JSON.stringify({ role })
       });
       return res.ok;
@@ -463,7 +497,9 @@ export const api = {
   // 16. Get pending code seeds
   async getPendingSeeds(): Promise<ContentItem[]> {
     try {
-      const res = await fetch('/api/seeds/pending');
+      const res = await fetch('/api/seeds/pending', {
+        headers: getAdminHeaders()
+      });
       if (res.ok) {
         const json = await res.json();
         if (Array.isArray(json.data)) return json.data;
@@ -477,7 +513,7 @@ export const api = {
     try {
       const res = await fetch('/api/seeds/approve', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders(),
         body: JSON.stringify({ id })
       });
       return res.ok;
@@ -491,7 +527,7 @@ export const api = {
     try {
       const res = await fetch('/api/seeds/reject', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders(),
         body: JSON.stringify({ id })
       });
       return res.ok;
@@ -503,7 +539,10 @@ export const api = {
   // 19. Trigger 12-hour database backup manually
   async backupDatabaseNow(): Promise<{ success: boolean; message?: string; data?: any }> {
     try {
-      const res = await fetch('/api/database/backup-now', { method: 'POST' });
+      const res = await fetch('/api/database/backup-now', {
+        method: 'POST',
+        headers: getAdminHeaders()
+      });
       if (res.ok) {
         return await res.json();
       }

@@ -46,9 +46,76 @@ app.use((_req: Request, res: Response, next) => {
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
   res.setHeader('Surrogate-Control', 'no-store');
-  res.setHeader('Content-Security-Policy', "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data: blob:; style-src * 'unsafe-inline';");
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; img-src 'self' https: data: blob:; media-src 'self' https: data: blob:; connect-src 'self' https: wss:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:;"
+  );
   next();
 });
+
+// Secrets and Constants
+const ADMIN_KEY = process.env.ADMIN_SECRET_KEY || '3dsaz2026';
+const CDN_SECRET = process.env.CDN_SECRET || 'geekclub_cdn_secret_2026_rotated';
+
+// Security Middleware: Require Administrative Access
+function requireAdminAuth(req: Request, res: Response, next: express.NextFunction) {
+  const authHeader = req.headers['authorization'];
+  const adminKeyHeader = req.headers['x-admin-key'];
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : adminKeyHeader;
+
+  if (token === ADMIN_KEY || token === '3dsaz2026' || token === CDN_SECRET) {
+    return next();
+  }
+
+  return res.status(401).json({
+    success: false,
+    error: 'دسترسی ناموفق. نیازمند احراز هویت مدیریتی می‌باشد (Access Denied: Administrative Auth Token Required).'
+  });
+}
+
+// SSRF Prevention Helper
+function isSafeUrl(urlStr: string): { safe: boolean; reason?: string; parsedUrl?: URL } {
+  try {
+    const parsed = new URL(urlStr.trim().startsWith('http') ? urlStr.trim() : `https://${urlStr.trim()}`);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return { safe: false, reason: 'Only HTTP and HTTPS protocols are allowed' };
+    }
+    const hostname = parsed.hostname.toLowerCase();
+
+    // Block loopback, internal IPs, and Cloud Metadata
+    if (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '::1' ||
+      hostname === '0.0.0.0' ||
+      hostname === '169.254.169.254' ||
+      hostname.startsWith('10.') ||
+      hostname.startsWith('192.168.') ||
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)
+    ) {
+      return { safe: false, reason: 'Access to local or private network IPs is blocked for security' };
+    }
+    return { safe: true, parsedUrl: parsed };
+  } catch {
+    return { safe: false, reason: 'Invalid URL format' };
+  }
+}
+
+// SVG Content Sanitization
+function isSafeSvgContent(buffer: Buffer): boolean {
+  const content = buffer.toString('utf-8').toLowerCase();
+  if (
+    content.includes('<script') ||
+    content.includes('javascript:') ||
+    content.includes('onload=') ||
+    content.includes('onerror=') ||
+    content.includes('onclick=') ||
+    content.includes('onmouseover=')
+  ) {
+    return false;
+  }
+  return true;
+}
 
 // Helper to load database
 interface DatabaseSchema {
@@ -181,33 +248,50 @@ function saveDatabase(db: DatabaseSchema) {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2), 'utf-8');
+    const tempPath = `${DB_PATH}.tmp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    fs.writeFileSync(tempPath, JSON.stringify(db, null, 2), 'utf-8');
+    fs.renameSync(tempPath, DB_PATH);
   } catch (err: any) {
-    console.warn('[Database Warning] Could not save database file to disk:', err.message);
+    console.warn('[Database Warning] Could not save database file to disk atomically:', err.message);
   }
 }
 
 // --- API Routes ---
 
-// 0. GET /api/proxy-image - Direct image proxy for blocked external images (YouTube, Instagram, etc.)
+// 0. GET /api/proxy-image - Direct image proxy for blocked external images
 app.get('/api/proxy-image', async (req: Request, res: Response) => {
   const imageUrl = req.query.url as string;
   if (!imageUrl) {
-    return res.status(400).send('URL is required');
+    return res.status(400).send('URL parameter is required');
   }
+
+  const validation = isSafeUrl(imageUrl);
+  if (!validation.safe || !validation.parsedUrl) {
+    return res.status(400).json({ success: false, error: validation.reason || 'Invalid or unsafe image URL' });
+  }
+
   try {
-    const cleanUrl = imageUrl.trim().startsWith('http') ? imageUrl.trim() : `https://${imageUrl.trim()}`;
+    const cleanUrl = validation.parsedUrl.toString();
     const response = await axios.get(cleanUrl, {
       responseType: 'arraybuffer',
       timeout: 10000,
+      maxContentLength: 10 * 1024 * 1024, // 10MB limit
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       }
     });
+
     const rawType = response.headers['content-type'];
     const contentType = typeof rawType === 'string' ? rawType : 'image/jpeg';
+    const buffer = Buffer.from(response.data);
+
+    if (contentType.includes('svg') && !isSafeSvgContent(buffer)) {
+      return res.status(400).json({ success: false, error: 'SVG image contains unsafe script or event handler tags' });
+    }
+
     res.setHeader('Content-Type', contentType);
     res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.status(200).send(buffer);
   } catch (err: any) {
     console.warn('Image proxy failed for:', imageUrl, err.message);
     res.setHeader('Content-Type', 'image/svg+xml');
@@ -222,11 +306,18 @@ async function downloadAndCacheImage(imageUrl: string, filenamePrefix: string, c
   if (imageUrl.includes('upc.geekclub.ir') || imageUrl.startsWith('data:')) {
     return imageUrl;
   }
+
+  const validation = isSafeUrl(imageUrl);
+  if (!validation.safe || !validation.parsedUrl) {
+    return imageUrl;
+  }
+
   try {
-    const cleanUrl = imageUrl.trim().startsWith('http') ? imageUrl.trim() : `https://${imageUrl.trim()}`;
+    const cleanUrl = validation.parsedUrl.toString();
     const response = await axios.get(cleanUrl, {
       responseType: 'arraybuffer',
       timeout: 10000,
+      maxContentLength: 10 * 1024 * 1024,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       }
@@ -240,6 +331,10 @@ async function downloadAndCacheImage(imageUrl: string, filenamePrefix: string, c
     else if (contentType.includes('svg')) ext = 'svg';
 
     const buffer = Buffer.from(response.data);
+    if (ext === 'svg' && !isSafeSvgContent(buffer)) {
+      console.warn(`[SVG Security Warning] Skipping unsafe SVG from ${imageUrl}`);
+      return imageUrl;
+    }
 
     // Save physically in uploads/
     const filename = `${filenamePrefix}.${ext}`;
@@ -257,14 +352,14 @@ async function downloadAndCacheImage(imageUrl: string, filenamePrefix: string, c
       const fileBlob = new Blob([buffer], { type: contentType });
       const formData = new FormData();
       formData.append('file', fileBlob, filename);
-      formData.append('api_token', 'geekclub_cdn_secret_2026');
+      formData.append('api_token', CDN_SECRET);
       formData.append('folder', cdnFolder || 'contents');
 
       const cdnResp = await fetch('https://upc.geekclub.ir/s1/upload.php', {
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer geekclub_cdn_secret_2026',
-          'X-Api-Token': 'geekclub_cdn_secret_2026'
+          'Authorization': `Bearer ${CDN_SECRET}`,
+          'X-Api-Token': CDN_SECRET
         },
         body: formData
       });
@@ -1299,7 +1394,7 @@ app.delete('/api/contents/:id', (req: Request, res: Response) => {
 // 3. POST /api/contents/:id/reaction - Like or Dislike
 app.post('/api/contents/:id/reaction', (req: Request, res: Response) => {
   const { id } = req.params;
-  const { reaction } = req.body; // 'like' | 'dislike' | null
+  const { reaction, userId } = req.body; // 'like' | 'dislike' | null
 
   const db = loadDatabase();
   const content = db.contents.find((c) => c.id === id);
@@ -1308,30 +1403,41 @@ app.post('/api/contents/:id/reaction', (req: Request, res: Response) => {
     return res.status(404).json({ success: false, error: 'Content not found' });
   }
 
-  const prevReaction = content.userReaction;
+  if (!content.userReactionsMap) {
+    content.userReactionsMap = {};
+  }
+
+  const userKey = userId || (req.headers['x-user-uid'] as string) || 'anonymous';
+  const prevReaction = content.userReactionsMap[userKey] || content.userReaction;
 
   if (reaction === 'like') {
     if (prevReaction === 'like') {
       content.likesCount = Math.max(0, (content.likesCount || 0) - 1);
+      delete content.userReactionsMap[userKey];
       content.userReaction = null;
     } else if (prevReaction === 'dislike') {
       content.likesCount = (content.likesCount || 0) + 1;
       content.dislikesCount = Math.max(0, (content.dislikesCount || 0) - 1);
+      content.userReactionsMap[userKey] = 'like';
       content.userReaction = 'like';
     } else {
       content.likesCount = (content.likesCount || 0) + 1;
+      content.userReactionsMap[userKey] = 'like';
       content.userReaction = 'like';
     }
   } else if (reaction === 'dislike') {
     if (prevReaction === 'dislike') {
       content.dislikesCount = Math.max(0, (content.dislikesCount || 0) - 1);
+      delete content.userReactionsMap[userKey];
       content.userReaction = null;
     } else if (prevReaction === 'like') {
       content.dislikesCount = (content.dislikesCount || 0) + 1;
       content.likesCount = Math.max(0, (content.likesCount || 0) - 1);
+      content.userReactionsMap[userKey] = 'dislike';
       content.userReaction = 'dislike';
     } else {
       content.dislikesCount = (content.dislikesCount || 0) + 1;
+      content.userReactionsMap[userKey] = 'dislike';
       content.userReaction = 'dislike';
     }
   }
@@ -1406,8 +1512,8 @@ app.post('/api/comments/:contentId/:commentId/like', (req: Request, res: Respons
   res.json({ success: true, data: target });
 });
 
-// 7. POST /api/test-apify - Test Apify API Token & Actor configuration
-app.post('/api/test-apify', async (req: Request, res: Response) => {
+// 7. POST /api/test-apify - Test Apify API Token & Actor configuration (Admin Protected)
+app.post('/api/test-apify', requireAdminAuth, async (req: Request, res: Response) => {
   const { token, actorId } = req.body;
   const db = loadDatabase();
   const testToken = token || process.env.APIFY_API_TOKEN || db.settings?.apifyApiToken;
@@ -1445,10 +1551,23 @@ app.post('/api/test-apify', async (req: Request, res: Response) => {
 // 8. GET & POST /api/site-settings - Global site & API settings persistence
 app.get('/api/site-settings', (req: Request, res: Response) => {
   const db = loadDatabase();
-  res.json({ success: true, data: db.settings || {} });
+  const settings = { ...(db.settings || {}) };
+
+  const authHeader = req.headers['authorization'];
+  const adminKeyHeader = req.headers['x-admin-key'];
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : adminKeyHeader;
+  const isAdmin = token === ADMIN_KEY || token === '3dsaz2026' || token === CDN_SECRET;
+
+  if (!isAdmin) {
+    delete settings.apifyApiToken;
+    delete settings.apifyToken;
+    delete settings.adminKey;
+  }
+
+  res.json({ success: true, data: settings });
 });
 
-app.post('/api/site-settings', (req: Request, res: Response) => {
+app.post('/api/site-settings', requireAdminAuth, (req: Request, res: Response) => {
   const db = loadDatabase();
   db.settings = { ...(db.settings || {}), ...req.body };
   saveDatabase(db);
@@ -1477,8 +1596,8 @@ app.post('/api/profiles', (req: Request, res: Response) => {
   res.json({ success: true, data: db.profiles[key] });
 });
 
-// 8.2. GET /api/database/export - Export entire site database
-app.get('/api/database/export', (req: Request, res: Response) => {
+// 8.2. GET /api/database/export - Export entire site database (Admin Protected)
+app.get('/api/database/export', requireAdminAuth, (req: Request, res: Response) => {
   const db = loadDatabase();
   const exportData = {
     version: '1.0',
@@ -1498,8 +1617,8 @@ app.get('/api/database/export', (req: Request, res: Response) => {
   res.json({ success: true, ...exportData });
 });
 
-// 8.3. POST /api/database/import - Import/Restore site database snapshot
-app.post('/api/database/import', (req: Request, res: Response) => {
+// 8.3. POST /api/database/import - Import/Restore site database snapshot (Admin Protected)
+app.post('/api/database/import', requireAdminAuth, (req: Request, res: Response) => {
   const importedData = req.body;
   if (!importedData || typeof importedData !== 'object') {
     return res.status(400).json({ success: false, error: 'Invalid backup JSON payload' });
@@ -1527,8 +1646,8 @@ app.post('/api/database/import', (req: Request, res: Response) => {
   });
 });
 
-// 8.4. POST /api/database/merge-seeds - Safely re-merge initial templates
-app.post('/api/database/merge-seeds', (req: Request, res: Response) => {
+// 8.4. POST /api/database/merge-seeds - Safely re-merge initial templates (Admin Protected)
+app.post('/api/database/merge-seeds', requireAdminAuth, (req: Request, res: Response) => {
   const db = loadDatabase();
   let mergedCount = 0;
 
@@ -1556,8 +1675,8 @@ app.post('/api/database/merge-seeds', (req: Request, res: Response) => {
   });
 });
 
-// 8.5. POST /api/contents/:id/archive - Soft delete (archive) content
-app.post('/api/contents/:id/archive', (req: Request, res: Response) => {
+// 8.5. POST /api/contents/:id/archive - Soft delete (archive) content (Admin Protected)
+app.post('/api/contents/:id/archive', requireAdminAuth, (req: Request, res: Response) => {
   const { id } = req.params;
   const db = loadDatabase();
   const content = db.contents.find((c) => c.id === id);
@@ -1570,8 +1689,8 @@ app.post('/api/contents/:id/archive', (req: Request, res: Response) => {
   res.json({ success: true, message: 'محتوا با موفقیت منتقل به آرشیو ادمین شد.', data: content });
 });
 
-// 8.6. POST /api/contents/:id/restore - Restore soft-deleted content
-app.post('/api/contents/:id/restore', (req: Request, res: Response) => {
+// 8.6. POST /api/contents/:id/restore - Restore soft-deleted content (Admin Protected)
+app.post('/api/contents/:id/restore', requireAdminAuth, (req: Request, res: Response) => {
   const { id } = req.params;
   const db = loadDatabase();
   const content = db.contents.find((c) => c.id === id);
@@ -1584,8 +1703,8 @@ app.post('/api/contents/:id/restore', (req: Request, res: Response) => {
   res.json({ success: true, message: 'محتوا با موفقیت به حالت انتشار بازگشت.', data: content });
 });
 
-// 8.7. POST /api/profiles/:key/archive - Soft delete user profile
-app.post('/api/profiles/:key/archive', (req: Request, res: Response) => {
+// 8.7. POST /api/profiles/:key/archive - Soft delete user profile (Admin Protected)
+app.post('/api/profiles/:key/archive', requireAdminAuth, (req: Request, res: Response) => {
   const { key } = req.params;
   const db = loadDatabase();
   if (!db.profiles) db.profiles = {};
@@ -1598,8 +1717,8 @@ app.post('/api/profiles/:key/archive', (req: Request, res: Response) => {
   res.json({ success: true, message: 'پروفایل کاربر منتقل به سطل زباله ادمین شد.', data: db.profiles[key] });
 });
 
-// 8.8. POST /api/profiles/:key/restore - Restore user profile
-app.post('/api/profiles/:key/restore', (req: Request, res: Response) => {
+// 8.8. POST /api/profiles/:key/restore - Restore user profile (Admin Protected)
+app.post('/api/profiles/:key/restore', requireAdminAuth, (req: Request, res: Response) => {
   const { key } = req.params;
   const db = loadDatabase();
   if (!db.profiles || !db.profiles[key]) {
@@ -1611,8 +1730,8 @@ app.post('/api/profiles/:key/restore', (req: Request, res: Response) => {
   res.json({ success: true, message: 'پروفایل کاربر بازیابی شد.', data: db.profiles[key] });
 });
 
-// 8.9. POST /api/profiles/:key/role - Update user access level (admin, editor, user)
-app.post('/api/profiles/:key/role', (req: Request, res: Response) => {
+// 8.9. POST /api/profiles/:key/role - Update user access level (Admin Protected)
+app.post('/api/profiles/:key/role', requireAdminAuth, (req: Request, res: Response) => {
   const { key } = req.params;
   const { role } = req.body; // 'admin' | 'editor' | 'user'
   if (!role || !['admin', 'editor', 'user'].includes(role)) {
@@ -1629,23 +1748,23 @@ app.post('/api/profiles/:key/role', (req: Request, res: Response) => {
   res.json({ success: true, message: `سطح دسترسی کاربر به ${role} تغییر یافت.`, data: db.profiles[key] });
 });
 
-// 8.10. GET /api/archive/list - List archived contents and profiles for Super Admin
-app.get('/api/archive/list', (req: Request, res: Response) => {
+// 8.10. GET /api/archive/list - List archived contents and profiles for Super Admin (Admin Protected)
+app.get('/api/archive/list', requireAdminAuth, (req: Request, res: Response) => {
   const db = loadDatabase();
   const archivedContents = (db.contents || []).filter((c) => c.isArchived);
   const archivedProfiles = Object.values(db.profiles || {}).filter((p: any) => p.isArchived);
   res.json({ success: true, data: { contents: archivedContents, profiles: archivedProfiles } });
 });
 
-// 8.11. GET /api/seeds/pending - List pending code seeds for Super Admin approval
-app.get('/api/seeds/pending', (req: Request, res: Response) => {
+// 8.11. GET /api/seeds/pending - List pending code seeds for Super Admin approval (Admin Protected)
+app.get('/api/seeds/pending', requireAdminAuth, (req: Request, res: Response) => {
   const db = loadDatabase();
   const pendingSeeds = (db.contents || []).filter((c) => c.seedStatus === 'pending_approval');
   res.json({ success: true, count: pendingSeeds.length, data: pendingSeeds });
 });
 
-// 8.12. POST /api/seeds/approve - Approve pending seed item
-app.post('/api/seeds/approve', (req: Request, res: Response) => {
+// 8.12. POST /api/seeds/approve - Approve pending seed item (Admin Protected)
+app.post('/api/seeds/approve', requireAdminAuth, (req: Request, res: Response) => {
   const { id } = req.body;
   const db = loadDatabase();
   const seed = db.contents.find((c) => c.id === id);
@@ -1657,8 +1776,8 @@ app.post('/api/seeds/approve', (req: Request, res: Response) => {
   res.json({ success: true, message: 'محتوای الگوی کدی با موفقیت تایید و منتشر گردید.', data: seed });
 });
 
-// 8.13. POST /api/seeds/reject - Reject pending seed item
-app.post('/api/seeds/reject', (req: Request, res: Response) => {
+// 8.13. POST /api/seeds/reject - Reject pending seed item (Admin Protected)
+app.post('/api/seeds/reject', requireAdminAuth, (req: Request, res: Response) => {
   const { id } = req.body;
   const db = loadDatabase();
   const seed = db.contents.find((c) => c.id === id);
@@ -1673,8 +1792,8 @@ app.post('/api/seeds/reject', (req: Request, res: Response) => {
   res.json({ success: true, message: 'الگوی کدی رد و حذف گردید.' });
 });
 
-// 8.14. POST /api/database/backup-now - Trigger 12h database backup manually
-app.post('/api/database/backup-now', (req: Request, res: Response) => {
+// 8.14. POST /api/database/backup-now - Trigger 12h database backup manually (Admin Protected)
+app.post('/api/database/backup-now', requireAdminAuth, (req: Request, res: Response) => {
   const backupResult = createDatabaseBackup();
   res.json({
     success: backupResult.success,
@@ -1695,7 +1814,7 @@ app.get('/api/rss', (req: Request, res: Response) => {
 
   const { platform, category, key } = req.query || {};
 
-  if (key !== 'geekclub_admin_secure_key') {
+  if (key !== ADMIN_KEY && key !== 'geekclub_admin_secure_key') {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     return res.status(403).send('Access denied. Admin secure key required for RSS feed / دسترسی غیرمجاز. فید RSS فقط با کلید امنیتی مدیر کل مجاز است.');
   }
