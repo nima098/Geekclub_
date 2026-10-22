@@ -39,17 +39,19 @@ export default function handler(req, res) {
   }
 
   const buildDate = new Date().toUTCString();
-  const siteUrl = 'https://geekclub.ir';
+  const host = req.headers?.host || 'geekclub.ir';
+  const protocol = req.headers?.['x-forwarded-proto'] || (host.includes('localhost') ? 'http' : 'https');
+  const siteUrl = `${protocol}://${host}`;
 
   const itemsXml = items.map(item => {
-    const itemUrl = item.url || `${siteUrl}/#${item.id}`;
+    const postUrl = `${siteUrl}/#${item.id}`;
     const cleanDesc = (item.description || item.title || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const thumbTag = item.thumbnail ? `\n      <enclosure url="${item.thumbnail}" type="image/jpeg" length="1024" />` : '';
 
     return `    <item>
       <title><![CDATA[${item.title}]]></title>
-      <link>${itemUrl}</link>
-      <guid isPermaLink="false">${item.id}</guid>
+      <link>${postUrl}</link>
+      <guid isPermaLink="true">${postUrl}</guid>
       <description><![CDATA[${cleanDesc}]]></description>
       <author>${item.author?.name || 'گیک‌کلاب'}</author>
       <category>${item.category || 'tech'}</category>

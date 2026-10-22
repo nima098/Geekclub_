@@ -122,7 +122,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   const meta = getPlatformMeta();
 
   return (
-    <article className={`group flex flex-col bg-slate-900/95 backdrop-blur-xl border border-slate-800/80 rounded-[1.75rem] overflow-hidden shadow-xl transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1 ${meta.accentColor} ${
+    <article id={item.id} className={`group flex flex-col bg-slate-900/95 backdrop-blur-xl border border-slate-800/80 rounded-[1.75rem] overflow-hidden shadow-xl transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1 ${meta.accentColor} ${
       viewMode === 'compact' ? 'sm:flex-row' : ''
     }`}>
       {/* Media / Embed Container */}

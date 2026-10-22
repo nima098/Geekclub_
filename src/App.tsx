@@ -45,6 +45,9 @@ import {
   RSSModal 
 } from './components/RSSModal';
 import { 
+  WelcomeBanner 
+} from './components/WelcomeBanner';
+import { 
   Toast, 
   ToastMessage 
 } from './components/Toast';
@@ -1194,8 +1197,14 @@ export default function App() {
         onToggleTheme={handleToggleTheme}
       />
 
-
-
+      {/* Guest Welcome Banner */}
+      {!user && (
+        <WelcomeBanner
+          onStartGoogleLogin={handleDirectGoogleLogin}
+          onOpenAddModal={() => setIsAddModalOpen(true)}
+          isLoggingIn={isLoggingInWithGoogle}
+        />
+      )}
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-6">
         {/* Filter Bar (Search, Platforms, Categories, Sort, View Modes) */}

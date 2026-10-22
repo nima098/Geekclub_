@@ -4,7 +4,7 @@ import axios from 'axios';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { INITIAL_CONTENT, INITIAL_COMMENTS } from './src/data/initialData';
+import { INITIAL_CONTENT, INITIAL_COMMENTS } from './src/data/initialData.ts';
 
 const getDirname = (): string => {
   try {
@@ -1388,17 +1388,19 @@ app.get('/api/rss', (req: Request, res: Response) => {
   }
 
   const buildDate = new Date().toUTCString();
-  const siteUrl = 'https://geekclub.ir';
+  const host = req.headers.host || 'geekclub.ir';
+  const protocol = (req.headers['x-forwarded-proto'] as string) || (host.includes('localhost') ? 'http' : 'https');
+  const siteUrl = `${protocol}://${host}`;
 
   const itemsXml = items.map((item: any) => {
-    const itemUrl = item.url || `${siteUrl}/#${item.id}`;
+    const postUrl = `${siteUrl}/#${item.id}`;
     const cleanDesc = (item.description || item.title || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const thumbTag = item.thumbnail ? `\n      <enclosure url="${item.thumbnail}" type="image/jpeg" length="1024" />` : '';
 
     return `    <item>
       <title><![CDATA[${item.title}]]></title>
-      <link>${itemUrl}</link>
-      <guid isPermaLink="false">${item.id}</guid>
+      <link>${postUrl}</link>
+      <guid isPermaLink="true">${postUrl}</guid>
       <description><![CDATA[${cleanDesc}]]></description>
       <author>${item.author?.name || 'گیک‌کلاب'}</author>
       <category>${item.category || 'tech'}</category>
