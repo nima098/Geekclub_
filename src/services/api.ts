@@ -617,6 +617,25 @@ export const api = {
       return { success: false, message: err.message };
     }
     return { success: false, message: 'خطا در اجرای پشتیبان‌گیری' };
+  },
+
+  // 20. Check database diagnostic and connectivity
+  async checkDatabaseDiagnostic(): Promise<any> {
+    try {
+      const res = await fetch(`/api/database-diagnostic?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+      return { success: false, message: 'HTTP error status: ' + res.status };
+    } catch (err: any) {
+      return { success: false, message: err.message || 'خطا در ارتباط با سرور' };
+    }
   }
 };
 
