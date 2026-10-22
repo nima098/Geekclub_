@@ -1350,12 +1350,14 @@ app.patch('/api/contents/:id', (req: Request, res: Response) => {
   const { id } = req.params;
   const updates = req.body;
   const db = loadDatabase();
-  let index = db.contents.findIndex((c) => c.id === id);
+  const cleanId = id.replace(/^(post|content)-/, '');
+
+  let index = db.contents.findIndex((c) => c.id === id || c.id === cleanId || c.id.endsWith(cleanId) || id.endsWith(c.id));
 
   if (!db.deletedIds) db.deletedIds = [];
 
   if (updates.isDeleted === false) {
-    db.deletedIds = db.deletedIds.filter((dId) => dId !== id);
+    db.deletedIds = db.deletedIds.filter((dId) => dId !== id && dId !== cleanId);
   }
   
   if (index === -1) {
@@ -1375,10 +1377,15 @@ app.patch('/api/contents/:id', (req: Request, res: Response) => {
 app.delete('/api/contents/:id', (req: Request, res: Response) => {
   const { id } = req.params;
   const db = loadDatabase();
-  db.contents = db.contents.filter((c) => c.id !== id);
+  const cleanId = id.replace(/^(post|content)-/, '');
+
+  db.contents = db.contents.filter((c) => c.id !== id && c.id !== cleanId && !c.id.endsWith(cleanId));
   if (!db.deletedIds) db.deletedIds = [];
   if (!db.deletedIds.includes(id)) {
     db.deletedIds.push(id);
+  }
+  if (!db.deletedIds.includes(cleanId)) {
+    db.deletedIds.push(cleanId);
   }
   if (db.comments && db.comments[id]) {
     delete db.comments[id];

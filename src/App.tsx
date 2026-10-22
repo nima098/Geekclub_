@@ -107,6 +107,48 @@ const STORAGE_KEYS = {
   USER: 'mediahub_user_v1'
 };
 
+const SOFT_DELETED_KEY = 'mediahub_soft_deleted_v2';
+
+function getSoftDeletedMap(): Record<string, boolean> {
+  try {
+    const saved = localStorage.getItem(SOFT_DELETED_KEY);
+    return saved ? JSON.parse(saved) : {};
+  } catch {
+    return {};
+  }
+}
+
+function setSoftDeletedStatus(id: string, isDeleted: boolean) {
+  try {
+    const map = getSoftDeletedMap();
+    const cleanId = id.replace(/^(post|content)-/, '');
+    if (isDeleted) {
+      map[id] = true;
+      map[cleanId] = true;
+    } else {
+      delete map[id];
+      delete map[cleanId];
+    }
+    localStorage.setItem(SOFT_DELETED_KEY, JSON.stringify(map));
+  } catch {}
+}
+
+function mergePreservingDeleted(items: ContentItem[]): ContentItem[] {
+  const softDeletedMap = getSoftDeletedMap();
+  return items.map((item) => {
+    const cleanId = item.id.replace(/^(post|content)-/, '');
+    const isDeletedInMap = Boolean(softDeletedMap[item.id] || softDeletedMap[cleanId]);
+    if (isDeletedInMap || item.isDeleted) {
+      return {
+        ...item,
+        isDeleted: true,
+        deletedAt: item.deletedAt || new Date().toLocaleDateString('fa-IR')
+      };
+    }
+    return item;
+  });
+}
+
 export default function App() {
   // --- States with LocalStorage Persistence ---
   const [contents, setContents] = useState<ContentItem[]>(() => {
@@ -471,7 +513,7 @@ export default function App() {
     async function syncBackendData() {
       const serverContents = await api.getContents({ includeDeleted: true });
       if (Array.isArray(serverContents)) {
-        setContents(serverContents);
+        setContents(mergePreservingDeleted(serverContents));
       }
     }
     syncBackendData();
@@ -479,7 +521,7 @@ export default function App() {
     // Subscribe to Cloud Firestore live contents updates across all users & Vercel
     const unsubscribe = api.subscribeContents((items) => {
       if (Array.isArray(items)) {
-        setContents(items);
+        setContents(mergePreservingDeleted(items));
       }
     });
 
@@ -1100,16 +1142,22 @@ export default function App() {
   // --- Soft-Delete & Trash Handlers ---
   const handleToggleSoftDelete = (contentId: string, shouldDelete: boolean) => {
     const deletedAtStr = shouldDelete ? new Date().toLocaleDateString('fa-IR') : undefined;
+    const cleanId = contentId.replace(/^(post|content)-/, '');
+
+    setSoftDeletedStatus(contentId, shouldDelete);
+
     setContents((prev) =>
-      prev.map((c) =>
-        c.id === contentId
-          ? {
-              ...c,
-              isDeleted: shouldDelete,
-              deletedAt: deletedAtStr
-            }
-          : c
-      )
+      prev.map((c) => {
+        const cCleanId = c.id.replace(/^(post|content)-/, '');
+        if (c.id === contentId || cCleanId === cleanId || c.id.endsWith(cleanId) || contentId.endsWith(c.id)) {
+          return {
+            ...c,
+            isDeleted: shouldDelete,
+            deletedAt: deletedAtStr
+          };
+        }
+        return c;
+      })
     );
 
     api.updateContent(contentId, {
@@ -1125,7 +1173,15 @@ export default function App() {
   };
 
   const handlePermanentDelete = (contentId: string) => {
-    setContents((prev) => prev.filter((c) => c.id !== contentId));
+    const cleanId = contentId.replace(/^(post|content)-/, '');
+    setSoftDeletedStatus(contentId, false);
+
+    setContents((prev) =>
+      prev.filter((c) => {
+        const cCleanId = c.id.replace(/^(post|content)-/, '');
+        return c.id !== contentId && cCleanId !== cleanId && !c.id.endsWith(cleanId);
+      })
+    );
     api.deleteContent(contentId);
     addToast('error', 'محتوا به طور کامل از حافظه دیتابیس حذف گردید.');
   };
