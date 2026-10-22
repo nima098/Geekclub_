@@ -108,16 +108,15 @@ const STORAGE_KEYS = {
 };
 
 export default function App() {
-  // --- States with LocalStorage Persistence ---
+  // --- Server-Authoritative Contents State ---
   const [contents, setContents] = useState<ContentItem[]>(() => {
     try {
-      // Clear legacy soft-deleted local blacklist to ensure 100% server authority
+      // Clear legacy localStorage content cache and soft-delete blacklists to ensure 100% server authority
+      localStorage.removeItem('mediahub_content_v1');
       localStorage.removeItem('mediahub_soft_deleted_v2');
       localStorage.removeItem('mediahub_deleted_ids_v1');
 
-      const saved = localStorage.getItem(STORAGE_KEYS.CONTENT);
-      const parsedSaved: ContentItem[] = saved !== null ? JSON.parse(saved) : INITIAL_CONTENT;
-      const itemsToProcess = Array.isArray(parsedSaved) ? parsedSaved : INITIAL_CONTENT;
+      const itemsToProcess = INITIAL_CONTENT;
 
       // Verified CDN covers on upc.geekclub.ir
       const VERIFIED_CDN_COVERS: Record<string, string> = {
@@ -421,15 +420,6 @@ export default function App() {
 
   // Toasts
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
-
-  // Sync to LocalStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.CONTENT, JSON.stringify(contents));
-    } catch (e) {
-      console.warn('LocalStorage save error:', e);
-    }
-  }, [contents]);
 
   useEffect(() => {
     try {
