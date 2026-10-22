@@ -1,86 +1,62 @@
-# System Policy & Technical Enhancement Plan
+# طرح جامع همگام‌سازی متمرکز دیتابیس و حذف محتوا در تمام مرورگرها (Multi-Browser Centralized Sync)
 
-This implementation plan establishes the foundational governance, data persistence, and security policies for the platform based on confirmed user requirements.
+این طرح بر اساس پاسخ‌های تأیید شده کاربر، ساختار ذخیره‌سازی و همگام‌سازی محتوا را از حالت وابسته به حافظه محلی مرورگر (LocalStorage) به یک **معماری کاملاً سرور-محور (Server-Authoritative)** ارتقا می‌دهد تا هر تغییری (حذف، ویرایش، بازگردانی) بلافاصله در تمام مرورگرها و دستگاه‌های مختلف همگام شود.
 
-## User Review & Critical Decisions
-
+## تصمیمات تأیید شده کاربر
 > [!IMPORTANT]
-> The following key decisions were confirmed by the user in Phase 1:
-
-- **Confirmed Decision 1: Seed & Sync Staging Policy**: Technical code updates will not overwrite existing database records. New default seed content will be stored in a pending "Staging / Pending Seeds" queue requiring explicit Super Admin approval before merging into the main library.
-- **Confirmed Decision 2: Multi-Tiered Access Control (RBAC)**: Implementation of 3 explicit role levels: Super Admin (`admin`), Content Editor (`editor`), and Standard User (`user`), with dynamic UI control visibility and permission guards.
-- **Confirmed Decision 3: Automated 12-Hour Google Drive & JSON Backup**: Automated 12-hour background backup scheduler to export snapshot archives to local storage and Drive exports.
-- **Confirmed Decision 4: Soft Delete & Archiving Policy**: Content and user profile deletion in Admin Panel will soft-delete items by hiding them from standard users while preserving them in a dedicated Admin Archive for restoration or permanent purge.
-- **Confirmed Decision 5: Dual Firestore & Local JSON Persistence**: Simultaneous persistence and bi-directional background sync between Cloud Firestore and local `/database.json`.
-
----
-
-## 1. Overview & Core Concept
-
-- **What It Does**: Upgrades the platform with enterprise-grade data management, staged seed updates, RBAC role enforcement, soft-delete archiving, and automated 12-hour backup integration.
-- **Target Audience**: Super Admins managing site configuration, Content Editors curating media/articles, and Standard Users accessing the site.
-- **Key Value**: Guarantees zero data loss during code updates, provides safe content deletion with recovery, and keeps full auditability across all admin operations.
-
----
-
-## 2. User Experience & Visual Design
-
-- **Admin Control Center**:
-  - **RBAC Role Switcher & User Management**: Admins can view user list, promote/demote roles (`Super Admin`, `Content Editor`, `Normal User`), and manage active sessions.
-  - **Pending Seed Updates Tab**: A dedicated tab in Admin Panel showing new seed items from code updates. Admins can preview, accept, or reject individual incoming seeds.
-  - **Content & User Archive (Soft Delete)**: An "Archived Items" view showing deleted posts, media, and user profiles with one-click "Restore" or "Delete Permanently" options.
-  - **Automated Backup & Drive Configuration**: Displays next backup countdown (12h cycle), manual "Backup Now" trigger, and backup status.
-- **Visual Identity & Theme**:
-  - Consistent Dark Slate theme (`#0f172a` canvas, `#1e293b` containers, emerald accents) matching the main site aesthetic.
-  - Clean unboxed metadata tags and WCAG AA contrast buttons with zero-pill discipline.
-
----
-
-## 3. Key Product Decisions & Trade-Offs
-
-- **Staging Queue vs Auto-Overwrite**:
-  - *Chosen*: Staging Queue for incoming code seeds.
-  - *Why*: Protects custom user edits and deleted items from reappearing when developer code syncs.
-- **Soft Delete vs Hard Delete**:
-  - *Chosen*: Soft Delete (`isArchived: true` flag in Firestore & database.json).
-  - *Why*: Allows instant recovery from accidental deletions while satisfying user policy requirements.
-
----
-
-## 4. Technical Architecture & Data Strategy
+> - **مرجع نهایی داده‌ها (Single Source of Truth)**: دیتابیس متمرکز سرور و فایربیس؛ عدم اتکا به حافظه محلی هر مرورگر برای وضعیت حذف محتوا.
+> - **همگام‌سازی بلادرنگ فید**: پولینگ خودکار سبک و زنده هر چند ثانیه یک‌بار تا بدون نیاز به فشردن Ctrl+F5 یا رفرش دستی، تغییرات در سایر تب‌ها و مرورگرها منعکس شود.
 
 ```
-┌────────────────────────────────────────────────────────┐
-│                   React Frontend App                   │
-│   (Role Guards: Admin / Content Editor / Normal User)   │
-└───────────────────────────┬────────────────────────────┘
-                            │
-              REST API / Dual-Sync Channel
-                            │
-┌───────────────────────────▼────────────────────────────┐
-│                    Express Server                      │
-│   (/api/backup, /api/seeds/pending, /api/archive)      │
-└─────────────┬────────────────────────────┬─────────────┘
-              │                            │
-┌─────────────▼──────────────┐  ┌──────────▼──────────────┐
-│  Cloud Firestore Database  │  │   Local database.json   │
-│  (Realtime & Cloud Storage)│  │   (Local Disk Sync)     │
-└────────────────────────────┘  └─────────────────────────┘
+┌────────────────────────┐         ┌────────────────────────┐
+│  مرورگر اول (ادمین ۱)   │         │  مرورگر دوم (ادمین ۲)   │
+│  کلیک روی دکمه «حذف»   │         │   مشاهده زنده تغییرات   │
+└───────────┬────────────┘         └───────────▲────────────┘
+            │                                  │
+            │ 1. POST /api/contents/:id/delete │ 3. پولینگ زنده فید (هر ۵ ثانیه)
+            ▼                                  │    دریافت لیست به‌روز بدون کش
+┌──────────────────────────────────────────────┴────────────┐
+│                  سرور متمرکز (server.ts)                   │
+│   • ثبت قطعی isDeleted: true در دیتابیس دیسک و Firestore  │
+│   • ارائه فید فیلترشده در GET /api/contents              │
+│   • پاسخ‌دهی بدون کش (Cache-Control: no-store)           │
+└───────────────────────────────────────────────────────────┘
 ```
-
-### Data Schema & Soft Delete Attributes
-Each entity (Post, User Profile, Admin Setting) will feature:
-- `isArchived?: boolean`
-- `archivedAt?: string`
-- `archivedBy?: string`
-- `seedStatus?: 'active' | 'pending_approval' | 'rejected'`
 
 ---
 
-## Proposed Execution Steps
+### ۱. معماری و نیازمندی‌های فنی
 
-1. **Role-Based Access Control (RBAC)**: Update User interfaces and Server Auth middleware to enforce Super Admin, Editor, and Normal User permissions.
-2. **Pending Seeds Approval Queue**: Modify `/server.ts` seed merge endpoint to place new code seeds into `pending_approval` state for Admin review.
-3. **Soft Delete System**: Add archiving middleware and update content queries to exclude `isArchived: true` items from public view while displaying them in Admin Archive.
-4. **12-Hour Automated Backup Routine**: Set up a background server interval and Admin UI controls to trigger database exports every 12 hours.
-5. **UI & Verification**: Compile applet, run lint checks, and test all user flows.
+#### ۱.۱. حذف وابستگی به LocalStorage در تشخیص محتوای حذف‌شده
+- در حال حاضر هر مرورگر وضعیت حذف را در کلیدهای مجزای `localStorage` نگهداری می‌کرد که باعث می‌شد مرورگر دوم از حذف‌های مرورگر اول مطلع نشود.
+- **راهکار**: فید اصلی در فرانت‌اند مستقیماً از خروجی معتبر سرور تغذیه می‌شود (`GET /api/contents`).
+- محتواهای حذف‌شده (`isDeleted: true`) در سطح سرور فیلتر شده و تنها در صورتی که پارامتر `includeDeleted=true` یا `onlyDeleted=true` ارسال شود (مخصوص سطل زباله) بازگردانده می‌شوند.
+
+#### ۱.۲. سیستم همگام‌سازی زنده و سبک (Cross-Browser Live Sync)
+- کاهش اینتروال پولینگ `subscribeContents` به بازه کوتاه و بهینه (۵ الی ۸ ثانیه).
+- ارسال هدرهای ضد کش استاندارد (`Cache-Control: no-store, no-cache`) تا مرورگرها پاسخ سرور را کش نکنند.
+- در صورت حذف محتوا در مرورگر اول، متد `POST /api/contents/:id/soft-delete` بلافاصله دیتابیس سرور را آپدیت کرده و در چرخه پولینگ بعدی (حداکثر ۵ ثانیه) کارت مورد نظر در مرورگر دوم نیز به طور خودکار محو می‌گردد.
+
+#### ۱.۳. پایدارسازی دیتابیس سرور (`server.ts`)
+- تضمین نوشتن اتمیک و فوری روی دیسک (`saveDatabase`) بدون باقی‌ماندن در صف موقت.
+- ثبت وضعیت حذف در هر دو بستر دیتابیس محلی سرور (`database.json`) و Cloud Firestore (در صورت دسترسی).
+- اندپوینت‌های اختصاصی:
+  - `POST /api/contents/:id/soft-delete`: علامت‌گذاری قطعی با `isDeleted: true` و تاریخ حذف.
+  - `POST /api/contents/:id/restore`: بازگردانی قطعی به فید عمومی با `isDeleted: false`.
+  - `POST /api/contents/:id/permanent-delete`: حذف همیشگی از دیتابیس.
+
+---
+
+### ۲. مراحل اجرایی
+
+1. **اصلاح فرانت‌اند (`src/App.tsx`)**:
+   - حذف شرط‌های متکی به `localStorage` محلی برای فیلتر حذف.
+   - تنظیم بارگذاری اولیه و استیت بر مبنای پاسخ معتبر سرور.
+   - اعمال تغییرات فوری در استیت محلی مرورگر مبدأ (Optimistic UI) و ارسال درخواست به سرور.
+
+2. **بهینه‌سازی لایه سرویس (`src/services/api.ts`)**:
+   - تنظیم پولینگ فید به بازه ۵ ثانیه‌ای برای همگام‌سازی فوق‌سریع میان مرورگرها.
+   - ارسال هدرهای جلوگیری از کش (`no-cache`).
+
+3. **تست و اعتبارسنجی همگام‌سازی دوطرفه**:
+   - ارسال درخواست حذف از طریق cURL / مرورگر اول و بررسی ناپدید شدن خودکار در خروجی اندپوینت فید مرورگر دوم.

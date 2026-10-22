@@ -107,58 +107,17 @@ const STORAGE_KEYS = {
   USER: 'mediahub_user_v1'
 };
 
-const SOFT_DELETED_KEY = 'mediahub_soft_deleted_v2';
-
-function getSoftDeletedMap(): Record<string, boolean> {
-  try {
-    const saved = localStorage.getItem(SOFT_DELETED_KEY);
-    return saved ? JSON.parse(saved) : {};
-  } catch {
-    return {};
-  }
-}
-
-function setSoftDeletedStatus(id: string, isDeleted: boolean) {
-  try {
-    const map = getSoftDeletedMap();
-    const cleanId = id.replace(/^(post|content)-/, '');
-    if (isDeleted) {
-      map[id] = true;
-      map[cleanId] = true;
-    } else {
-      delete map[id];
-      delete map[cleanId];
-    }
-    localStorage.setItem(SOFT_DELETED_KEY, JSON.stringify(map));
-  } catch {}
-}
-
-function mergePreservingDeleted(items: ContentItem[]): ContentItem[] {
-  const softDeletedMap = getSoftDeletedMap();
-  return items.map((item) => {
-    const cleanId = item.id.replace(/^(post|content)-/, '');
-    const isDeletedInMap = Boolean(softDeletedMap[item.id] || softDeletedMap[cleanId]);
-    if (isDeletedInMap || item.isDeleted) {
-      return {
-        ...item,
-        isDeleted: true,
-        deletedAt: item.deletedAt || new Date().toLocaleDateString('fa-IR')
-      };
-    }
-    return item;
-  });
-}
-
 export default function App() {
   // --- States with LocalStorage Persistence ---
   const [contents, setContents] = useState<ContentItem[]>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEYS.CONTENT);
-      const savedDeleted = localStorage.getItem('mediahub_deleted_ids_v1');
-      const deletedIds: string[] = savedDeleted ? JSON.parse(savedDeleted) : [];
+      // Clear legacy soft-deleted local blacklist to ensure 100% server authority
+      localStorage.removeItem('mediahub_soft_deleted_v2');
+      localStorage.removeItem('mediahub_deleted_ids_v1');
 
+      const saved = localStorage.getItem(STORAGE_KEYS.CONTENT);
       const parsedSaved: ContentItem[] = saved !== null ? JSON.parse(saved) : INITIAL_CONTENT;
-      const itemsToProcess = parsedSaved.filter((item) => !deletedIds.includes(item.id));
+      const itemsToProcess = Array.isArray(parsedSaved) ? parsedSaved : INITIAL_CONTENT;
 
       // Verified CDN covers on upc.geekclub.ir
       const VERIFIED_CDN_COVERS: Record<string, string> = {
@@ -508,52 +467,20 @@ export default function App() {
     }
   }, [profileComments]);
 
-  // Synchronize with Cloud Firestore in real-time
+  // Synchronize with centralized server database in real-time
   useEffect(() => {
     async function syncBackendData() {
       const serverContents = await api.getContents({ includeDeleted: true });
-      if (Array.isArray(serverContents)) {
-        setContents((prev) => {
-          const locallyDeletedIds = new Set(prev.filter((c) => c.isDeleted).map((c) => c.id));
-          const softDeletedMap = getSoftDeletedMap();
-          return serverContents.map((item) => {
-            const cleanId = item.id.replace(/^(post|content)-/, '');
-            const wasDeletedLocally = locallyDeletedIds.has(item.id) || locallyDeletedIds.has(cleanId);
-            const wasDeletedInMap = Boolean(softDeletedMap[item.id] || softDeletedMap[cleanId]);
-            if (wasDeletedLocally || wasDeletedInMap || item.isDeleted) {
-              return {
-                ...item,
-                isDeleted: true,
-                deletedAt: item.deletedAt || new Date().toLocaleDateString('fa-IR')
-              };
-            }
-            return item;
-          });
-        });
+      if (Array.isArray(serverContents) && serverContents.length > 0) {
+        setContents(serverContents);
       }
     }
     syncBackendData();
 
-    // Subscribe to Cloud Firestore live contents updates across all users & Vercel
+    // Subscribe to server live contents updates across all users & open browsers
     const unsubscribe = api.subscribeContents((items) => {
-      if (Array.isArray(items)) {
-        setContents((prev) => {
-          const locallyDeletedIds = new Set(prev.filter((c) => c.isDeleted).map((c) => c.id));
-          const softDeletedMap = getSoftDeletedMap();
-          return items.map((item) => {
-            const cleanId = item.id.replace(/^(post|content)-/, '');
-            const wasDeletedLocally = locallyDeletedIds.has(item.id) || locallyDeletedIds.has(cleanId);
-            const wasDeletedInMap = Boolean(softDeletedMap[item.id] || softDeletedMap[cleanId]);
-            if (wasDeletedLocally || wasDeletedInMap || item.isDeleted) {
-              return {
-                ...item,
-                isDeleted: true,
-                deletedAt: item.deletedAt || new Date().toLocaleDateString('fa-IR')
-              };
-            }
-            return item;
-          });
-        });
+      if (Array.isArray(items) && items.length > 0) {
+        setContents(items);
       }
     });
 
@@ -1176,8 +1103,6 @@ export default function App() {
     const deletedAtStr = shouldDelete ? new Date().toLocaleDateString('fa-IR') : undefined;
     const cleanId = contentId.replace(/^(post|content)-/, '');
 
-    setSoftDeletedStatus(contentId, shouldDelete);
-
     setContents((prev) =>
       prev.map((c) => {
         const cCleanId = c.id.replace(/^(post|content)-/, '');
@@ -1203,7 +1128,6 @@ export default function App() {
 
   const handlePermanentDelete = async (contentId: string) => {
     const cleanId = contentId.replace(/^(post|content)-/, '');
-    setSoftDeletedStatus(contentId, false);
 
     setContents((prev) =>
       prev.filter((c) => {

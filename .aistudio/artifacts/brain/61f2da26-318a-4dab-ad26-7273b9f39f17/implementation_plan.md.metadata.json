@@ -1,6 +1,6 @@
 {
-  "summary":  "Comprehensive implementation plan for multi-level role-based access control (Super Admin, Content Editor, User), pending seed approval workflow, soft-delete archiving, 12-hour automated backup export, and Firestore-local JSON dual sync.",
-  "updatedAt":  "2026-10-22T16:06:27.461004645Z",
+  "summary":  "طرح جامع پیاده‌سازی همگام‌سازی متمرکز دیتابیس و حذف همزمان در تمام مرورگرها بدون اتکا به حافظه محلی",
+  "updatedAt":  "2026-10-22T20:58:18.358927794Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

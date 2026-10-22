@@ -1136,6 +1136,10 @@ app.get('/api/metadata/extract', async (req: Request, res: Response) => {
 
 // 1. GET /api/contents - List all contents with optional filters
 app.get('/api/contents', (req: Request, res: Response) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   const db = loadDatabase();
   let results = [...db.contents];
   const { platform, category, search, sort, includeArchived, includePending, includeDeleted } = req.query;
@@ -1345,6 +1349,18 @@ app.get('/api/contents/:id/enrich', async (req: Request, res: Response) => {
   return res.json({ success: true, data: meta });
 });
 
+function matchesContentId(item: any, id: string): boolean {
+  if (!item || !id) return false;
+  const itemId = String(item.id || '');
+  if (itemId === id) return true;
+  const cleanId = id.replace(/^(post|content)-/, '');
+  const cleanItemId = itemId.replace(/^(post|content)-/, '');
+  if (cleanItemId === cleanId) return true;
+  if (itemId === `post-${cleanId}` || itemId === `content-${cleanId}`) return true;
+  if (id === `post-${cleanItemId}` || id === `content-${cleanItemId}`) return true;
+  return false;
+}
+
 // 2.2 PATCH /api/contents/:id & POST /api/contents/:id/update - Update content fields in local db
 const handleContentUpdate = (req: Request, res: Response) => {
   const { id } = req.params;
@@ -1352,7 +1368,7 @@ const handleContentUpdate = (req: Request, res: Response) => {
   const db = loadDatabase();
   const cleanId = id.replace(/^(post|content)-/, '');
 
-  let index = db.contents.findIndex((c) => c.id === id || c.id === cleanId || c.id.endsWith(cleanId) || id.endsWith(c.id));
+  let index = db.contents.findIndex((c) => matchesContentId(c, id));
 
   if (!db.deletedIds) db.deletedIds = [];
 
@@ -1379,10 +1395,9 @@ app.post('/api/contents/:id/update', handleContentUpdate);
 app.post('/api/contents/:id/soft-delete', (req: Request, res: Response) => {
   const { id } = req.params;
   const db = loadDatabase();
-  const cleanId = id.replace(/^(post|content)-/, '');
   const deletedAt = req.body?.deletedAt || new Date().toISOString();
 
-  let target = db.contents.find((c) => c.id === id || c.id === cleanId || c.id.endsWith(cleanId) || id.endsWith(c.id));
+  let target = db.contents.find((c) => matchesContentId(c, id));
   if (!target) {
     target = { id, title: 'محتوای اشتراک‌گذاری شده', url: '', isDeleted: true, deletedAt };
     db.contents.push(target);
@@ -1401,7 +1416,7 @@ app.post('/api/contents/:id/restore', (req: Request, res: Response) => {
   const db = loadDatabase();
   const cleanId = id.replace(/^(post|content)-/, '');
 
-  let target = db.contents.find((c) => c.id === id || c.id === cleanId || c.id.endsWith(cleanId) || id.endsWith(c.id));
+  let target = db.contents.find((c) => matchesContentId(c, id));
   if (target) {
     target.isDeleted = false;
     target.isArchived = false;
@@ -1423,7 +1438,7 @@ const handlePermanentDelete = (req: Request, res: Response) => {
   const db = loadDatabase();
   const cleanId = id.replace(/^(post|content)-/, '');
 
-  db.contents = db.contents.filter((c) => c.id !== id && c.id !== cleanId && !c.id.endsWith(cleanId));
+  db.contents = db.contents.filter((c) => !matchesContentId(c, id));
   if (!db.deletedIds) db.deletedIds = [];
   if (!db.deletedIds.includes(id)) {
     db.deletedIds.push(id);

@@ -88,8 +88,15 @@ export const api = {
       if (filters?.search) params.append('search', filters.search);
       if (filters?.sort) params.append('sort', filters.sort);
       params.append('includeDeleted', 'true');
+      params.append('_t', Date.now().toString());
 
-      const res = await fetch(`/api/contents?${params.toString()}`);
+      const res = await fetch(`/api/contents?${params.toString()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
       if (res.ok) {
         const json = await res.json();
         if (Array.isArray(json.data)) {
@@ -106,14 +113,20 @@ export const api = {
     return INITIAL_CONTENT.filter((c) => filters?.includeDeleted || !c.isDeleted);
   },
 
-  // Sanction-proof polling subscription for live updates without 403 Google WebChannel errors
+  // Centralized polling subscription for live updates across all open browsers
   subscribeContents(callback: (contents: ContentItem[]) => void): () => void {
     let intervalId: any = null;
     let isSubscribed = true;
 
     const fetchLatest = () => {
       if (!isSubscribed) return;
-      fetch('/api/contents?includeDeleted=true')
+      fetch(`/api/contents?includeDeleted=true&_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      })
         .then((res) => (res.ok ? res.json() : null))
         .then((json) => {
           if (isSubscribed && json?.data && Array.isArray(json.data)) {
@@ -126,8 +139,8 @@ export const api = {
     // Immediate initial fetch
     fetchLatest();
 
-    // Periodic check every 20 seconds
-    intervalId = setInterval(fetchLatest, 20000);
+    // Periodic check every 4 seconds for immediate multi-browser sync
+    intervalId = setInterval(fetchLatest, 4000);
 
     return () => {
       isSubscribed = false;
