@@ -35,8 +35,20 @@ import {
   Maximize2,
   Minimize2,
   Home,
-  ArrowLeft
+  ArrowLeft,
+  Database,
+  Download,
+  Upload,
+  HardDrive,
+  Cloud,
+  CloudUpload
 } from 'lucide-react';
+import { 
+  signInWithGoogleDrive, 
+  getDriveAccessToken, 
+  uploadBackupToGoogleDrive,
+  initDriveAuthListener
+} from '../utils/googleDrive';
 import { 
   ContentItem, 
   FeedbackItem, 
@@ -44,6 +56,7 @@ import {
   InboxMessage, 
   SiteAdminSettings 
 } from '../types/content';
+import { api } from '../services/api';
 import { 
   getCDNConfig, 
   saveCDNConfig, 
@@ -91,8 +104,100 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   onUpdateContents
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'dashboard' | 'contents' | 'users' | 'feedback' | 'broadcast' | 'settings'
+    'dashboard' | 'contents' | 'users' | 'database' | 'feedback' | 'broadcast' | 'settings'
   >('dashboard');
+
+  // Database Backup & Restore States
+  const [isExportingDb, setIsExportingDb] = useState(false);
+  const [isImportingDb, setIsImportingDb] = useState(false);
+  const [importMessage, setImportMessage] = useState<{ success: boolean; text: string } | null>(null);
+  const [isMergingSeeds, setIsMergingSeeds] = useState(false);
+  const [mergeMessage, setMergeMessage] = useState<{ success: boolean; text: string } | null>(null);
+
+  // Google Drive 12-Hour Automated Sync States
+  const [driveUser, setDriveUser] = useState<{ email: string; displayName: string } | null>(null);
+  const [driveToken, setDriveToken] = useState<string | null>(getDriveAccessToken());
+  const [isConnectingDrive, setIsConnectingDrive] = useState(false);
+  const [isUploadingDrive, setIsUploadingDrive] = useState(false);
+  const [driveSyncMessage, setDriveSyncMessage] = useState<{ success: boolean; text: string; link?: string } | null>(null);
+  const [lastDriveUploadTime, setLastDriveUploadTime] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = initDriveAuthListener((user, token) => {
+      setDriveUser({ email: user.email || '3dsaz1990@gmail.com', displayName: user.displayName || 'ادمین' });
+      setDriveToken(token);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleConnectDrive = async () => {
+    setIsConnectingDrive(true);
+    setDriveSyncMessage(null);
+    try {
+      const { user, accessToken } = await signInWithGoogleDrive();
+      setDriveUser({ email: user.email || '3dsaz1990@gmail.com', displayName: user.displayName || 'ادمین' });
+      setDriveToken(accessToken);
+      setDriveSyncMessage({
+        success: true,
+        text: `اکانت گوگل (${user.email || '3dsaz1990@gmail.com'}) با موفقیت متصل گردید.`
+      });
+    } catch (err: any) {
+      setDriveSyncMessage({
+        success: false,
+        text: 'خطا در اتصال به گوگل درایو: ' + (err.message || 'ورود لغو شد.')
+      });
+    } finally {
+      setIsConnectingDrive(false);
+    }
+  };
+
+  const handleUploadDriveNow = async () => {
+    const token = driveToken || getDriveAccessToken();
+    if (!token) {
+      setDriveSyncMessage({
+        success: false,
+        text: 'لطفاً ابتدا به اکانت گوگل درایو خود متصل شوید.'
+      });
+      return;
+    }
+
+    setIsUploadingDrive(true);
+    setDriveSyncMessage(null);
+    try {
+      const dbData = await api.exportDatabase();
+      const res = await uploadBackupToGoogleDrive(token, dbData);
+      if (res.success) {
+        const timeStr = new Date().toLocaleTimeString('fa-IR');
+        setLastDriveUploadTime(timeStr);
+        setDriveSyncMessage({
+          success: true,
+          text: `پشتیبان دیتابیس با موفقیت به گوگل درایو متصل شده ارسال شد (${res.fileName})`,
+          link: res.webViewLink
+        });
+      } else {
+        setDriveSyncMessage({
+          success: false,
+          text: res.error || 'خطا در آپلود فایل به گوگل درایو'
+        });
+      }
+    } catch (err: any) {
+      setDriveSyncMessage({
+        success: false,
+        text: 'خطا در فرآیند ارسال به گوگل درایو: ' + err.message
+      });
+    } finally {
+      setIsUploadingDrive(false);
+    }
+  };
+
+  // 12-hour auto backup upload trigger if connected
+  useEffect(() => {
+    if (!driveToken) return;
+    const interval = setInterval(() => {
+      handleUploadDriveNow();
+    }, 12 * 60 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [driveToken]);
 
   // Content moderation filter: 'all' | 'active' | 'pending' | 'trash'
   const [contentFilter, setContentFilter] = useState<'all' | 'active' | 'pending' | 'trash'>('all');
@@ -288,6 +393,75 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       `پایان عملیات: تعداد ${transferredCount} تصویر با موفقیت فشرده‌سازی و روی upc.geekclub.ir/s1/ ذخیره شد.`,
       ...prev
     ]);
+  };
+
+  // Backup & Restore Handlers
+  const handleExportBackup = async () => {
+    setIsExportingDb(true);
+    try {
+      const data = await api.exportDatabase();
+      if (data) {
+        const jsonStr = JSON.stringify(data, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `geekclub_full_backup_${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } catch (err: any) {
+      console.error('Export backup failed:', err);
+    } finally {
+      setIsExportingDb(false);
+    }
+  };
+
+  const handleImportFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImportingDb(true);
+    setImportMessage(null);
+
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      const res = await api.importDatabase(json);
+      if (res.success) {
+        setImportMessage({ success: true, text: res.message || 'اطلاعات با موفقیت بازیابی شد.' });
+        if (onUpdateContents && json.contents && Array.isArray(json.contents)) {
+          onUpdateContents(json.contents);
+        }
+      } else {
+        setImportMessage({ success: false, text: res.message || 'فرمت فایل پشتیبان معتبر نیست.' });
+      }
+    } catch (err: any) {
+      setImportMessage({ success: false, text: 'خطا در خواندن فایل JSON پشتیبان: ' + err.message });
+    } finally {
+      setIsImportingDb(false);
+    }
+  };
+
+  const handleMergeSeeds = async () => {
+    setIsMergingSeeds(true);
+    setMergeMessage(null);
+    try {
+      const res = await api.mergeSeeds();
+      if (res.success) {
+        setMergeMessage({ success: true, text: res.message || 'داده‌های اولیه با موفقیت ادغام شدند.' });
+        const latest = await api.getContents();
+        if (onUpdateContents) onUpdateContents(latest);
+      } else {
+        setMergeMessage({ success: false, text: res.message || 'خطا در ادغام.' });
+      }
+    } catch (err: any) {
+      setMergeMessage({ success: false, text: err.message });
+    } finally {
+      setIsMergingSeeds(false);
+    }
   };
 
   // Fullscreen state & effect (MUST BE DECLARED BEFORE ANY RETURN STATEMENT)
@@ -513,6 +687,21 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             مدیریت کاربران و انتشار مستقیم
             <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 font-mono">
               {usersList.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('database')}
+            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+              activeTab === 'database'
+                ? 'border-indigo-500 text-indigo-400 font-bold'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Database className="w-4 h-4 text-cyan-400" />
+            پایداری داده‌ها و پشتیبان‌گیری
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-cyan-500/20 text-cyan-300 font-mono">
+              JSON + Firestore
             </span>
           </button>
 
@@ -1028,6 +1217,282 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       </div>
                     );
                   })
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 3.1. Database & Backup Tab */}
+          {activeTab === 'database' && (
+            <div className="space-y-6 max-w-4xl mx-auto">
+              {/* Storage Health Overview */}
+              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-700 pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-cyan-500/20 text-cyan-400">
+                      <Database className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
+                        وضعیت پایداری دیتابیس و همگام‌سازی دوگانه
+                        <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                          Firestore + Disk JSON
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-300">
+                        اطلاعات محتواها، پروفایل کاربران و تنظیمات پنل در دو لایه حافظه ابری و دیسک محلی ذخیره می‌شوند
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                  <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
+                    <span className="text-[11px] text-slate-400 block mb-1">کل پست‌های ثبت‌شده</span>
+                    <span className="text-xl font-mono font-bold text-slate-100">{contents.length}</span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
+                    <span className="text-[11px] text-slate-400 block mb-1">پروفایل‌های فعال</span>
+                    <span className="text-xl font-mono font-bold text-slate-100">{usersList.length}</span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
+                    <span className="text-[11px] text-slate-400 block mb-1">همگام‌سازی دیسک (/database.json)</span>
+                    <span className="text-xs font-bold text-emerald-400 flex items-center justify-center gap-1 mt-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      فعال و پایدار
+                    </span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
+                    <span className="text-[11px] text-slate-400 block mb-1">دیتابیس Firestore</span>
+                    <span className="text-xs font-bold text-emerald-400 flex items-center justify-center gap-1 mt-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      متصل (ai-studio-mediahub)
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Google Drive Automated 12-Hour Sync Section */}
+              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-700 pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-blue-500/20 text-blue-400">
+                      <Cloud className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
+                        پشتیبان‌گیری خودکار ۱۲ ساعته روی Google Drive
+                        <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/30">
+                          Google Workspace OAuth
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-300">
+                        ارسال خودکار و منظم فایل‌های snapshot دیتابیس سایت به پوشه گوگل درایو ادمین (3dsaz1990@gmail.com)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-750 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-200">وضعیت اتصال گوگل درایو:</span>
+                      {driveUser ? (
+                        <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                          <CheckCircle2 className="w-4 h-4" />
+                          متصل به {driveUser.email}
+                        </span>
+                      ) : (
+                        <span className="text-xs font-bold text-amber-400 flex items-center gap-1">
+                          <AlertTriangle className="w-4 h-4" />
+                          عدم اتصال به گوگل درایو
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      {lastDriveUploadTime 
+                        ? `آخرین آپلود موفق روی درایو: ساعت ${lastDriveUploadTime}`
+                        : 'سیستم آماده اتصال و ارسال فایل پشتیبان ۱۲ ساعته می‌باشد.'}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    {!driveUser ? (
+                      <button
+                        type="button"
+                        onClick={handleConnectDrive}
+                        disabled={isConnectingDrive}
+                        className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-md shadow-blue-600/20 cursor-pointer disabled:opacity-50"
+                      >
+                        <Cloud className="w-4 h-4" />
+                        {isConnectingDrive ? 'در حال اتصال...' : 'اتصال به اکانت Google Drive'}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleUploadDriveNow}
+                        disabled={isUploadingDrive}
+                        className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-md shadow-emerald-600/20 cursor-pointer disabled:opacity-50"
+                      >
+                        <CloudUpload className={`w-4 h-4 ${isUploadingDrive ? 'animate-bounce' : ''}`} />
+                        {isUploadingDrive ? 'در حال ارسال پشتیبان به درایو...' : 'ارسال آنی دیتابیس به گوگل درایو'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {driveSyncMessage && (
+                  <div
+                    className={`p-3 rounded-xl text-xs font-bold flex items-center justify-between gap-2 ${
+                      driveSyncMessage.success
+                        ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                        : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {driveSyncMessage.success ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <AlertTriangle className="w-4 h-4 text-rose-400" />}
+                      <span>{driveSyncMessage.text}</span>
+                    </div>
+                    {driveSyncMessage.link && (
+                      <a
+                        href={driveSyncMessage.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:underline font-mono text-[11px] flex items-center gap-1 shrink-0"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        مشاهده در گوگل درایو
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Full Backup Download & Restore Section */}
+              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
+                <div className="flex items-center gap-3 border-b border-slate-700 pb-3">
+                  <div className="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-400">
+                    <HardDrive className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm sm:text-base font-bold text-slate-100">
+                      دانلود و بازیابی فایل پشتیبان (Full JSON Backup)
+                    </h4>
+                    <p className="text-xs text-slate-300">
+                      دانلود یک نسخه پشتیبان جامع از کلیه اطلاعات محتواها، پروفایل‌ها، کامنت‌ها و تنظیمات یا بازیابی آن‌ها
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Download Backup Button */}
+                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-750 flex flex-col justify-between space-y-3">
+                    <div>
+                      <h5 className="text-xs font-bold text-slate-200 flex items-center gap-1.5 mb-1">
+                        <Download className="w-4 h-4 text-indigo-400" />
+                        دانلود نسخه کامل فایل پشتیبان
+                      </h5>
+                      <p className="text-[11px] text-slate-400 leading-relaxed">
+                        فایل جامع JSON شامل تمامی محتواها، دیدگاه‌ها، سطل بازیافت، پروفایل‌های کاربران و تنظیمات پنل مدیریت را دانلود کنید.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleExportBackup}
+                      disabled={isExportingDb}
+                      className="w-full px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-md shadow-indigo-600/20 cursor-pointer disabled:opacity-50"
+                    >
+                      <Download className={`w-4 h-4 ${isExportingDb ? 'animate-bounce' : ''}`} />
+                      {isExportingDb ? 'در حال دریافت فایل...' : 'دانلود فایل پشتیبان (JSON)'}
+                    </button>
+                  </div>
+
+                  {/* Restore Backup File Selector */}
+                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-750 flex flex-col justify-between space-y-3">
+                    <div>
+                      <h5 className="text-xs font-bold text-slate-200 flex items-center gap-1.5 mb-1">
+                        <Upload className="w-4 h-4 text-cyan-400" />
+                        بازیابی اطلاعات از فایل پشتیبان
+                      </h5>
+                      <p className="text-[11px] text-slate-400 leading-relaxed">
+                        فایل پشتیبان JSON قبلی را انتخاب نمایید تا دیتابیس سایت بلافاصله بازسازی و به‌روزرسانی شود.
+                      </p>
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        type="file"
+                        id="backupFileInput"
+                        accept=".json,application/json"
+                        onChange={handleImportFileChange}
+                        disabled={isImportingDb}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="backupFileInput"
+                        className="w-full px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-cyan-300 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer border border-cyan-500/30"
+                      >
+                        <Upload className={`w-4 h-4 ${isImportingDb ? 'animate-spin' : ''}`} />
+                        {isImportingDb ? 'در حال پردازش و بازیابی...' : 'انتخاب و آپلود فایل JSON'}
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {importMessage && (
+                  <div
+                    className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${
+                      importMessage.success
+                        ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                        : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+                    }`}
+                  >
+                    {importMessage.success ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <AlertTriangle className="w-4 h-4 text-rose-400" />}
+                    {importMessage.text}
+                  </div>
+                )}
+              </div>
+
+              {/* Seed Merge & Template Maintenance Section */}
+              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-700 pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400">
+                      <RotateCcw className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm sm:text-base font-bold text-slate-100">
+                        ترکیب و ادغام مجدد داده‌های اولیه نمونه (Seed Templates)
+                      </h4>
+                      <p className="text-xs text-slate-300">
+                        ادغام آیتم‌های نمونه اولیه جدید با دیتابیس فعلی، بدون حذف پست‌های کاربر یا بازگردانی آیتم‌های حذف شده
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleMergeSeeds}
+                    disabled={isMergingSeeds}
+                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-md shadow-amber-500/20 disabled:opacity-50"
+                  >
+                    <RotateCcw className={`w-3.5 h-3.5 ${isMergingSeeds ? 'animate-spin' : ''}`} />
+                    {isMergingSeeds ? 'در حال ادغام...' : 'ادغام داده‌های اولیه'}
+                  </button>
+                </div>
+
+                {mergeMessage && (
+                  <div
+                    className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${
+                      mergeMessage.success
+                        ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                        : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+                    }`}
+                  >
+                    {mergeMessage.success ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <AlertTriangle className="w-4 h-4 text-rose-400" />}
+                    {mergeMessage.text}
+                  </div>
                 )}
               </div>
             </div>

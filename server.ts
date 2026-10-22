@@ -56,16 +56,17 @@ interface DatabaseSchema {
   comments: Record<string, any[]>;
   deletedIds?: string[];
   settings?: Record<string, any>;
+  profiles?: Record<string, any>;
 }
 
 let cachedDb: DatabaseSchema | null = null;
 
 function loadDatabase(): DatabaseSchema {
-  if (cachedDb && cachedDb.contents && cachedDb.contents.length > 0) {
+  if (cachedDb !== null) {
     return cachedDb;
   }
 
-  let dbData: DatabaseSchema = { contents: [], comments: {} };
+  let dbData: DatabaseSchema = { contents: [], comments: {}, deletedIds: [], settings: {}, profiles: {} };
 
   try {
     if (fs.existsSync(DB_PATH)) {
@@ -76,11 +77,43 @@ function loadDatabase(): DatabaseSchema {
     console.warn('[Database Warning] Error reading database file:', err);
   }
 
-  // Fallback to INITIAL_CONTENT if database is empty or missing
-  if (!dbData.contents || !Array.isArray(dbData.contents) || dbData.contents.length === 0) {
-    dbData.contents = Array.isArray(INITIAL_CONTENT) ? [...INITIAL_CONTENT] : [];
+  if (!dbData.deletedIds || !Array.isArray(dbData.deletedIds)) {
+    dbData.deletedIds = [];
+  }
+
+  if (!dbData.profiles || typeof dbData.profiles !== 'object') {
+    dbData.profiles = {};
+  }
+
+  if (!dbData.settings || typeof dbData.settings !== 'object') {
+    dbData.settings = {};
+  }
+
+  if (!dbData.comments || typeof dbData.comments !== 'object') {
     dbData.comments = INITIAL_COMMENTS || {};
-  } else if (dbData.deletedIds && dbData.deletedIds.length > 0) {
+  }
+
+  // Fallback to INITIAL_CONTENT only if database file did not exist or contents was null/undefined
+  if (!dbData.contents || !Array.isArray(dbData.contents)) {
+    dbData.contents = Array.isArray(INITIAL_CONTENT) ? INITIAL_CONTENT.map((seed: any) => ({ ...seed, seedStatus: 'active' })) : [];
+  } else {
+    // Smart seed merger per user policy: Combine any missing default seed items into staging/pending queue for Admin approval
+    if (Array.isArray(INITIAL_CONTENT)) {
+      const existingIds = new Set(dbData.contents.map((c: any) => c.id));
+      const deletedSet = new Set(dbData.deletedIds);
+      for (const seed of INITIAL_CONTENT) {
+        if (seed && seed.id && !existingIds.has(seed.id) && !deletedSet.has(seed.id)) {
+          dbData.contents.push({
+            ...seed,
+            seedStatus: 'pending_approval' // Staged for Super Admin review
+          });
+        }
+      }
+    }
+  }
+
+  // Filter out deletedIds from dbData.contents
+  if (dbData.deletedIds && dbData.deletedIds.length > 0) {
     dbData.contents = dbData.contents.filter((c) => !dbData.deletedIds?.includes(c.id));
   }
 
@@ -106,8 +139,40 @@ function loadDatabase(): DatabaseSchema {
   }
 
   cachedDb = dbData;
+  if (!fs.existsSync(DB_PATH)) {
+    saveDatabase(dbData);
+  }
   return dbData;
 }
+
+const BACKUP_DIR = IS_VERCEL
+  ? path.resolve('/tmp', 'backups')
+  : path.resolve(__dirname, 'data', 'backups');
+
+function createDatabaseBackup(): { success: boolean; filename: string; path: string; timestamp: string } {
+  try {
+    const db = loadDatabase();
+    if (!fs.existsSync(BACKUP_DIR)) {
+      fs.mkdirSync(BACKUP_DIR, { recursive: true });
+    }
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `backup_12h_${timestamp}.json`;
+    const backupPath = path.join(BACKUP_DIR, filename);
+    fs.writeFileSync(backupPath, JSON.stringify(db, null, 2), 'utf-8');
+    db.settings = { ...(db.settings || {}), lastBackupAt: new Date().toISOString() };
+    saveDatabase(db);
+    console.log(`[Auto Backup] 12-hour database backup created: ${filename}`);
+    return { success: true, filename, path: backupPath, timestamp: new Date().toISOString() };
+  } catch (err: any) {
+    console.warn(`[Auto Backup Warning] Failed to create 12h backup:`, err.message);
+    return { success: false, filename: '', path: '', timestamp: new Date().toISOString() };
+  }
+}
+
+// 12-hour automated background backup scheduler
+setInterval(() => {
+  createDatabaseBackup();
+}, 12 * 60 * 60 * 1000);
 
 function saveDatabase(db: DatabaseSchema) {
   cachedDb = db;
@@ -978,7 +1043,17 @@ app.get('/api/metadata/extract', async (req: Request, res: Response) => {
 app.get('/api/contents', (req: Request, res: Response) => {
   const db = loadDatabase();
   let results = [...db.contents];
-  const { platform, category, search, sort } = req.query;
+  const { platform, category, search, sort, includeArchived, includePending } = req.query;
+
+  // Filter out soft-deleted / archived items by default unless explicitly requested
+  if (includeArchived !== 'true') {
+    results = results.filter((c) => !c.isArchived);
+  }
+
+  // Filter out pending seeds waiting for Super Admin approval by default
+  if (includePending !== 'true') {
+    results = results.filter((c) => c.seedStatus !== 'pending_approval');
+  }
 
   if (platform && platform !== 'all') {
     results = results.filter((c) => c.platform === platform);
@@ -1357,6 +1432,234 @@ app.post('/api/site-settings', (req: Request, res: Response) => {
   db.settings = { ...(db.settings || {}), ...req.body };
   saveDatabase(db);
   res.json({ success: true, data: db.settings });
+});
+
+// 8.1. GET & POST /api/profiles - User profiles persistence
+app.get('/api/profiles', (req: Request, res: Response) => {
+  const db = loadDatabase();
+  res.json({ success: true, data: db.profiles || {} });
+});
+
+app.post('/api/profiles', (req: Request, res: Response) => {
+  const profile = req.body;
+  if (!profile || (!profile.uid && !profile.email && !profile.username)) {
+    return res.status(400).json({ success: false, error: 'Valid profile object with uid, email, or username is required' });
+  }
+
+  const db = loadDatabase();
+  if (!db.profiles) db.profiles = {};
+
+  const key = profile.uid || profile.email || profile.username;
+  db.profiles[key] = { ...(db.profiles[key] || {}), ...profile, updatedAt: new Date().toISOString() };
+  saveDatabase(db);
+
+  res.json({ success: true, data: db.profiles[key] });
+});
+
+// 8.2. GET /api/database/export - Export entire site database
+app.get('/api/database/export', (req: Request, res: Response) => {
+  const db = loadDatabase();
+  const exportData = {
+    version: '1.0',
+    exportedAt: new Date().toISOString(),
+    contentsCount: db.contents?.length || 0,
+    profilesCount: Object.keys(db.profiles || {}).length,
+    deletedIdsCount: db.deletedIds?.length || 0,
+    data: db
+  };
+
+  if (req.query.download === 'true') {
+    res.setHeader('Content-Disposition', `attachment; filename="geekclub_backup_${Date.now()}.json"`);
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    return res.send(JSON.stringify(db, null, 2));
+  }
+
+  res.json({ success: true, ...exportData });
+});
+
+// 8.3. POST /api/database/import - Import/Restore site database snapshot
+app.post('/api/database/import', (req: Request, res: Response) => {
+  const importedData = req.body;
+  if (!importedData || typeof importedData !== 'object') {
+    return res.status(400).json({ success: false, error: 'Invalid backup JSON payload' });
+  }
+
+  const targetData = importedData.data || importedData;
+
+  const newDb: DatabaseSchema = {
+    contents: Array.isArray(targetData.contents) ? targetData.contents : [],
+    comments: typeof targetData.comments === 'object' && targetData.comments ? targetData.comments : {},
+    deletedIds: Array.isArray(targetData.deletedIds) ? targetData.deletedIds : [],
+    settings: typeof targetData.settings === 'object' && targetData.settings ? targetData.settings : {},
+    profiles: typeof targetData.profiles === 'object' && targetData.profiles ? targetData.profiles : {}
+  };
+
+  saveDatabase(newDb);
+  res.json({
+    success: true,
+    message: 'داده‌های سایت با موفقیت بازیابی و روی دیسک قرار گرفتند.',
+    summary: {
+      contents: newDb.contents.length,
+      profiles: Object.keys(newDb.profiles || {}).length,
+      deletedIds: (newDb.deletedIds || []).length
+    }
+  });
+});
+
+// 8.4. POST /api/database/merge-seeds - Safely re-merge initial templates
+app.post('/api/database/merge-seeds', (req: Request, res: Response) => {
+  const db = loadDatabase();
+  let mergedCount = 0;
+
+  if (Array.isArray(INITIAL_CONTENT)) {
+    const existingIds = new Set(db.contents.map((c: any) => c.id));
+    const deletedSet = new Set(db.deletedIds || []);
+
+    for (const seed of INITIAL_CONTENT) {
+      if (seed && seed.id && !existingIds.has(seed.id) && !deletedSet.has(seed.id)) {
+        db.contents.push(seed);
+        mergedCount++;
+      }
+    }
+  }
+
+  if (mergedCount > 0) {
+    saveDatabase(db);
+  }
+
+  res.json({
+    success: true,
+    message: mergedCount > 0 ? `${mergedCount} آیتم نمونه جدید با موفقیت اضافه شد.` : 'تمامی آیتم‌های نمونه قبلاً در دیتابیس موجود هستند.',
+    mergedCount,
+    totalContents: db.contents.length
+  });
+});
+
+// 8.5. POST /api/contents/:id/archive - Soft delete (archive) content
+app.post('/api/contents/:id/archive', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const db = loadDatabase();
+  const content = db.contents.find((c) => c.id === id);
+  if (!content) {
+    return res.status(404).json({ success: false, error: 'Content not found' });
+  }
+  content.isArchived = true;
+  content.archivedAt = new Date().toISOString();
+  saveDatabase(db);
+  res.json({ success: true, message: 'محتوا با موفقیت منتقل به آرشیو ادمین شد.', data: content });
+});
+
+// 8.6. POST /api/contents/:id/restore - Restore soft-deleted content
+app.post('/api/contents/:id/restore', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const db = loadDatabase();
+  const content = db.contents.find((c) => c.id === id);
+  if (!content) {
+    return res.status(404).json({ success: false, error: 'Content not found' });
+  }
+  content.isArchived = false;
+  delete content.archivedAt;
+  saveDatabase(db);
+  res.json({ success: true, message: 'محتوا با موفقیت به حالت انتشار بازگشت.', data: content });
+});
+
+// 8.7. POST /api/profiles/:key/archive - Soft delete user profile
+app.post('/api/profiles/:key/archive', (req: Request, res: Response) => {
+  const { key } = req.params;
+  const db = loadDatabase();
+  if (!db.profiles) db.profiles = {};
+  if (!db.profiles[key]) {
+    return res.status(404).json({ success: false, error: 'User profile not found' });
+  }
+  db.profiles[key].isArchived = true;
+  db.profiles[key].archivedAt = new Date().toISOString();
+  saveDatabase(db);
+  res.json({ success: true, message: 'پروفایل کاربر منتقل به سطل زباله ادمین شد.', data: db.profiles[key] });
+});
+
+// 8.8. POST /api/profiles/:key/restore - Restore user profile
+app.post('/api/profiles/:key/restore', (req: Request, res: Response) => {
+  const { key } = req.params;
+  const db = loadDatabase();
+  if (!db.profiles || !db.profiles[key]) {
+    return res.status(404).json({ success: false, error: 'User profile not found' });
+  }
+  db.profiles[key].isArchived = false;
+  delete db.profiles[key].archivedAt;
+  saveDatabase(db);
+  res.json({ success: true, message: 'پروفایل کاربر بازیابی شد.', data: db.profiles[key] });
+});
+
+// 8.9. POST /api/profiles/:key/role - Update user access level (admin, editor, user)
+app.post('/api/profiles/:key/role', (req: Request, res: Response) => {
+  const { key } = req.params;
+  const { role } = req.body; // 'admin' | 'editor' | 'user'
+  if (!role || !['admin', 'editor', 'user'].includes(role)) {
+    return res.status(400).json({ success: false, error: 'Valid role (admin, editor, or user) is required' });
+  }
+  const db = loadDatabase();
+  if (!db.profiles) db.profiles = {};
+  if (!db.profiles[key]) {
+    db.profiles[key] = { uid: key, email: key, displayName: 'کاربر', username: key, hideEmail: true, photoURL: '', allowProfileComments: true };
+  }
+  db.profiles[key].role = role;
+  db.profiles[key].isAdmin = role === 'admin';
+  saveDatabase(db);
+  res.json({ success: true, message: `سطح دسترسی کاربر به ${role} تغییر یافت.`, data: db.profiles[key] });
+});
+
+// 8.10. GET /api/archive/list - List archived contents and profiles for Super Admin
+app.get('/api/archive/list', (req: Request, res: Response) => {
+  const db = loadDatabase();
+  const archivedContents = (db.contents || []).filter((c) => c.isArchived);
+  const archivedProfiles = Object.values(db.profiles || {}).filter((p: any) => p.isArchived);
+  res.json({ success: true, data: { contents: archivedContents, profiles: archivedProfiles } });
+});
+
+// 8.11. GET /api/seeds/pending - List pending code seeds for Super Admin approval
+app.get('/api/seeds/pending', (req: Request, res: Response) => {
+  const db = loadDatabase();
+  const pendingSeeds = (db.contents || []).filter((c) => c.seedStatus === 'pending_approval');
+  res.json({ success: true, count: pendingSeeds.length, data: pendingSeeds });
+});
+
+// 8.12. POST /api/seeds/approve - Approve pending seed item
+app.post('/api/seeds/approve', (req: Request, res: Response) => {
+  const { id } = req.body;
+  const db = loadDatabase();
+  const seed = db.contents.find((c) => c.id === id);
+  if (!seed) {
+    return res.status(404).json({ success: false, error: 'Seed item not found' });
+  }
+  seed.seedStatus = 'active';
+  saveDatabase(db);
+  res.json({ success: true, message: 'محتوای الگوی کدی با موفقیت تایید و منتشر گردید.', data: seed });
+});
+
+// 8.13. POST /api/seeds/reject - Reject pending seed item
+app.post('/api/seeds/reject', (req: Request, res: Response) => {
+  const { id } = req.body;
+  const db = loadDatabase();
+  const seed = db.contents.find((c) => c.id === id);
+  if (!seed) {
+    return res.status(404).json({ success: false, error: 'Seed item not found' });
+  }
+  seed.seedStatus = 'rejected';
+  db.contents = db.contents.filter((c) => c.id !== id);
+  if (!db.deletedIds) db.deletedIds = [];
+  if (!db.deletedIds.includes(id)) db.deletedIds.push(id);
+  saveDatabase(db);
+  res.json({ success: true, message: 'الگوی کدی رد و حذف گردید.' });
+});
+
+// 8.14. POST /api/database/backup-now - Trigger 12h database backup manually
+app.post('/api/database/backup-now', (req: Request, res: Response) => {
+  const backupResult = createDatabaseBackup();
+  res.json({
+    success: backupResult.success,
+    message: backupResult.success ? `پشتیبان‌گیری ۱۲ ساعته با موفقیت انجام شد: ${backupResult.filename}` : 'پشتیبان‌گیری با خطا مواجه شد.',
+    data: backupResult
+  });
 });
 
 // 9. GET /api/rss - Public RSS Feed generator

@@ -112,8 +112,11 @@ export default function App() {
   const [contents, setContents] = useState<ContentItem[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.CONTENT);
-      const parsedSaved: ContentItem[] = saved ? JSON.parse(saved) : [];
-      const itemsToProcess = parsedSaved.length > 0 ? parsedSaved : INITIAL_CONTENT;
+      const savedDeleted = localStorage.getItem('mediahub_deleted_ids_v1');
+      const deletedIds: string[] = savedDeleted ? JSON.parse(savedDeleted) : [];
+
+      const parsedSaved: ContentItem[] = saved !== null ? JSON.parse(saved) : INITIAL_CONTENT;
+      const itemsToProcess = parsedSaved.filter((item) => !deletedIds.includes(item.id));
 
       // Verified CDN covers on upc.geekclub.ir
       const VERIFIED_CDN_COVERS: Record<string, string> = {
@@ -390,10 +393,30 @@ export default function App() {
   useEffect(() => {
     try {
       localStorage.setItem('geekclub_users_list_v1', JSON.stringify(usersList));
+      usersList.forEach((u) => {
+        api.saveProfile(u).catch(() => {});
+      });
     } catch (e) {
       console.warn('LocalStorage save error:', e);
     }
   }, [usersList]);
+
+  // Load profiles from backend REST / Firestore on startup
+  useEffect(() => {
+    api.getProfiles().then((remoteProfiles) => {
+      if (remoteProfiles && Object.keys(remoteProfiles).length > 0) {
+        setUsersList((prev) => {
+          const map = new Map(prev.map((u) => [u.uid, u]));
+          Object.values(remoteProfiles).forEach((p: any) => {
+            if (p && p.uid) {
+              map.set(p.uid, { ...map.get(p.uid), ...p });
+            }
+          });
+          return Array.from(map.values());
+        });
+      }
+    }).catch(() => {});
+  }, []);
 
   // Toasts
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -447,7 +470,7 @@ export default function App() {
   useEffect(() => {
     async function syncBackendData() {
       const serverContents = await api.getContents();
-      if (serverContents && serverContents.length > 0) {
+      if (Array.isArray(serverContents)) {
         setContents(serverContents);
       }
     }
@@ -455,7 +478,7 @@ export default function App() {
 
     // Subscribe to Cloud Firestore live contents updates across all users & Vercel
     const unsubscribe = api.subscribeContents((items) => {
-      if (items && items.length > 0) {
+      if (Array.isArray(items)) {
         setContents(items);
       }
     });

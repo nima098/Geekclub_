@@ -16,6 +16,36 @@ import { INITIAL_CONTENT, INITIAL_COMMENTS } from '../data/initialData';
 
 const CONTENTS_COLLECTION = 'contents';
 const COMMENTS_COLLECTION = 'comments';
+const DELETED_IDS_KEY = 'mediahub_deleted_ids_v1';
+
+function getDeletedIds(): string[] {
+  try {
+    const saved = localStorage.getItem(DELETED_IDS_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+}
+
+function addDeletedId(id: string) {
+  try {
+    const current = getDeletedIds();
+    if (!current.includes(id)) {
+      const updated = [...current, id];
+      localStorage.setItem(DELETED_IDS_KEY, JSON.stringify(updated));
+    }
+  } catch {}
+}
+
+function removeDeletedId(id: string) {
+  try {
+    const current = getDeletedIds();
+    if (current.includes(id)) {
+      const updated = current.filter((item) => item !== id);
+      localStorage.setItem(DELETED_IDS_KEY, JSON.stringify(updated));
+    }
+  } catch {}
+}
 
 export const api = {
   // 1. Fetch contents via Server REST API (100% sanction-proof, works everywhere without 403 errors in Iran)
@@ -25,6 +55,8 @@ export const api = {
     search?: string;
     sort?: SortOption;
   }): Promise<ContentItem[]> {
+    const deletedIds = getDeletedIds();
+
     // Primary: Call server REST endpoint which handles database logic
     try {
       const params = new URLSearchParams();
@@ -36,15 +68,15 @@ export const api = {
       const res = await fetch(`/api/contents?${params.toString()}`);
       if (res.ok) {
         const json = await res.json();
-        if (Array.isArray(json.data) && json.data.length > 0) {
-          return json.data;
+        if (Array.isArray(json.data)) {
+          return json.data.filter((c: ContentItem) => !deletedIds.includes(c.id));
         }
       }
     } catch {
       // Server REST endpoint fallback
     }
 
-    return INITIAL_CONTENT;
+    return INITIAL_CONTENT.filter((c) => !deletedIds.includes(c.id));
   },
 
   // Sanction-proof polling subscription for live updates without 403 Google WebChannel errors
@@ -57,8 +89,10 @@ export const api = {
       fetch('/api/contents')
         .then((res) => (res.ok ? res.json() : null))
         .then((json) => {
-          if (isSubscribed && json?.data && Array.isArray(json.data) && json.data.length > 0) {
-            callback(json.data);
+          if (isSubscribed && json?.data && Array.isArray(json.data)) {
+            const deletedIds = getDeletedIds();
+            const filtered = json.data.filter((c: ContentItem) => !deletedIds.includes(c.id));
+            callback(filtered);
           }
         })
         .catch(() => {});
@@ -79,6 +113,8 @@ export const api = {
   // 2. Add new content to Server REST API & Cloud Firestore
   async addContent(contentData: Partial<ContentItem>): Promise<ContentItem | null> {
     const newId = contentData.id || `content-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    removeDeletedId(newId);
+
     const newItem: ContentItem = {
       id: newId,
       title: contentData.title || 'محتوای اشتراک‌گذاری شده',
@@ -148,6 +184,8 @@ export const api = {
   },
 
   async deleteContent(id: string): Promise<void> {
+    addDeletedId(id);
+
     // Primary: Express REST API endpoint
     try {
       await fetch(`/api/contents/${id}`, {
@@ -289,5 +327,178 @@ export const api = {
     } catch {}
 
     return null;
+  },
+
+  // 8. Save user profile to REST API and Cloud Firestore
+  async saveProfile(profile: any): Promise<void> {
+    if (!profile) return;
+    try {
+      await fetch('/api/profiles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profile)
+      });
+    } catch {}
+
+    try {
+      if (profile.uid) {
+        const docRef = doc(db, 'profiles', profile.uid);
+        await setDoc(docRef, profile, { merge: true });
+      }
+    } catch {}
+  },
+
+  // 9. Fetch profiles from REST API or Firestore
+  async getProfiles(): Promise<Record<string, any>> {
+    try {
+      const res = await fetch('/api/profiles');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data && typeof json.data === 'object') return json.data;
+      }
+    } catch {}
+
+    try {
+      const snapshot = await getDocs(collection(db, 'profiles'));
+      const profilesMap: Record<string, any> = {};
+      snapshot.docs.forEach((docSnap) => {
+        profilesMap[docSnap.id] = docSnap.data();
+      });
+      return profilesMap;
+    } catch {}
+
+    return {};
+  },
+
+  // 10. Database Export (Full Site JSON Backup)
+  async exportDatabase(): Promise<any> {
+    try {
+      const res = await fetch('/api/database/export');
+      if (res.ok) {
+        const json = await res.json();
+        return json.data || json;
+      }
+    } catch {}
+    return null;
+  },
+
+  // 11. Database Import (Full Site Restoration)
+  async importDatabase(jsonData: any): Promise<{ success: boolean; message?: string; summary?: any }> {
+    try {
+      const res = await fetch('/api/database/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(jsonData)
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (err: any) {
+      return { success: false, message: err.message };
+    }
+    return { success: false, message: 'خطا در بازیابی اطلاعات' };
+  },
+
+  // 12. Merge Seed Data without deleting user items
+  async mergeSeeds(): Promise<{ success: boolean; message?: string; mergedCount?: number }> {
+    try {
+      const res = await fetch('/api/database/merge-seeds', {
+        method: 'POST'
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (err: any) {
+      return { success: false, message: err.message };
+    }
+    return { success: false, message: 'خطا در ادغام داده‌های نمونه' };
+  },
+
+  // 13. Soft delete (archive) content
+  async archiveContent(id: string): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/contents/${id}/archive`, { method: 'POST' });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
+  // 14. Restore soft-deleted content
+  async restoreContent(id: string): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/contents/${id}/restore`, { method: 'POST' });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
+  // 15. Update user role (admin, editor, user)
+  async updateUserRole(key: string, role: string): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/profiles/${key}/role`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role })
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
+  // 16. Get pending code seeds
+  async getPendingSeeds(): Promise<ContentItem[]> {
+    try {
+      const res = await fetch('/api/seeds/pending');
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json.data)) return json.data;
+      }
+    } catch {}
+    return [];
+  },
+
+  // 17. Approve pending seed
+  async approveSeed(id: string): Promise<boolean> {
+    try {
+      const res = await fetch('/api/seeds/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
+  // 18. Reject pending seed
+  async rejectSeed(id: string): Promise<boolean> {
+    try {
+      const res = await fetch('/api/seeds/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
+  // 19. Trigger 12-hour database backup manually
+  async backupDatabaseNow(): Promise<{ success: boolean; message?: string; data?: any }> {
+    try {
+      const res = await fetch('/api/database/backup-now', { method: 'POST' });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (err: any) {
+      return { success: false, message: err.message };
+    }
+    return { success: false, message: 'خطا در اجرای پشتیبان‌گیری' };
   }
 };
+

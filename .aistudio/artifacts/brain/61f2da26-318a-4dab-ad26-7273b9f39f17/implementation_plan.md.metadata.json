@@ -1,6 +1,6 @@
 {
-  "summary":  "برنامه پیاده‌سازی ساختار آدرس‌های یکتا (Permalink) و اسلاگ (Slug) برای مطالب گیک‌کلاب بر اساس ترکیب دسته‌بندی و شناسه مطلب.",
-  "updatedAt":  "2026-10-22T15:30:13.085923644Z",
+  "summary":  "Comprehensive implementation plan for multi-level role-based access control (Super Admin, Content Editor, User), pending seed approval workflow, soft-delete archiving, 12-hour automated backup export, and Firestore-local JSON dual sync.",
+  "updatedAt":  "2026-10-22T16:06:27.461004645Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

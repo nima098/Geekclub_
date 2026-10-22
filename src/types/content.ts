@@ -64,6 +64,8 @@ export interface MediaSlide {
   thumbnail?: string;
 }
 
+export type UserRole = 'super_admin' | 'admin' | 'editor' | 'user' | 'مدیر کل سایت (Super Admin)' | 'کاربر عضو' | string;
+
 export interface ContentItem {
   id: string;
   title: string;
@@ -86,6 +88,10 @@ export interface ContentItem {
   sourceDomain?: string;
   isDeleted?: boolean;
   deletedAt?: string;
+  isArchived?: boolean;
+  archivedAt?: string;
+  archivedBy?: string;
+  seedStatus?: 'active' | 'pending_approval' | 'rejected';
   authorUid?: string;
   approvalStatus?: 'approved' | 'pending' | 'rejected';
   moderationReason?: string;
@@ -108,8 +114,10 @@ export interface UserProfile {
   allowProfileComments: boolean; // default true
   joinedAt?: string;
   isAdmin?: boolean;
+  role?: UserRole;
+  isArchived?: boolean;
+  archivedAt?: string;
   autoApproveContent?: boolean; // When true, content is published immediately without admin approval
-  role?: string;
   hasCompletedRegistration?: boolean;
 }
 
@@ -127,6 +135,9 @@ export interface SiteAdminSettings {
   apifyApiToken?: string;
   apifyActorId?: string;
   enableApifyInstagram?: boolean;
+  autoBackup12h?: boolean;
+  lastBackupAt?: string;
+  backupDriveFolder?: string;
 }
 
 export interface FeedbackItem {
