@@ -1146,13 +1146,12 @@ app.get('/api/contents', (req: Request, res: Response) => {
 
   // Always filter out permanently deleted IDs first
   if (db.deletedIds && Array.isArray(db.deletedIds) && db.deletedIds.length > 0) {
-    const delSet = new Set(db.deletedIds);
-    results = results.filter((c) => !delSet.has(c.id));
+    results = results.filter((c) => !db.deletedIds!.some((delId) => matchesContentId(c, delId)));
   }
 
   // Filter out soft-deleted items unless explicitly requested (includeDeleted === 'true')
   if (includeDeleted !== 'true') {
-    results = results.filter((c) => !c.isDeleted);
+    results = results.filter((c) => !c.isDeleted && !c.isArchived);
   }
 
   // Filter out archived items by default unless explicitly requested
@@ -1397,17 +1396,22 @@ app.post('/api/contents/:id/soft-delete', (req: Request, res: Response) => {
   const db = loadDatabase();
   const deletedAt = req.body?.deletedAt || new Date().toISOString();
 
-  let target = db.contents.find((c) => matchesContentId(c, id));
-  if (!target) {
-    target = { id, title: 'محتوای اشتراک‌گذاری شده', url: '', isDeleted: true, deletedAt };
-    db.contents.push(target);
-  } else {
-    target.isDeleted = true;
-    target.deletedAt = deletedAt;
+  let matched = false;
+  for (const c of db.contents) {
+    if (matchesContentId(c, id)) {
+      c.isDeleted = true;
+      c.isArchived = true;
+      c.deletedAt = deletedAt;
+      matched = true;
+    }
+  }
+  if (!matched) {
+    const newItem = { id, title: 'محتوای حذف‌شده', url: '', isDeleted: true, isArchived: true, deletedAt };
+    db.contents.push(newItem);
   }
 
   saveDatabase(db);
-  res.json({ success: true, data: target, message: 'Content soft-deleted' });
+  res.json({ success: true, message: 'Content soft-deleted' });
 });
 
 // Dedicated POST /api/contents/:id/restore
@@ -1416,20 +1420,21 @@ app.post('/api/contents/:id/restore', (req: Request, res: Response) => {
   const db = loadDatabase();
   const cleanId = id.replace(/^(post|content)-/, '');
 
-  let target = db.contents.find((c) => matchesContentId(c, id));
-  if (target) {
-    target.isDeleted = false;
-    target.isArchived = false;
-    delete target.deletedAt;
-    delete target.archivedAt;
+  for (const target of db.contents) {
+    if (matchesContentId(target, id)) {
+      target.isDeleted = false;
+      target.isArchived = false;
+      delete target.deletedAt;
+      delete target.archivedAt;
+    }
   }
 
   if (db.deletedIds) {
-    db.deletedIds = db.deletedIds.filter((dId) => dId !== id && dId !== cleanId);
+    db.deletedIds = db.deletedIds.filter((dId) => !matchesContentId({ id: dId }, id));
   }
 
   saveDatabase(db);
-  res.json({ success: true, data: target, message: 'Content restored to feed' });
+  res.json({ success: true, message: 'Content restored to feed' });
 });
 
 // Dedicated POST & DELETE for permanent deletion
@@ -1811,20 +1816,6 @@ app.post('/api/contents/:id/archive', requireAdminAuth, (req: Request, res: Resp
   content.archivedAt = new Date().toISOString();
   saveDatabase(db);
   res.json({ success: true, message: 'محتوا با موفقیت منتقل به آرشیو ادمین شد.', data: content });
-});
-
-// 8.6. POST /api/contents/:id/restore - Restore soft-deleted content (Admin Protected)
-app.post('/api/contents/:id/restore', requireAdminAuth, (req: Request, res: Response) => {
-  const { id } = req.params;
-  const db = loadDatabase();
-  const content = db.contents.find((c) => c.id === id);
-  if (!content) {
-    return res.status(404).json({ success: false, error: 'Content not found' });
-  }
-  content.isArchived = false;
-  delete content.archivedAt;
-  saveDatabase(db);
-  res.json({ success: true, message: 'محتوا با موفقیت به حالت انتشار بازگشت.', data: content });
 });
 
 // 8.7. POST /api/profiles/:key/archive - Soft delete user profile (Admin Protected)

@@ -111,12 +111,22 @@ export default function App() {
   // --- Server-Authoritative Contents State ---
   const [contents, setContents] = useState<ContentItem[]>(() => {
     try {
-      // Clear legacy localStorage content cache and soft-delete blacklists to ensure 100% server authority
+      // Clear legacy localStorage content cache to ensure 100% server authority
       localStorage.removeItem('mediahub_content_v1');
       localStorage.removeItem('mediahub_soft_deleted_v2');
       localStorage.removeItem('mediahub_deleted_ids_v1');
 
-      const itemsToProcess = INITIAL_CONTENT;
+      // Check session cache for already-synced server contents
+      const cached = sessionStorage.getItem('geekclub_synced_contents_v2');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+
+      // Initial fallback: only include active non-deleted items from INITIAL_CONTENT
+      const itemsToProcess = INITIAL_CONTENT.filter((item) => !item.isDeleted && !item.isArchived);
 
       // Verified CDN covers on upc.geekclub.ir
       const VERIFIED_CDN_COVERS: Record<string, string> = {
@@ -160,7 +170,7 @@ export default function App() {
         };
       });
     } catch {
-      return INITIAL_CONTENT;
+      return INITIAL_CONTENT.filter((item) => !item.isDeleted && !item.isArchived);
     }
   });
 
@@ -1093,19 +1103,24 @@ export default function App() {
     const deletedAtStr = shouldDelete ? new Date().toLocaleDateString('fa-IR') : undefined;
     const cleanId = contentId.replace(/^(post|content)-/, '');
 
-    setContents((prev) =>
-      prev.map((c) => {
+    setContents((prev) => {
+      const updated = prev.map((c) => {
         const cCleanId = c.id.replace(/^(post|content)-/, '');
         if (c.id === contentId || cCleanId === cleanId || c.id.endsWith(cleanId) || contentId.endsWith(c.id)) {
           return {
             ...c,
             isDeleted: shouldDelete,
+            isArchived: shouldDelete,
             deletedAt: deletedAtStr
           };
         }
         return c;
-      })
-    );
+      });
+      try {
+        sessionStorage.setItem('geekclub_synced_contents_v2', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
 
     if (shouldDelete) {
       await api.softDeleteContent(contentId, deletedAtStr);
@@ -1119,12 +1134,16 @@ export default function App() {
   const handlePermanentDelete = async (contentId: string) => {
     const cleanId = contentId.replace(/^(post|content)-/, '');
 
-    setContents((prev) =>
-      prev.filter((c) => {
+    setContents((prev) => {
+      const updated = prev.filter((c) => {
         const cCleanId = c.id.replace(/^(post|content)-/, '');
         return c.id !== contentId && cCleanId !== cleanId && !c.id.endsWith(cleanId);
-      })
-    );
+      });
+      try {
+        sessionStorage.setItem('geekclub_synced_contents_v2', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
     await api.deleteContent(contentId);
     addToast('error', 'محتوا به طور کامل از حافظه دیتابیس حذف گردید.');
   };

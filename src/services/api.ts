@@ -87,7 +87,9 @@ export const api = {
       if (filters?.category && filters.category !== 'all') params.append('category', filters.category);
       if (filters?.search) params.append('search', filters.search);
       if (filters?.sort) params.append('sort', filters.sort);
-      params.append('includeDeleted', 'true');
+      if (filters?.includeDeleted) {
+        params.append('includeDeleted', 'true');
+      }
       params.append('_t', Date.now().toString());
 
       const res = await fetch(`/api/contents?${params.toString()}`, {
@@ -100,8 +102,11 @@ export const api = {
       if (res.ok) {
         const json = await res.json();
         if (Array.isArray(json.data)) {
+          try {
+            sessionStorage.setItem('geekclub_synced_contents_v2', JSON.stringify(json.data));
+          } catch {}
           return json.data.filter((c: ContentItem) => {
-            if (!filters?.includeDeleted && c.isDeleted) return false;
+            if (!filters?.includeDeleted && (c.isDeleted || c.isArchived)) return false;
             return true;
           });
         }
@@ -110,7 +115,17 @@ export const api = {
       // Server REST endpoint fallback
     }
 
-    return INITIAL_CONTENT.filter((c) => filters?.includeDeleted || !c.isDeleted);
+    try {
+      const cached = sessionStorage.getItem('geekclub_synced_contents_v2');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.filter((c: ContentItem) => filters?.includeDeleted || (!c.isDeleted && !c.isArchived));
+        }
+      }
+    } catch {}
+
+    return INITIAL_CONTENT.filter((c) => filters?.includeDeleted || (!c.isDeleted && !c.isArchived));
   },
 
   // Centralized polling subscription for live updates across all open browsers
@@ -130,6 +145,9 @@ export const api = {
         .then((res) => (res.ok ? res.json() : null))
         .then((json) => {
           if (isSubscribed && json?.data && Array.isArray(json.data)) {
+            try {
+              sessionStorage.setItem('geekclub_synced_contents_v2', JSON.stringify(json.data));
+            } catch {}
             callback(json.data);
           }
         })
@@ -139,8 +157,8 @@ export const api = {
     // Immediate initial fetch
     fetchLatest();
 
-    // Periodic check every 4 seconds for immediate multi-browser sync
-    intervalId = setInterval(fetchLatest, 4000);
+    // Periodic check every 3 seconds for immediate multi-browser sync
+    intervalId = setInterval(fetchLatest, 3000);
 
     return () => {
       isSubscribed = false;
@@ -239,25 +257,48 @@ export const api = {
 
     // Primary: Express REST API endpoint
     try {
-      await fetch(`/api/contents/${encodedId}/soft-delete`, {
+      const res = await fetch(`/api/contents/${encodedId}/soft-delete`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ isDeleted: true, deletedAt: timeStr })
       });
+      if (!res.ok) {
+        await fetch(`/api/contents/${encodedId}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ isDeleted: true, isArchived: true, deletedAt: timeStr })
+        });
+      }
     } catch {
       try {
         await fetch(`/api/contents/${encodedId}`, {
           method: 'PATCH',
           headers,
-          body: JSON.stringify({ isDeleted: true, deletedAt: timeStr })
+          body: JSON.stringify({ isDeleted: true, isArchived: true, deletedAt: timeStr })
         });
       } catch {}
     }
 
+    // Keep session cache in sync
+    try {
+      const cached = sessionStorage.getItem('geekclub_synced_contents_v2');
+      if (cached) {
+        const list = JSON.parse(cached);
+        if (Array.isArray(list)) {
+          const updated = list.map((c: ContentItem) =>
+            c.id === id || c.id.replace(/^(post|content)-/, '') === id.replace(/^(post|content)-/, '')
+              ? { ...c, isDeleted: true, isArchived: true, deletedAt: timeStr }
+              : c
+          );
+          sessionStorage.setItem('geekclub_synced_contents_v2', JSON.stringify(updated));
+        }
+      }
+    } catch {}
+
     // Secondary: Cloud Firestore
     try {
       const docRef = doc(db, CONTENTS_COLLECTION, id);
-      await setDoc(docRef, { isDeleted: true, deletedAt: timeStr }, { merge: true });
+      await setDoc(docRef, { isDeleted: true, isArchived: true, deletedAt: timeStr }, { merge: true });
     } catch {}
   },
 
@@ -267,25 +308,48 @@ export const api = {
 
     // Primary: Express REST API endpoint
     try {
-      await fetch(`/api/contents/${encodedId}/restore`, {
+      const res = await fetch(`/api/contents/${encodedId}/restore`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ isDeleted: false })
       });
+      if (!res.ok) {
+        await fetch(`/api/contents/${encodedId}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ isDeleted: false, isArchived: false })
+        });
+      }
     } catch {
       try {
         await fetch(`/api/contents/${encodedId}`, {
           method: 'PATCH',
           headers,
-          body: JSON.stringify({ isDeleted: false })
+          body: JSON.stringify({ isDeleted: false, isArchived: false })
         });
       } catch {}
     }
 
+    // Keep session cache in sync
+    try {
+      const cached = sessionStorage.getItem('geekclub_synced_contents_v2');
+      if (cached) {
+        const list = JSON.parse(cached);
+        if (Array.isArray(list)) {
+          const updated = list.map((c: ContentItem) =>
+            c.id === id || c.id.replace(/^(post|content)-/, '') === id.replace(/^(post|content)-/, '')
+              ? { ...c, isDeleted: false, isArchived: false }
+              : c
+          );
+          sessionStorage.setItem('geekclub_synced_contents_v2', JSON.stringify(updated));
+        }
+      }
+    } catch {}
+
     // Secondary: Cloud Firestore
     try {
       const docRef = doc(db, CONTENTS_COLLECTION, id);
-      await setDoc(docRef, { isDeleted: false }, { merge: true });
+      await setDoc(docRef, { isDeleted: false, isArchived: false }, { merge: true });
     } catch {}
   },
 
@@ -307,6 +371,20 @@ export const api = {
         });
       } catch {}
     }
+
+    // Keep session cache in sync
+    try {
+      const cached = sessionStorage.getItem('geekclub_synced_contents_v2');
+      if (cached) {
+        const list = JSON.parse(cached);
+        if (Array.isArray(list)) {
+          const updated = list.filter((c: ContentItem) =>
+            c.id !== id && c.id.replace(/^(post|content)-/, '') !== id.replace(/^(post|content)-/, '')
+          );
+          sessionStorage.setItem('geekclub_synced_contents_v2', JSON.stringify(updated));
+        }
+      }
+    } catch {}
 
     // Secondary: Cloud Firestore
     try {

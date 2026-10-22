@@ -100,7 +100,8 @@ export const INITIAL_CONTENT: ContentItem[] = [
     commentsCount: 2,
     userReaction: 'like',
     sourceDomain: 'instagram.com',
-    approvalStatus: 'approved'
+    approvalStatus: 'approved',
+    isDeleted: true
   },
   {
     id: 'yt-pending-1',
@@ -150,7 +151,8 @@ export const INITIAL_CONTENT: ContentItem[] = [
     dislikesCount: 6,
     commentsCount: 19,
     userReaction: null,
-    sourceDomain: 'youtube.com'
+    sourceDomain: 'youtube.com',
+    isDeleted: true
   },
   {
     id: 'art-1',
@@ -183,7 +185,8 @@ export const INITIAL_CONTENT: ContentItem[] = [
 ۳. میکروانیمیشن‌هایی که بازخورد فوری از کنش‌های کاربر ارائه می‌دهند
 ۴. طراحی واکنش‌گرا و دسترس‌پذیری برای تمامی نمایشگرها
 
-توصیه مهم برای طراحان این است که همیشه پیش از شروع ساخت کامپوننت‌ها، سیستم طراحی (Design System) یکپارچه و مقیاس‌پذیر بسازند تا تجربه تعاملی کاربران در تمام مراحل پیوسته باقی بماند.`
+توصیه مهم برای طراحان این است که همیشه پیش از شروع ساخت کامپوننت‌ها، سیستم طراحی (Design System) یکپارچه و مقیاس‌پذیر بسازند تا تجربه تعاملی کاربران در تمام مراحل پیوسته باقی بماند.`,
+    isDeleted: true
   },
   {
     id: 'ig-new-dzf',
@@ -208,7 +211,8 @@ export const INITIAL_CONTENT: ContentItem[] = [
     commentsCount: 19,
     userReaction: 'like',
     sourceDomain: 'instagram.com',
-    approvalStatus: 'approved'
+    approvalStatus: 'approved',
+    isDeleted: true
   },
   {
     id: 'aparat-1',
@@ -233,7 +237,8 @@ export const INITIAL_CONTENT: ContentItem[] = [
     commentsCount: 23,
     userReaction: 'like',
     sourceDomain: 'aparat.com',
-    approvalStatus: 'approved'
+    approvalStatus: 'approved',
+    isDeleted: true
   },
   {
     id: 'ig-1',

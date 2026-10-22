@@ -54,9 +54,58 @@ export default function handler(req, res) {
   const contentId = pathParts.length > 2 ? pathParts[2] : req.query?.id;
 
   try {
+    // Check for soft-delete subpath
+    if (urlPath.includes('/soft-delete') || req.body?.isDeleted === true) {
+      const id = contentId || req.query?.id || req.body?.id;
+      if (id) {
+        let matched = false;
+        for (const c of db.contents) {
+          if (c.id === id || c.id.replace(/^(post|content)-/, '') === id.replace(/^(post|content)-/, '')) {
+            c.isDeleted = true;
+            c.isArchived = true;
+            c.deletedAt = req.body?.deletedAt || new Date().toISOString();
+            matched = true;
+          }
+        }
+        if (!matched) {
+          db.contents.push({ id, title: 'محتوای حذف‌شده', url: '', isDeleted: true, isArchived: true });
+        }
+        saveDatabase(db);
+        return res.status(200).json({ success: true, message: 'Content soft-deleted' });
+      }
+    }
+
+    // Check for restore subpath
+    if (urlPath.includes('/restore') || (req.body?.isDeleted === false && req.method === 'POST')) {
+      const id = contentId || req.query?.id || req.body?.id;
+      if (id) {
+        for (const c of db.contents) {
+          if (c.id === id || c.id.replace(/^(post|content)-/, '') === id.replace(/^(post|content)-/, '')) {
+            c.isDeleted = false;
+            c.isArchived = false;
+            delete c.deletedAt;
+            delete c.archivedAt;
+          }
+        }
+        if (db.deletedIds) {
+          db.deletedIds = db.deletedIds.filter((dId) => dId !== id && dId !== id.replace(/^(post|content)-/, ''));
+        }
+        saveDatabase(db);
+        return res.status(200).json({ success: true, message: 'Content restored' });
+      }
+    }
+
     if (req.method === 'GET') {
-      const { platform, category, search, sort } = req.query || {};
+      const { platform, category, search, sort, includeDeleted } = req.query || {};
       let results = [...db.contents];
+
+      if (db.deletedIds && db.deletedIds.length > 0) {
+        results = results.filter((c) => !db.deletedIds.includes(c.id));
+      }
+
+      if (includeDeleted !== 'true') {
+        results = results.filter((c) => !c.isDeleted && !c.isArchived);
+      }
 
       if (platform && platform !== 'all') {
         results = results.filter((c) => c.platform === platform);
