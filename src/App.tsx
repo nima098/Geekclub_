@@ -87,6 +87,8 @@ import {
   SearchX, 
   ArrowUp,
   BookmarkCheck,
+  Bookmark,
+  ArrowLeft,
   Crown,
   MessageSquarePlus,
   Video,
@@ -271,10 +273,11 @@ export default function App() {
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [isAdminPortalModalOpen, setIsAdminPortalModalOpen] = useState(false);
   const [isRSSModalOpen, setIsRSSModalOpen] = useState(false);
+  const [singlePostId, setSinglePostId] = useState<string | null>(null);
 
-  // Check URL query parameters (?admin=true, ?admin=login) and hash (#admin)
+  // Check URL query parameters (?p=id, ?post=id, ?id=id, ?admin=true) and hash (#admin, #id)
   useEffect(() => {
-    const handleUrlAdminCheck = () => {
+    const handleUrlRouting = () => {
       const urlParams = new URLSearchParams(window.location.search);
       const hasAdminParam = urlParams.has('admin');
       const hasAdminHash = window.location.hash.toLowerCase() === '#admin' || window.location.pathname.endsWith('/admin');
@@ -286,14 +289,26 @@ export default function App() {
           setIsAdminPortalModalOpen(true);
         }
       }
+
+      // Check Single Post Permalink parameter ?p=id or ?post=id or ?id=id or hash (#content-123)
+      const postIdParam = urlParams.get('p') || urlParams.get('post') || urlParams.get('id');
+      const rawHash = window.location.hash ? window.location.hash.replace('#', '').trim() : null;
+
+      if (postIdParam && postIdParam !== 'admin') {
+        setSinglePostId(postIdParam);
+      } else if (rawHash && rawHash !== 'admin' && rawHash.length > 2) {
+        setSinglePostId(rawHash);
+      } else {
+        setSinglePostId(null);
+      }
     };
 
-    handleUrlAdminCheck();
-    window.addEventListener('popstate', handleUrlAdminCheck);
-    window.addEventListener('hashchange', handleUrlAdminCheck);
+    handleUrlRouting();
+    window.addEventListener('popstate', handleUrlRouting);
+    window.addEventListener('hashchange', handleUrlRouting);
     return () => {
-      window.removeEventListener('popstate', handleUrlAdminCheck);
-      window.removeEventListener('hashchange', handleUrlAdminCheck);
+      window.removeEventListener('popstate', handleUrlRouting);
+      window.removeEventListener('hashchange', handleUrlRouting);
     };
   }, [user]);
 
@@ -579,11 +594,13 @@ export default function App() {
 
   // --- Share Handler ---
   const handleShare = (item: ContentItem) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://geekclub.ir';
+    const permalink = `${origin}/?p=${item.id}`;
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(item.url);
-      addToast('success', 'لینک محتوا با موفقیت در کلیپ‌بورد کپی شد');
+      navigator.clipboard.writeText(permalink);
+      addToast('success', 'لینک اختصاصی این مطلب با موفقیت کپی شد ✨');
     } else {
-      addToast('info', `آدرس محتوا: ${item.url}`);
+      addToast('info', `لینک اختصاصی مطلب: ${permalink}`);
     }
   };
 
@@ -1087,6 +1104,14 @@ export default function App() {
 
   // --- Filtered & Sorted Content List ---
   const filteredContents = useMemo(() => {
+    // If Single Post Permalink Mode is active
+    if (singlePostId) {
+      const match = contents.filter((item) => !item.isDeleted && (item.id === singlePostId || item.id.endsWith(singlePostId)));
+      if (match.length > 0) {
+        return match;
+      }
+    }
+
     return contents
       .filter((item) => {
         // Trash filter for admin
@@ -1151,7 +1176,7 @@ export default function App() {
         }
         return 0;
       });
-  }, [contents, selectedPlatform, selectedCategory, showSavedOnly, searchQuery, sortOption]);
+  }, [contents, selectedPlatform, selectedCategory, showSavedOnly, searchQuery, sortOption, showTrashOnly, singlePostId]);
 
   const savedCount = useMemo(() => {
     return contents.filter((c) => c.saved).length;
@@ -1207,6 +1232,38 @@ export default function App() {
       )}
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-6">
+        {/* Single Post Permalink Banner */}
+        {singlePostId && (
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border border-indigo-500/40 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-right">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center justify-center shrink-0">
+                <Bookmark className="w-5 h-5 text-indigo-400" />
+              </div>
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                  در حال مشاهده لینک اختصاصی مطلب
+                  <span className="text-[10px] bg-indigo-500/30 text-indigo-200 border border-indigo-500/40 px-2.5 py-0.5 rounded-full font-mono">
+                    Single Post
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  شما در حال مشاهده مستقیم این مطلب هستید. برای مشاهده تمام اخبار و ویدیوها روی دکمه بازگشت کلیک کنید.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setSinglePostId(null);
+                window.history.pushState({}, '', window.location.pathname);
+              }}
+              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-2 transition cursor-pointer shrink-0 shadow-lg shadow-indigo-600/30 active:scale-95"
+            >
+              <span>مشاهده همه مطالب سایت</span>
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          </div>
+        )}
         {/* Filter Bar (Search, Platforms, Categories, Sort, View Modes) */}
         <FilterBar
           searchQuery={searchQuery}

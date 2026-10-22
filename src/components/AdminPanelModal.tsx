@@ -605,7 +605,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               </div>
 
               {/* Main Quick Toggle: Content Approval Mode */}
-              <div className="p-5 rounded-2xl bg-slate-800/60 border border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <ShieldAlert className="w-5 h-5 text-amber-400" />
@@ -620,7 +620,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       {siteSettings.requireContentApproval ? 'تایید دستی فعال است' : 'انتشار مستقیم و آزاد'}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400 leading-relaxed max-w-2xl">
+                  <p className="text-xs text-slate-300 leading-relaxed max-w-2xl">
                     {siteSettings.requireContentApproval
                       ? 'محتوای ارسالی توسط اعضای عادی سایت نیازمند بررسی و تأیید در پنل مدیریت است، به جز کاربرانی که در تب «مدیریت کاربران» دسترسی انتشار مستقیم دارند.'
                       : 'تمامی محتواهای ثبت‌شده توسط تمام کاربران بلافاصله و بدون وقفه در سایت منتشر می‌شوند.'}
@@ -654,19 +654,19 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               </div>
 
               {/* Quick Actions & Guidelines */}
-              <div className="p-5 rounded-2xl bg-slate-800/40 border border-slate-800 space-y-3">
-                <h4 className="text-sm font-bold text-slate-200 flex items-center gap-2">
+              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-3">
+                <h4 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-indigo-400" />
                   راهنمای مدیریت دسترسی‌ها و محتوا
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-300 leading-relaxed">
-                  <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 space-y-1">
-                    <strong className="text-amber-300 block">⚡ کاربران با انتشار مستقیم:</strong>
-                    <span>شما می‌توانید در تب <strong>«مدیریت کاربران»</strong>، به نویسندگان معتمد، تیم تحریریه یا کاربران ویژه، دسترسی <em>انتشار مستقیم بدون تایید</em> اعطا کنید تا حتی در زمان فعال بودن تایید محتوا، پست‌هایشان فوراً پخش شود.</span>
+                  <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-750 space-y-1">
+                    <strong className="text-amber-300 block font-bold">⚡ کاربران با انتشار مستقیم:</strong>
+                    <span className="text-slate-200">شما می‌توانید در تب <strong className="text-white">«مدیریت کاربران»</strong>، به نویسندگان معتمد، تیم تحریریه یا کاربران ویژه، دسترسی <em className="text-emerald-300">انتشار مستقیم بدون تایید</em> اعطا کنید تا حتی در زمان فعال بودن تایید محتوا، پست‌هایشان فوراً پخش شود.</span>
                   </div>
-                  <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 space-y-1">
-                    <strong className="text-emerald-300 block">♻️ سطل بازیافت محتوا:</strong>
-                    <span>هر محتوایی که توسط مدیر یا منتشرکننده حذف شود، در حافظه سیستم باقی می‌ماند و در تب <strong>«مدیریت محتوا»</strong> قابل بازیابی است.</span>
+                  <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-750 space-y-1">
+                    <strong className="text-emerald-300 block font-bold">♻️ سطل بازیافت محتوا:</strong>
+                    <span className="text-slate-200">هر محتوایی که توسط مدیر یا منتشرکننده حذف شود، در حافظه سیستم باقی می‌ماند و در تب <strong className="text-white">«مدیریت محتوا»</strong> قابل بازیابی است.</span>
                   </div>
                 </div>
               </div>
@@ -677,14 +677,14 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           {activeTab === 'contents' && (
             <div className="space-y-4">
               {/* Filter controls */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-800/40 p-3 rounded-2xl border border-slate-800">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700/80 shadow-md">
                 <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto">
                   <button
                     onClick={() => setContentFilter('all')}
                     className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
                       contentFilter === 'all'
                         ? 'bg-indigo-600 text-white shadow-sm'
-                        : 'bg-slate-800 text-slate-400 hover:text-white'
+                        : 'bg-slate-800 text-slate-300 hover:text-white'
                     }`}
                   >
                     همه ({contents.length})
@@ -694,7 +694,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
                       contentFilter === 'active'
                         ? 'bg-emerald-600 text-white shadow-sm'
-                        : 'bg-slate-800 text-slate-400 hover:text-white'
+                        : 'bg-slate-800 text-slate-300 hover:text-white'
                     }`}
                   >
                     فعال‌ها ({activeCount})
@@ -715,7 +715,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
                       contentFilter === 'trash'
                         ? 'bg-rose-600 text-white shadow-sm'
-                        : 'bg-slate-800 text-slate-400 hover:text-white'
+                        : 'bg-slate-800 text-slate-300 hover:text-white'
                     }`}
                   >
                     سطل بازیافت ({trashCount})
@@ -731,7 +731,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     value={contentSearch}
                     onChange={(e) => setContentSearch(e.target.value)}
                     placeholder="جستجو در عنوان یا نویسنده..."
-                    className="w-full pr-8 pl-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-full pr-8 pl-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                 </div>
               </div>
@@ -739,19 +739,19 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               {/* Contents Table / List */}
               <div className="space-y-3">
                 {filteredContents.length === 0 ? (
-                  <div className="text-center py-12 text-slate-400 bg-slate-800/20 rounded-2xl border border-slate-800 text-xs">
+                  <div className="text-center py-12 text-slate-300 bg-slate-800/80 rounded-2xl border border-slate-700/80 shadow-md text-xs font-medium">
                     محتوایی در این بخش یافت نشد.
                   </div>
                 ) : (
                   filteredContents.map((item) => (
                     <div
                       key={item.id}
-                      className={`p-4 rounded-2xl border transition flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
+                      className={`p-4 rounded-2xl border shadow-md transition flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
                         item.approvalStatus === 'pending'
-                          ? 'bg-amber-950/20 border-amber-500/40 ring-1 ring-amber-500/30'
+                          ? 'bg-amber-950/30 border-amber-500/50 ring-1 ring-amber-500/30'
                           : item.isDeleted
-                          ? 'bg-rose-950/20 border-rose-900/40 opacity-80'
-                          : 'bg-slate-800/40 border-slate-800'
+                          ? 'bg-rose-950/30 border-rose-800/50 opacity-80'
+                          : 'bg-slate-800/80 border-slate-700/80'
                       }`}
                     >
                       <div className="flex items-start sm:items-center gap-3">
@@ -870,14 +870,14 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           {/* 3. User Management & Direct Publishing Tab */}
           {activeTab === 'users' && (
             <div className="space-y-5">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-800/40 p-3.5 rounded-2xl border border-slate-800">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700/80 shadow-md">
                 <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto">
                   <button
                     onClick={() => setUserFilter('all')}
                     className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
                       userFilter === 'all'
                         ? 'bg-indigo-600 text-white shadow-sm'
-                        : 'bg-slate-800 text-slate-400 hover:text-white'
+                        : 'bg-slate-800 text-slate-300 hover:text-white'
                     }`}
                   >
                     همه کاربران ({usersList.length})
@@ -908,7 +908,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
                       userFilter === 'admins'
                         ? 'bg-amber-600 text-white shadow-sm'
-                        : 'bg-slate-800 text-slate-400 hover:text-white'
+                        : 'bg-slate-800 text-slate-300 hover:text-white'
                     }`}
                   >
                     مدیران سیستم ({usersList.filter((u) => u.isAdmin).length})
@@ -924,13 +924,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     value={userSearch}
                     onChange={(e) => setUserSearch(e.target.value)}
                     placeholder="جستجو بر اساس نام، نام کاربری یا ایمیل..."
-                    className="w-full pr-8 pl-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-full pr-8 pl-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                 </div>
               </div>
 
               {/* Informative banner about direct publishing permission */}
-              <div className="p-3.5 rounded-2xl bg-indigo-950/20 border border-indigo-800/30 flex items-center gap-3 text-xs text-indigo-300">
+              <div className="p-3.5 rounded-2xl bg-indigo-950/30 border border-indigo-700/40 shadow-sm flex items-center gap-3 text-xs text-indigo-300">
                 <Sparkles className="w-4 h-4 text-indigo-400 shrink-0" />
                 <span>
                   <strong>نکته مهم:</strong> کاربرانی که سوییچ <em>«انتشار مستقیم (بدون تایید)»</em> برای آن‌ها فعال باشد، محتوای اشتراک‌گذاری‌شده‌شان بلافاصله و بدون نیاز به تایید ادمین روی سایت قرار می‌گیرد.
@@ -940,7 +940,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               {/* Users Cards Grid */}
               <div className="space-y-3">
                 {filteredUsers.length === 0 ? (
-                  <div className="text-center py-12 text-slate-400 bg-slate-800/20 rounded-2xl border border-slate-800 text-xs">
+                  <div className="text-center py-12 text-slate-300 bg-slate-800/80 rounded-2xl border border-slate-700/80 shadow-md text-xs font-medium">
                     هیچ کاربری با این مشخصات یافت نشد.
                   </div>
                 ) : (
@@ -949,7 +949,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     return (
                       <div
                         key={u.uid}
-                        className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800 hover:border-slate-700 transition flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                        className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md hover:border-slate-600 transition flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
                       >
                         <div className="flex items-center gap-3.5">
                           <img
@@ -1036,7 +1036,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           {/* 4. Settings Tab */}
           {activeTab === 'settings' && (
             <div className="max-w-2xl mx-auto space-y-6">
-              <div className="p-5 rounded-2xl bg-slate-800/50 border border-slate-700/80 space-y-4">
+              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
                 <div className="flex items-center gap-3 border-b border-slate-700 pb-3">
                   <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400">
                     <ShieldAlert className="w-6 h-6" />
@@ -1045,21 +1045,21 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     <h4 className="text-sm sm:text-base font-bold text-slate-100">
                       تنظیمات نظارت و انتشار محتوا
                     </h4>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-300">
                       کنترل شرایط پیش‌فرض انتشار پست‌های ارسالی کاربران در کل سایت
                     </p>
                   </div>
                 </div>
 
                 {/* Primary Content Moderation Toggle */}
-                <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between gap-4">
+                <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-750 shadow-sm flex items-center justify-between gap-4">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs sm:text-sm font-bold text-slate-200">
+                      <span className="text-xs sm:text-sm font-bold text-slate-100">
                         فعال‌سازی تأیید محتوا پیش از انتشار عمومی (Content Moderation)
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                    <p className="text-[11px] text-slate-300 leading-relaxed">
                       هنگامی که این گزینه روشن باشد، محتوای اشتراک‌گذاری شده توسط کاربران عادی به صورت معلق (در انتظار بررسی) ذخیره شده و پس از تأیید در پنل مدیریت روی فید اصلی سایت قرار می‌گیرد.
                     </p>
                   </div>
@@ -1084,7 +1084,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 </div>
 
                 {/* Status summary */}
-                <div className="p-3.5 rounded-xl bg-slate-900/40 border border-slate-800 flex items-center justify-between text-xs">
+                <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-750 shadow-sm flex items-center justify-between text-xs">
                   <span className="text-slate-400">وضعیت فعلی سیستم:</span>
                   <span className={`font-bold ${
                     siteSettings.requireContentApproval ? 'text-amber-300' : 'text-emerald-400'
@@ -1697,15 +1697,15 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 </select>
               </div>
 
-              {filteredFeedback.length === 0 ? (
-                <div className="text-center py-12 text-slate-400 bg-slate-800/20 rounded-2xl border border-slate-800 text-xs">
+               {filteredFeedback.length === 0 ? (
+                <div className="text-center py-12 text-slate-300 bg-slate-800/80 rounded-2xl border border-slate-700/80 shadow-md text-xs font-medium">
                   هیچ پیشنهادی یا انتقادی در این بخش وجود ندارد.
                 </div>
               ) : (
                 filteredFeedback.map((fb) => (
                   <div
                     key={fb.id}
-                    className="p-4 rounded-2xl bg-slate-800/50 border border-slate-800 space-y-3"
+                    className="p-4.5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-3"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -1722,7 +1722,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                           </span>
                         </div>
                         <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
-                          <span>ارسال از: <strong className="text-slate-300">{fb.senderName}</strong> {fb.isGuest && '(مهمان)'}</span>
+                          <span>ارسال از: <strong className="text-slate-200">{fb.senderName}</strong> {fb.isGuest && '(مهمان)'}</span>
                           {fb.senderEmail && <span className="dir-ltr font-mono">{fb.senderEmail}</span>}
                           <span>| {fb.createdAt}</span>
                         </div>
@@ -1739,7 +1739,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       </span>
                     </div>
 
-                    <p className="text-xs text-slate-300 bg-slate-900/60 p-3 rounded-xl border border-slate-800 leading-relaxed whitespace-pre-line">
+                    <p className="text-xs text-slate-100 font-medium bg-slate-900/80 p-3.5 rounded-xl border border-slate-750 leading-relaxed whitespace-pre-line shadow-inner">
                       {fb.message}
                     </p>
 
