@@ -1043,9 +1043,20 @@ app.get('/api/metadata/extract', async (req: Request, res: Response) => {
 app.get('/api/contents', (req: Request, res: Response) => {
   const db = loadDatabase();
   let results = [...db.contents];
-  const { platform, category, search, sort, includeArchived, includePending } = req.query;
+  const { platform, category, search, sort, includeArchived, includePending, includeDeleted } = req.query;
 
-  // Filter out soft-deleted / archived items by default unless explicitly requested
+  // Always filter out permanently deleted IDs first
+  if (db.deletedIds && Array.isArray(db.deletedIds) && db.deletedIds.length > 0) {
+    const delSet = new Set(db.deletedIds);
+    results = results.filter((c) => !delSet.has(c.id));
+  }
+
+  // Filter out soft-deleted items unless explicitly requested (includeDeleted === 'true')
+  if (includeDeleted !== 'true') {
+    results = results.filter((c) => !c.isDeleted);
+  }
+
+  // Filter out archived items by default unless explicitly requested
   if (includeArchived !== 'true') {
     results = results.filter((c) => !c.isArchived);
   }
@@ -1245,6 +1256,16 @@ app.patch('/api/contents/:id', (req: Request, res: Response) => {
   const updates = req.body;
   const db = loadDatabase();
   let index = db.contents.findIndex((c) => c.id === id);
+
+  if (!db.deletedIds) db.deletedIds = [];
+
+  if (updates.isDeleted === true) {
+    if (!db.deletedIds.includes(id)) {
+      db.deletedIds.push(id);
+    }
+  } else if (updates.isDeleted === false) {
+    db.deletedIds = db.deletedIds.filter((dId) => dId !== id);
+  }
   
   if (index === -1) {
     // If item was not yet explicitly in database.json, add it with updates

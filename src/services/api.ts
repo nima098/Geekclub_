@@ -54,6 +54,7 @@ export const api = {
     category?: Category;
     search?: string;
     sort?: SortOption;
+    includeDeleted?: boolean;
   }): Promise<ContentItem[]> {
     const deletedIds = getDeletedIds();
 
@@ -64,19 +65,24 @@ export const api = {
       if (filters?.category && filters.category !== 'all') params.append('category', filters.category);
       if (filters?.search) params.append('search', filters.search);
       if (filters?.sort) params.append('sort', filters.sort);
+      if (filters?.includeDeleted) params.append('includeDeleted', 'true');
 
       const res = await fetch(`/api/contents?${params.toString()}`);
       if (res.ok) {
         const json = await res.json();
         if (Array.isArray(json.data)) {
-          return json.data.filter((c: ContentItem) => !deletedIds.includes(c.id));
+          return json.data.filter((c: ContentItem) => {
+            if (deletedIds.includes(c.id)) return false;
+            if (!filters?.includeDeleted && c.isDeleted) return false;
+            return true;
+          });
         }
       }
     } catch {
       // Server REST endpoint fallback
     }
 
-    return INITIAL_CONTENT.filter((c) => !deletedIds.includes(c.id));
+    return INITIAL_CONTENT.filter((c) => !deletedIds.includes(c.id) && (filters?.includeDeleted || !c.isDeleted));
   },
 
   // Sanction-proof polling subscription for live updates without 403 Google WebChannel errors
@@ -86,7 +92,7 @@ export const api = {
 
     const fetchLatest = () => {
       if (!isSubscribed) return;
-      fetch('/api/contents')
+      fetch('/api/contents?includeDeleted=true')
         .then((res) => (res.ok ? res.json() : null))
         .then((json) => {
           if (isSubscribed && json?.data && Array.isArray(json.data)) {
@@ -167,6 +173,12 @@ export const api = {
 
   // 3. Update content (approval / edit / delete / reaction)
   async updateContent(id: string, updates: Partial<ContentItem>): Promise<void> {
+    if (updates.isDeleted === true) {
+      addDeletedId(id);
+    } else if (updates.isDeleted === false) {
+      removeDeletedId(id);
+    }
+
     // Primary: Express REST API endpoint
     try {
       await fetch(`/api/contents/${id}`, {
