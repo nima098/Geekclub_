@@ -23,7 +23,8 @@ export const SUPER_ADMIN_USER: UserProfile = {
   joinedAt: 'مهر ۱۴۰۴',
   isAdmin: true,
   autoApproveContent: true,
-  role: 'super_admin'
+  role: 'super_admin',
+  hasCompletedRegistration: true
 };
 
 export const DEFAULT_USER: UserProfile = {
@@ -38,7 +39,8 @@ export const DEFAULT_USER: UserProfile = {
   joinedAt: 'مهر ۱۴۰۴',
   isAdmin: true,
   autoApproveContent: true,
-  role: 'super_admin'
+  role: 'super_admin',
+  hasCompletedRegistration: true
 };
 
 export const INITIAL_REGISTERED_USERS: UserProfile[] = [

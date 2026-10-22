@@ -1,6 +1,6 @@
 {
-  "summary":  "Implementation plan for integrating Apify Instagram scraper API, server download, and CDN asset management for Instagram content sharing.",
-  "updatedAt":  "2026-10-20T23:31:57.583198033Z",
+  "summary":  "برنامه پیاده‌سازی ساختار آدرس‌های یکتا (Permalink) و اسلاگ (Slug) برای مطالب گیک‌کلاب بر اساس ترکیب دسته‌بندی و شناسه مطلب.",
+  "updatedAt":  "2026-10-22T15:30:13.085923644Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

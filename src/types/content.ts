@@ -110,6 +110,7 @@ export interface UserProfile {
   isAdmin?: boolean;
   autoApproveContent?: boolean; // When true, content is published immediately without admin approval
   role?: string;
+  hasCompletedRegistration?: boolean;
 }
 
 export interface SiteAdminSettings {

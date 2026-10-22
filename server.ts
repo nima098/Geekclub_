@@ -1393,7 +1393,8 @@ app.get('/api/rss', (req: Request, res: Response) => {
   const siteUrl = `${protocol}://${host}`;
 
   const itemsXml = items.map((item: any) => {
-    const postUrl = `${siteUrl}/?p=${item.id}`;
+    const cat = item.category || 'tech';
+    const postUrl = `${siteUrl}/${cat}/post-${item.id}`;
     const cleanDesc = (item.description || item.title || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const thumbTag = item.thumbnail ? `\n      <enclosure url="${item.thumbnail}" type="image/jpeg" length="1024" />` : '';
 

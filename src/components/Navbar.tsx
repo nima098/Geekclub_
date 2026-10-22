@@ -41,6 +41,7 @@ interface NavbarProps {
   totalItemsCount: number;
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
+  onGoHome?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -59,7 +60,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   showSavedOnly,
   totalItemsCount,
   theme,
-  onToggleTheme
+  onToggleTheme,
+  onGoHome
 }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -95,19 +97,29 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 h-16 sm:h-18 flex items-center justify-between gap-1.5 sm:gap-4 w-full min-w-0">
         {/* Brand & Wordmark Zone */}
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 min-w-0">
-          <div 
-            className="flex items-center gap-3 cursor-pointer group" 
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          <a 
+            href="/"
+            className="flex items-center gap-3 cursor-pointer group no-underline text-inherit" 
+            onClick={(e) => {
+              e.preventDefault();
+              if (onGoHome) {
+                onGoHome();
+              } else {
+                window.history.pushState({}, '', '/');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            }}
+            title="صفحه اصلی گیک کلاب"
           >
             <div className="w-8.5 h-8.5 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-[#0077d9] text-white flex items-center justify-center shadow-lg shadow-[#0077d9]/30 group-hover:scale-105 transition-transform duration-200 shrink-0">
               <Share2 className="w-5 h-5 text-white" />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm sm:text-xl font-black text-slate-100 tracking-tight whitespace-nowrap">
+              <span className="text-sm sm:text-xl font-black text-slate-100 tracking-tight whitespace-nowrap hover:text-[#0077d9] transition-colors">
                 گیک کلاب
               </span>
             </div>
-          </div>
+          </a>
 
           {/* Theme Mode Toggle Button (Sun / Moon) */}
           <button

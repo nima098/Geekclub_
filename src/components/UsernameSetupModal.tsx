@@ -115,7 +115,8 @@ export const UsernameSetupModal: React.FC<UsernameSetupModalProps> = ({
       autoApproveContent: isSuperAdmin ? true : Boolean(existing?.autoApproveContent),
       role: isSuperAdmin ? 'مدیر کل سایت (Super Admin)' : (existing?.role || 'کاربر عضو'),
       bio: existing?.bio || (isSuperAdmin ? 'مدیر کل و بنیان‌گذار وب‌سایت 👑' : 'علاقه‌مند به تکنولوژی و رسانه گیک کلاب 🚀'),
-      joinedAt: existing?.joinedAt || 'مهر ۱۴۰۵'
+      joinedAt: existing?.joinedAt || 'مهر ۱۴۰۵',
+      hasCompletedRegistration: true
     };
 
     onComplete(finalProfile);

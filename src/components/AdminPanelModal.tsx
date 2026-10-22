@@ -568,7 +568,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             <div className="space-y-6">
               {/* Metric Cards Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                <div className="p-4 rounded-2xl bg-indigo-950/30 border border-indigo-800/40 space-y-1">
+                <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-1">
                   <span className="text-xs text-indigo-300 font-medium">محتواهای فعال و منتشرشده</span>
                   <div className="text-2xl sm:text-3xl font-black text-white">{activeCount}</div>
                   <span className="text-[10px] text-emerald-400 font-medium">نمایش عمومی در سایت</span>
@@ -579,14 +579,14 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     setActiveTab('contents');
                     setContentFilter('pending');
                   }}
-                  className="p-4 rounded-2xl bg-amber-950/30 border border-amber-800/40 space-y-1 cursor-pointer hover:bg-amber-950/40 transition"
+                  className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-1 cursor-pointer hover:bg-slate-750 transition"
                 >
                   <span className="text-xs text-amber-300 font-medium">در انتظار تایید ادمین</span>
                   <div className="text-2xl sm:text-3xl font-black text-amber-300">{pendingCount}</div>
                   <span className="text-[10px] text-amber-400 font-medium underline">بررسی و تایید انتشار ←</span>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-rose-950/30 border border-rose-800/40 space-y-1">
+                <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-1">
                   <span className="text-xs text-rose-300 font-medium">سطل بازیافت (حذف نرم)</span>
                   <div className="text-2xl sm:text-3xl font-black text-rose-200">{trashCount}</div>
                   <span className="text-[10px] text-rose-400 font-medium">قابل بازگردانی مجدد</span>
@@ -594,7 +594,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
                 <div 
                   onClick={() => setActiveTab('users')}
-                  className="p-4 rounded-2xl bg-emerald-950/30 border border-emerald-800/40 space-y-1 cursor-pointer hover:bg-emerald-950/40 transition"
+                  className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-1 cursor-pointer hover:bg-slate-750 transition"
                 >
                   <span className="text-xs text-emerald-300 font-medium">کاربران ثبت‌نام شده</span>
                   <div className="text-2xl sm:text-3xl font-black text-emerald-200">{usersList.length}</div>
@@ -930,8 +930,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               </div>
 
               {/* Informative banner about direct publishing permission */}
-              <div className="p-3.5 rounded-2xl bg-indigo-950/30 border border-indigo-700/40 shadow-sm flex items-center gap-3 text-xs text-indigo-300">
-                <Sparkles className="w-4 h-4 text-indigo-400 shrink-0" />
+              <div className="p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md flex items-center gap-3 text-xs text-slate-200">
+                <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
                 <span>
                   <strong>نکته مهم:</strong> کاربرانی که سوییچ <em>«انتشار مستقیم (بدون تایید)»</em> برای آن‌ها فعال باشد، محتوای اشتراک‌گذاری‌شده‌شان بلافاصله و بدون نیاز به تایید ادمین روی سایت قرار می‌گیرد.
                 </span>
@@ -1118,7 +1118,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               </div>
 
               {/* Platform Enable/Disable Toggles Section */}
-              <div className="p-5 rounded-2xl bg-slate-800/50 border border-slate-700/80 space-y-4">
+              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
                 <div className="flex items-center gap-3 border-b border-slate-700 pb-3">
                   <div className="p-2.5 rounded-xl bg-pink-500/10 text-pink-400">
                     <Layers className="w-6 h-6" />
@@ -1255,7 +1255,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               </div>
 
               {/* Google reCAPTCHA Security Section */}
-              <div className="p-5 rounded-2xl bg-slate-800/50 border border-slate-700/80 space-y-4">
+              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
                 <div className="flex items-center gap-3 border-b border-slate-700 pb-3">
                   <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400">
                     <ShieldCheck className="w-6 h-6" />
@@ -1301,8 +1301,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               </div>
 
               {/* Dedicated CDN Setup & Management Section (upc.geekclub.ir) */}
-              <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-4">
-                <div className="flex items-center justify-between border-b border-amber-500/20 pb-3">
+              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-700 pb-3">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400">
                       <ExternalLink className="w-6 h-6" />
@@ -1555,8 +1555,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               </div>
 
               {/* Apify Instagram Media Scraper & CDN Integration */}
-              <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-950/40 via-purple-950/20 to-slate-900 border border-indigo-500/30 space-y-4">
-                <div className="flex items-center justify-between border-b border-indigo-500/20 pb-3">
+              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-700 pb-3">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-400">
                       <Instagram className="w-6 h-6" />
@@ -1772,12 +1772,12 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           {/* 6. Broadcast / Send System Message Tab */}
           {activeTab === 'broadcast' && (
             <div className="max-w-xl mx-auto space-y-4">
-              <div className="p-4 rounded-2xl bg-indigo-950/30 border border-indigo-800/40 text-xs text-indigo-300 leading-relaxed">
+              <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md text-xs text-slate-200 leading-relaxed">
                 این پیام به عنوان اعلان رسمی مدیریت مستقیماً در صندوق پیام‌های ورودی (این‌باکس) کاربران قرار خواهد گرفت.
               </div>
 
               {broadcastSent ? (
-                <div className="p-8 text-center bg-slate-800/40 rounded-2xl border border-slate-800 space-y-2">
+                <div className="p-8 text-center bg-slate-800/80 rounded-2xl border border-slate-700/80 shadow-md space-y-2">
                   <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
                   <h4 className="font-bold text-white text-sm">پیام با موفقیت به این‌باکس ارسال شد!</h4>
                 </div>

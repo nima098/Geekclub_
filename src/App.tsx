@@ -275,7 +275,7 @@ export default function App() {
   const [isRSSModalOpen, setIsRSSModalOpen] = useState(false);
   const [singlePostId, setSinglePostId] = useState<string | null>(null);
 
-  // Check URL query parameters (?p=id, ?post=id, ?id=id, ?admin=true) and hash (#admin, #id)
+  // Check URL query parameters (?p=id, ?post=id, ?id=id, ?admin=true), path (/category/post-123) and hash (#admin, #id)
   useEffect(() => {
     const handleUrlRouting = () => {
       const urlParams = new URLSearchParams(window.location.search);
@@ -290,14 +290,31 @@ export default function App() {
         }
       }
 
-      // Check Single Post Permalink parameter ?p=id or ?post=id or ?id=id or hash (#content-123)
+      // 1. Check Query params: ?p=id or ?post=id or ?id=id
       const postIdParam = urlParams.get('p') || urlParams.get('post') || urlParams.get('id');
+      
+      // 2. Check Clean Path: e.g. /tech/post-yt-1 or /programming/content-123 or /tech/yt-1
+      const pathname = window.location.pathname;
+      let pathPostId: string | null = null;
+      if (pathname && pathname !== '/') {
+        const parts = pathname.split('/').filter(Boolean);
+        if (parts.length >= 1) {
+          const lastPart = parts[parts.length - 1];
+          if (lastPart.startsWith('post-') || lastPart.startsWith('content-')) {
+            pathPostId = lastPart.replace(/^(post|content)-/, '');
+          } else if (parts.length >= 2 && lastPart !== 'admin' && lastPart !== 'api') {
+            pathPostId = lastPart;
+          }
+        }
+      }
+
+      // 3. Check Hash
       const rawHash = window.location.hash ? window.location.hash.replace('#', '').trim() : null;
 
-      if (postIdParam && postIdParam !== 'admin') {
-        setSinglePostId(postIdParam);
-      } else if (rawHash && rawHash !== 'admin' && rawHash.length > 2) {
-        setSinglePostId(rawHash);
+      const resolvedId = postIdParam || pathPostId || (rawHash && rawHash !== 'admin' && rawHash.length > 2 ? rawHash : null);
+
+      if (resolvedId && resolvedId !== 'admin') {
+        setSinglePostId(resolvedId);
       } else {
         setSinglePostId(null);
       }
@@ -311,6 +328,18 @@ export default function App() {
       window.removeEventListener('hashchange', handleUrlRouting);
     };
   }, [user]);
+
+  // Sync document title when viewing single post
+  useEffect(() => {
+    if (singlePostId) {
+      const match = contents.find((c) => c.id === singlePostId || c.id.endsWith(singlePostId));
+      if (match) {
+        document.title = `${match.title} | گیک‌کلاب`;
+        return;
+      }
+    }
+    document.title = 'گیک‌کلاب | GeekClub - مرجع محتوای گلچین شده';
+  }, [singlePostId, contents]);
 
   // Feedback list state
   const [feedbackList, setFeedbackList] = useState<FeedbackItem[]>(() => {
@@ -595,10 +624,11 @@ export default function App() {
   // --- Share Handler ---
   const handleShare = (item: ContentItem) => {
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://geekclub.ir';
-    const permalink = `${origin}/?p=${item.id}`;
+    const cat = item.category || 'tech';
+    const permalink = `${origin}/${cat}/post-${item.id}`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(permalink);
-      addToast('success', 'لینک اختصاصی این مطلب با موفقیت کپی شد ✨');
+      addToast('success', 'لینک اختصاصی این مطلب با فرمت دسته‌بندی و اسلاگ کپی شد ✨');
     } else {
       addToast('info', `لینک اختصاصی مطلب: ${permalink}`);
     }
@@ -897,9 +927,30 @@ export default function App() {
     setIsLoggingInWithGoogle(true);
     try {
       const verified = await loginWithGooglePopup();
-      // Ask user for their username immediately after successful Google authentication
-      setTempGoogleUser(verified);
-      setIsUsernameModalOpen(true);
+
+      // Check if user already exists in usersList and has completed registration
+      const existing = usersList.find(
+        (u) =>
+          (u.email && verified.email && u.email.toLowerCase() === verified.email.toLowerCase()) ||
+          u.uid === verified.uid
+      );
+
+      const isAlreadyRegistered = Boolean(
+        existing && (existing.hasCompletedRegistration || (existing.username && existing.username !== 'user'))
+      );
+
+      if (isAlreadyRegistered && existing) {
+        // Returning user -> direct login without showing registration popup
+        handleLogin({
+          ...existing,
+          photoURL: verified.photoURL || existing.photoURL,
+          displayName: existing.displayName || verified.displayName
+        });
+      } else {
+        // First-time login -> show registration completion popup
+        setTempGoogleUser(verified);
+        setIsUsernameModalOpen(true);
+      }
     } catch (err: any) {
       console.error('Direct Google login error:', err);
       if (err?.code === 'auth/unauthorized-domain') {
@@ -917,19 +968,34 @@ export default function App() {
   };
 
   const handleCompleteUsernameSetup = (profile: UserProfile) => {
-    handleLogin(profile);
+    handleLogin({
+      ...profile,
+      hasCompletedRegistration: true
+    });
     setIsUsernameModalOpen(false);
     setTempGoogleUser(null);
   };
 
   const handleBypassWithEmail = (email: string, name: string) => {
-    setTempGoogleUser({
-      uid: `usr-${Date.now()}`,
-      displayName: name,
-      email: email,
-      photoURL: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name)}`
-    });
-    setIsUsernameModalOpen(true);
+    const existing = usersList.find(
+      (u) => u.email && u.email.toLowerCase() === email.toLowerCase()
+    );
+
+    const isAlreadyRegistered = Boolean(
+      existing && (existing.hasCompletedRegistration || (existing.username && existing.username !== 'user'))
+    );
+
+    if (isAlreadyRegistered && existing) {
+      handleLogin(existing);
+    } else {
+      setTempGoogleUser({
+        uid: existing?.uid || `usr-${Date.now()}`,
+        displayName: name || existing?.displayName || 'کاربر گیک',
+        email: email,
+        photoURL: existing?.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name || 'user')}`
+      });
+      setIsUsernameModalOpen(true);
+    }
   };
 
   // --- Profile, Inbox & Guestbook Handlers ---
@@ -1089,6 +1155,13 @@ export default function App() {
     setShowTrashOnly(false);
   };
 
+  const handleGoHome = () => {
+    setSinglePostId(null);
+    handleResetFilters();
+    window.history.pushState({}, '', '/');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const isAdmin = Boolean(
     user && (
       user.isAdmin ||
@@ -1220,6 +1293,7 @@ export default function App() {
         totalItemsCount={contents.filter((c) => !c.isDeleted).length}
         theme={theme}
         onToggleTheme={handleToggleTheme}
+        onGoHome={handleGoHome}
       />
 
       {/* Guest Welcome Banner */}
@@ -1255,7 +1329,7 @@ export default function App() {
             <button
               onClick={() => {
                 setSinglePostId(null);
-                window.history.pushState({}, '', window.location.pathname);
+                window.history.pushState({}, '', '/');
               }}
               className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-2 transition cursor-pointer shrink-0 shadow-lg shadow-indigo-600/30 active:scale-95"
             >
@@ -1329,7 +1403,11 @@ export default function App() {
                 onLike={handleLike}
                 onDislike={handleDislike}
                 onOpenComments={(targetItem) => setActiveCommentsItem(targetItem)}
-                onOpenArticleReader={(targetItem) => setActiveArticleItem(targetItem)}
+                onOpenArticleReader={(targetItem) => {
+                  setActiveArticleItem(targetItem);
+                  const cat = targetItem.category || 'tech';
+                  window.history.pushState({}, '', `/${cat}/post-${targetItem.id}`);
+                }}
                 onToggleSave={handleToggleSave}
                 onShare={handleShare}
                 onTagClick={(tag) => setSearchQuery(tag)}
@@ -1367,7 +1445,17 @@ export default function App() {
       <footer className="border-t border-slate-800/80 bg-slate-900/95 backdrop-blur-xl py-8 text-xs text-slate-400 mt-12 shadow-lg shadow-slate-950/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-200">گیک کلاب (GeekClub)</span>
+            <a
+              href="/"
+              onClick={(e) => {
+                e.preventDefault();
+                handleGoHome();
+              }}
+              className="font-bold text-slate-200 hover:text-[#0077d9] transition-colors cursor-pointer"
+              title="بازگشت به صفحه اصلی سایت"
+            >
+              گیک کلاب (GeekClub)
+            </a>
             <span>- پلتفرم اشتراک محتوای مناسب گیک‌ها</span>
           </div>
 
