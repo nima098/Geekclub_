@@ -45,11 +45,10 @@ function getAdminHeaders(): Record<string, string> {
 
 function getDeletedIds(): string[] {
   try {
-    const saved = localStorage.getItem(DELETED_IDS_KEY);
-    return saved ? JSON.parse(saved) : [];
-  } catch {
-    return [];
-  }
+    // Clear legacy localStorage blacklist to ensure soft-deleted items show in Trash Bin
+    localStorage.removeItem(DELETED_IDS_KEY);
+  } catch {}
+  return [];
 }
 
 function addDeletedId(id: string) {
@@ -81,8 +80,6 @@ export const api = {
     sort?: SortOption;
     includeDeleted?: boolean;
   }): Promise<ContentItem[]> {
-    const deletedIds = getDeletedIds();
-
     // Primary: Call server REST endpoint which handles database logic
     try {
       const params = new URLSearchParams();
@@ -90,14 +87,13 @@ export const api = {
       if (filters?.category && filters.category !== 'all') params.append('category', filters.category);
       if (filters?.search) params.append('search', filters.search);
       if (filters?.sort) params.append('sort', filters.sort);
-      if (filters?.includeDeleted) params.append('includeDeleted', 'true');
+      params.append('includeDeleted', 'true');
 
       const res = await fetch(`/api/contents?${params.toString()}`);
       if (res.ok) {
         const json = await res.json();
         if (Array.isArray(json.data)) {
           return json.data.filter((c: ContentItem) => {
-            if (deletedIds.includes(c.id)) return false;
             if (!filters?.includeDeleted && c.isDeleted) return false;
             return true;
           });
@@ -107,7 +103,7 @@ export const api = {
       // Server REST endpoint fallback
     }
 
-    return INITIAL_CONTENT.filter((c) => !deletedIds.includes(c.id) && (filters?.includeDeleted || !c.isDeleted));
+    return INITIAL_CONTENT.filter((c) => filters?.includeDeleted || !c.isDeleted);
   },
 
   // Sanction-proof polling subscription for live updates without 403 Google WebChannel errors
@@ -121,9 +117,7 @@ export const api = {
         .then((res) => (res.ok ? res.json() : null))
         .then((json) => {
           if (isSubscribed && json?.data && Array.isArray(json.data)) {
-            const deletedIds = getDeletedIds();
-            const filtered = json.data.filter((c: ContentItem) => !deletedIds.includes(c.id));
-            callback(filtered);
+            callback(json.data);
           }
         })
         .catch(() => {});
@@ -198,11 +192,6 @@ export const api = {
 
   // 3. Update content (approval / edit / delete / reaction)
   async updateContent(id: string, updates: Partial<ContentItem>): Promise<void> {
-    if (updates.isDeleted === true) {
-      addDeletedId(id);
-    } else if (updates.isDeleted === false) {
-      removeDeletedId(id);
-    }
 
     // Primary: Express REST API endpoint
     try {

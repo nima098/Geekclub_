@@ -469,7 +469,7 @@ export default function App() {
   // Synchronize with Cloud Firestore in real-time
   useEffect(() => {
     async function syncBackendData() {
-      const serverContents = await api.getContents();
+      const serverContents = await api.getContents({ includeDeleted: true });
       if (Array.isArray(serverContents)) {
         setContents(serverContents);
       }

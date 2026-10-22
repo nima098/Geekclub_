@@ -179,9 +179,9 @@ function loadDatabase(): DatabaseSchema {
     }
   }
 
-  // Filter out deletedIds from dbData.contents
-  if (dbData.deletedIds && dbData.deletedIds.length > 0) {
-    dbData.contents = dbData.contents.filter((c) => !dbData.deletedIds?.includes(c.id));
+  // Ensure deletedIds array exists
+  if (!dbData.deletedIds) {
+    dbData.deletedIds = [];
   }
 
   // Purge any remaining Unsplash URLs and replace with CDN assets
@@ -1354,11 +1354,7 @@ app.patch('/api/contents/:id', (req: Request, res: Response) => {
 
   if (!db.deletedIds) db.deletedIds = [];
 
-  if (updates.isDeleted === true) {
-    if (!db.deletedIds.includes(id)) {
-      db.deletedIds.push(id);
-    }
-  } else if (updates.isDeleted === false) {
+  if (updates.isDeleted === false) {
     db.deletedIds = db.deletedIds.filter((dId) => dId !== id);
   }
   
