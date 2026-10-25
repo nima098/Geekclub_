@@ -530,7 +530,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             </button>
 
             {/* Admin-Only Delete button (Moves content to Trash Bin) */}
-            {isAdmin && onDeleteContent && !item.isDeleted && (
+            {isAdmin && onDeleteContent && !(item.isDeleted || item.isArchived) && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -545,7 +545,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             )}
 
             {/* Restore button (When viewing Trash as Admin) */}
-            {isAdmin && item.isDeleted && onRestoreContent && (
+            {isAdmin && (item.isDeleted || item.isArchived) && onRestoreContent && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -560,7 +560,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             )}
 
             {/* Permanent Delete button (When viewing Trash as Admin) */}
-            {isAdmin && item.isDeleted && onPermanentDelete && (
+            {isAdmin && (item.isDeleted || item.isArchived) && onPermanentDelete && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();

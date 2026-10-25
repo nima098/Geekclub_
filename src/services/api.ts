@@ -43,6 +43,54 @@ function getAdminHeaders(): Record<string, string> {
   };
 }
 
+const SOFT_DELETED_IDS_KEY = 'geekclub_soft_deleted_v3';
+
+export function getLocalSoftDeletedIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(SOFT_DELETED_IDS_KEY);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        return new Set(arr);
+      }
+    }
+  } catch {}
+  return new Set();
+}
+
+export function addLocalSoftDeletedId(id: string) {
+  try {
+    const set = getLocalSoftDeletedIds();
+    const cleanId = String(id).replace(/^(post|content|custom)-/, '').trim();
+    set.add(id);
+    if (cleanId) set.add(cleanId);
+    localStorage.setItem(SOFT_DELETED_IDS_KEY, JSON.stringify(Array.from(set)));
+  } catch {}
+}
+
+export function removeLocalSoftDeletedId(id: string) {
+  try {
+    const set = getLocalSoftDeletedIds();
+    const cleanId = String(id).replace(/^(post|content|custom)-/, '').trim();
+    set.delete(id);
+    if (cleanId) set.delete(cleanId);
+    set.delete(`post-${cleanId}`);
+    set.delete(`content-${cleanId}`);
+    set.delete(`custom-${cleanId}`);
+    localStorage.setItem(SOFT_DELETED_IDS_KEY, JSON.stringify(Array.from(set)));
+  } catch {}
+}
+
+export function isIdSoftDeleted(id: string, softSet?: Set<string>): boolean {
+  const set = softSet || getLocalSoftDeletedIds();
+  if (!id) return false;
+  if (set.has(id)) return true;
+  const cleanId = String(id).replace(/^(post|content|custom)-/, '').trim();
+  if (cleanId && set.has(cleanId)) return true;
+  if (cleanId && (set.has(`post-${cleanId}`) || set.has(`content-${cleanId}`) || set.has(`custom-${cleanId}`))) return true;
+  return false;
+}
+
 function getDeletedIds(): string[] {
   try {
     // Clear legacy localStorage blacklist to ensure soft-deleted items show in Trash Bin
@@ -80,6 +128,7 @@ export const api = {
     sort?: SortOption;
     includeDeleted?: boolean;
   }): Promise<ContentItem[]> {
+    const softSet = getLocalSoftDeletedIds();
     // Primary: Call server REST endpoint which handles database logic
     try {
       const params = new URLSearchParams();
@@ -89,6 +138,7 @@ export const api = {
       if (filters?.sort) params.append('sort', filters.sort);
       if (filters?.includeDeleted) {
         params.append('includeDeleted', 'true');
+        params.append('includeArchived', 'true');
       }
       params.append('_t', Date.now().toString());
 
@@ -102,10 +152,16 @@ export const api = {
       if (res.ok) {
         const json = await res.json();
         if (Array.isArray(json.data)) {
+          const processed = json.data.map((c: ContentItem) => {
+            if (isIdSoftDeleted(c.id, softSet)) {
+              return { ...c, isDeleted: true, isArchived: true };
+            }
+            return c;
+          });
           try {
-            sessionStorage.setItem('geekclub_synced_contents_v2', JSON.stringify(json.data));
+            sessionStorage.setItem('geekclub_synced_contents_v2', JSON.stringify(processed));
           } catch {}
-          return json.data.filter((c: ContentItem) => {
+          return processed.filter((c: ContentItem) => {
             if (!filters?.includeDeleted && (c.isDeleted || c.isArchived)) return false;
             return true;
           });
@@ -120,12 +176,20 @@ export const api = {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.filter((c: ContentItem) => filters?.includeDeleted || (!c.isDeleted && !c.isArchived));
+          const processed = parsed.map((c: ContentItem) => {
+            if (isIdSoftDeleted(c.id, softSet)) {
+              return { ...c, isDeleted: true, isArchived: true };
+            }
+            return c;
+          });
+          return processed.filter((c: ContentItem) => filters?.includeDeleted || (!c.isDeleted && !c.isArchived));
         }
       }
     } catch {}
 
-    return INITIAL_CONTENT.filter((c) => filters?.includeDeleted || (!c.isDeleted && !c.isArchived));
+    return INITIAL_CONTENT
+      .map((c) => isIdSoftDeleted(c.id, softSet) ? { ...c, isDeleted: true, isArchived: true } : c)
+      .filter((c) => filters?.includeDeleted || (!c.isDeleted && !c.isArchived));
   },
 
   // Centralized polling subscription for live updates across all open browsers
@@ -135,7 +199,8 @@ export const api = {
 
     const fetchLatest = () => {
       if (!isSubscribed) return;
-      fetch(`/api/contents?includeDeleted=true&_t=${Date.now()}`, {
+      const softSet = getLocalSoftDeletedIds();
+      fetch(`/api/contents?includeDeleted=true&includeArchived=true&_t=${Date.now()}`, {
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -145,10 +210,16 @@ export const api = {
         .then((res) => (res.ok ? res.json() : null))
         .then((json) => {
           if (isSubscribed && json?.data && Array.isArray(json.data)) {
+            const processed = json.data.map((c: ContentItem) => {
+              if (isIdSoftDeleted(c.id, softSet)) {
+                return { ...c, isDeleted: true, isArchived: true };
+              }
+              return c;
+            });
             try {
-              sessionStorage.setItem('geekclub_synced_contents_v2', JSON.stringify(json.data));
+              sessionStorage.setItem('geekclub_synced_contents_v2', JSON.stringify(processed));
             } catch {}
-            callback(json.data);
+            callback(processed);
           }
         })
         .catch(() => {});
@@ -255,6 +326,9 @@ export const api = {
     const encodedId = encodeURIComponent(id);
     const headers = getAdminHeaders();
 
+    // Mark in persistent local set immediately so no in-flight polling can resurrect it
+    addLocalSoftDeletedId(id);
+
     // Primary: Express REST API endpoint
     try {
       const res = await fetch(`/api/contents/${encodedId}/soft-delete`, {
@@ -286,7 +360,7 @@ export const api = {
         const list = JSON.parse(cached);
         if (Array.isArray(list)) {
           const updated = list.map((c: ContentItem) =>
-            c.id === id || c.id.replace(/^(post|content)-/, '') === id.replace(/^(post|content)-/, '')
+            c.id === id || c.id.replace(/^(post|content|custom)-/, '') === id.replace(/^(post|content|custom)-/, '')
               ? { ...c, isDeleted: true, isArchived: true, deletedAt: timeStr }
               : c
           );
@@ -305,6 +379,9 @@ export const api = {
   async restoreContent(id: string): Promise<void> {
     const encodedId = encodeURIComponent(id);
     const headers = getAdminHeaders();
+
+    // Remove from persistent local soft-deleted set
+    removeLocalSoftDeletedId(id);
 
     // Primary: Express REST API endpoint
     try {
@@ -337,7 +414,7 @@ export const api = {
         const list = JSON.parse(cached);
         if (Array.isArray(list)) {
           const updated = list.map((c: ContentItem) =>
-            c.id === id || c.id.replace(/^(post|content)-/, '') === id.replace(/^(post|content)-/, '')
+            c.id === id || c.id.replace(/^(post|content|custom)-/, '') === id.replace(/^(post|content|custom)-/, '')
               ? { ...c, isDeleted: false, isArchived: false }
               : c
           );
@@ -356,6 +433,9 @@ export const api = {
   async deleteContent(id: string): Promise<void> {
     const encodedId = encodeURIComponent(id);
     const headers = getAdminHeaders();
+
+    // Remove from local soft-deleted set
+    removeLocalSoftDeletedId(id);
 
     // Primary: Express REST API endpoint
     try {
@@ -379,7 +459,7 @@ export const api = {
         const list = JSON.parse(cached);
         if (Array.isArray(list)) {
           const updated = list.filter((c: ContentItem) =>
-            c.id !== id && c.id.replace(/^(post|content)-/, '') !== id.replace(/^(post|content)-/, '')
+            c.id !== id && c.id.replace(/^(post|content|custom)-/, '') !== id.replace(/^(post|content|custom)-/, '')
           );
           sessionStorage.setItem('geekclub_synced_contents_v2', JSON.stringify(updated));
         }

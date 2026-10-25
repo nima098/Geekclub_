@@ -523,9 +523,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   if (!isOpen) return null;
 
   // Counts
-  const activeCount = contents.filter((c) => !c.isDeleted && c.approvalStatus !== 'pending' && c.approvalStatus !== 'rejected').length;
-  const pendingCount = contents.filter((c) => !c.isDeleted && c.approvalStatus === 'pending').length;
-  const trashCount = contents.filter((c) => c.isDeleted).length;
+  const activeCount = contents.filter((c) => !c.isDeleted && !c.isArchived && c.approvalStatus !== 'pending' && c.approvalStatus !== 'rejected').length;
+  const pendingCount = contents.filter((c) => !c.isDeleted && !c.isArchived && c.approvalStatus === 'pending').length;
+  const trashCount = contents.filter((c) => c.isDeleted || c.isArchived).length;
   const pendingFeedbackCount = feedbackList.filter((f) => f.status === 'pending').length;
 
   const autoApprovedUsersCount = usersList.filter((u) => u.autoApproveContent || u.isAdmin).length;
@@ -533,13 +533,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
   // Filtered contents
   const filteredContents = contents.filter((c) => {
-    if (contentFilter === 'active' && (c.isDeleted || c.approvalStatus === 'pending' || c.approvalStatus === 'rejected')) {
+    if (contentFilter === 'active' && ((c.isDeleted || c.isArchived) || c.approvalStatus === 'pending' || c.approvalStatus === 'rejected')) {
       return false;
     }
-    if (contentFilter === 'pending' && (c.isDeleted || c.approvalStatus !== 'pending')) {
+    if (contentFilter === 'pending' && ((c.isDeleted || c.isArchived) || c.approvalStatus !== 'pending')) {
       return false;
     }
-    if (contentFilter === 'trash' && !c.isDeleted) {
+    if (contentFilter === 'trash' && !c.isDeleted && !c.isArchived) {
       return false;
     }
     if (contentSearch.trim()) {
@@ -980,7 +980,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       className={`p-4 rounded-2xl border shadow-md transition flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
                         item.approvalStatus === 'pending'
                           ? 'bg-amber-950/30 border-amber-500/50 ring-1 ring-amber-500/30'
-                          : item.isDeleted
+                          : (item.isDeleted || item.isArchived)
                           ? 'bg-rose-950/30 border-rose-800/50 opacity-80'
                           : 'bg-slate-800/80 border-slate-700/80'
                       }`}
@@ -1002,12 +1002,12 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                 نیازمند بررسی و تأیید مدیر
                               </span>
                             )}
-                            {item.isDeleted && (
+                            {(item.isDeleted || item.isArchived) && (
                               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
                                 در سطل بازیافت
                               </span>
                             )}
-                            {!item.isDeleted && item.approvalStatus !== 'pending' && (
+                            {!(item.isDeleted || item.isArchived) && item.approvalStatus !== 'pending' && (
                               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                                 فعال در فید
                               </span>
@@ -1048,7 +1048,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         )}
 
                         {/* If item is in Trash */}
-                        {item.isDeleted && (
+                        {(item.isDeleted || item.isArchived) && (
                           <>
                             <button
                               onClick={() => onToggleSoftDelete(item.id, false)}
@@ -1069,7 +1069,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         )}
 
                         {/* Normal Active Content */}
-                        {!item.isDeleted && item.approvalStatus !== 'pending' && (
+                        {!(item.isDeleted || item.isArchived) && item.approvalStatus !== 'pending' && (
                           <button
                             onClick={() => onToggleSoftDelete(item.id, true)}
                             className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-rose-600/20 text-rose-400 hover:text-rose-300 border border-rose-500/30 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"

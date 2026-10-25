@@ -1101,12 +1101,13 @@ export default function App() {
   // --- Soft-Delete & Trash Handlers ---
   const handleToggleSoftDelete = async (contentId: string, shouldDelete: boolean) => {
     const deletedAtStr = shouldDelete ? new Date().toLocaleDateString('fa-IR') : undefined;
-    const cleanId = contentId.replace(/^(post|content)-/, '');
+    const normalize = (s: string) => String(s).replace(/^(post|content|custom)-/, '').trim();
+    const cleanId = normalize(contentId);
 
     setContents((prev) => {
       const updated = prev.map((c) => {
-        const cCleanId = c.id.replace(/^(post|content)-/, '');
-        if (c.id === contentId || cCleanId === cleanId || c.id.endsWith(cleanId) || contentId.endsWith(c.id)) {
+        const cCleanId = normalize(c.id);
+        if (c.id === contentId || cCleanId === cleanId || c.id.endsWith(cleanId) || contentId.endsWith(cCleanId)) {
           return {
             ...c,
             isDeleted: shouldDelete,
@@ -1132,11 +1133,12 @@ export default function App() {
   };
 
   const handlePermanentDelete = async (contentId: string) => {
-    const cleanId = contentId.replace(/^(post|content)-/, '');
+    const normalize = (s: string) => String(s).replace(/^(post|content|custom)-/, '').trim();
+    const cleanId = normalize(contentId);
 
     setContents((prev) => {
       const updated = prev.filter((c) => {
-        const cCleanId = c.id.replace(/^(post|content)-/, '');
+        const cCleanId = normalize(c.id);
         return c.id !== contentId && cCleanId !== cleanId && !c.id.endsWith(cleanId);
       });
       try {
@@ -1213,14 +1215,14 @@ export default function App() {
   );
 
   const trashCount = useMemo(() => {
-    return contents.filter((c) => c.isDeleted).length;
+    return contents.filter((c) => c.isDeleted || c.isArchived).length;
   }, [contents]);
 
   // --- Filtered & Sorted Content List ---
   const filteredContents = useMemo(() => {
     // If Single Post Permalink Mode is active
     if (singlePostId) {
-      const match = contents.filter((item) => !item.isDeleted && (item.id === singlePostId || item.id.endsWith(singlePostId)));
+      const match = contents.filter((item) => !item.isDeleted && !item.isArchived && (item.id === singlePostId || item.id.endsWith(singlePostId)));
       if (match.length > 0) {
         return match;
       }
@@ -1230,11 +1232,11 @@ export default function App() {
       .filter((item) => {
         // Trash filter for admin
         if (showTrashOnly) {
-          return Boolean(item.isDeleted);
+          return Boolean(item.isDeleted || item.isArchived);
         }
 
         // Soft-delete filter: Exclude items in trash from public feed
-        if (item.isDeleted) {
+        if (item.isDeleted || item.isArchived) {
           return false;
         }
 
@@ -1331,7 +1333,7 @@ export default function App() {
         unreadInboxCount={inbox.filter((m) => !m.read).length}
         onToggleSavedOnly={() => setShowSavedOnly(!showSavedOnly)}
         showSavedOnly={showSavedOnly}
-        totalItemsCount={contents.filter((c) => !c.isDeleted).length}
+        totalItemsCount={contents.filter((c) => !c.isDeleted && !c.isArchived).length}
         theme={theme}
         onToggleTheme={handleToggleTheme}
         onGoHome={handleGoHome}

@@ -53,14 +53,30 @@ export default function handler(req, res) {
   const pathParts = urlPath.split('?')[0].split('/').filter(Boolean);
   const contentId = pathParts.length > 2 ? pathParts[2] : req.query?.id;
 
+  const normalize = (s) => String(s || '').replace(/^(post|content|custom)-/, '').trim();
+  const matchesContentId = (item, id) => {
+    if (!item || !id) return false;
+    const itemId = String(item.id || '');
+    if (itemId === id) return true;
+    const cleanId = normalize(id);
+    const cleanItemId = normalize(itemId);
+    if (cleanItemId === cleanId) return true;
+    if (cleanId && (itemId.endsWith(cleanId) || id.endsWith(cleanItemId))) return true;
+    return false;
+  };
+
   try {
     // Check for soft-delete subpath
     if (urlPath.includes('/soft-delete') || req.body?.isDeleted === true) {
       const id = contentId || req.query?.id || req.body?.id;
       if (id) {
+        if (!db.softDeletedIds) db.softDeletedIds = [];
+        if (!db.softDeletedIds.some((sId) => matchesContentId({ id: sId }, id))) {
+          db.softDeletedIds.push(id);
+        }
         let matched = false;
         for (const c of db.contents) {
-          if (c.id === id || c.id.replace(/^(post|content)-/, '') === id.replace(/^(post|content)-/, '')) {
+          if (matchesContentId(c, id)) {
             c.isDeleted = true;
             c.isArchived = true;
             c.deletedAt = req.body?.deletedAt || new Date().toISOString();
@@ -68,7 +84,7 @@ export default function handler(req, res) {
           }
         }
         if (!matched) {
-          db.contents.push({ id, title: 'محتوای حذف‌شده', url: '', isDeleted: true, isArchived: true });
+          db.contents.push({ id, title: 'محتوای حذف‌شده', url: '', isDeleted: true, isArchived: true, deletedAt: req.body?.deletedAt || new Date().toISOString() });
         }
         saveDatabase(db);
         return res.status(200).json({ success: true, message: 'Content soft-deleted' });
@@ -79,16 +95,19 @@ export default function handler(req, res) {
     if (urlPath.includes('/restore') || (req.body?.isDeleted === false && req.method === 'POST')) {
       const id = contentId || req.query?.id || req.body?.id;
       if (id) {
+        if (db.softDeletedIds) {
+          db.softDeletedIds = db.softDeletedIds.filter((sId) => !matchesContentId({ id: sId }, id));
+        }
+        if (db.deletedIds) {
+          db.deletedIds = db.deletedIds.filter((dId) => !matchesContentId({ id: dId }, id));
+        }
         for (const c of db.contents) {
-          if (c.id === id || c.id.replace(/^(post|content)-/, '') === id.replace(/^(post|content)-/, '')) {
+          if (matchesContentId(c, id)) {
             c.isDeleted = false;
             c.isArchived = false;
             delete c.deletedAt;
             delete c.archivedAt;
           }
-        }
-        if (db.deletedIds) {
-          db.deletedIds = db.deletedIds.filter((dId) => dId !== id && dId !== id.replace(/^(post|content)-/, ''));
         }
         saveDatabase(db);
         return res.status(200).json({ success: true, message: 'Content restored' });
@@ -100,7 +119,7 @@ export default function handler(req, res) {
       let results = [...db.contents];
 
       if (db.deletedIds && db.deletedIds.length > 0) {
-        results = results.filter((c) => !db.deletedIds.includes(c.id));
+        results = results.filter((c) => !db.deletedIds.some((delId) => matchesContentId(c, delId)));
       }
 
       if (includeDeleted !== 'true') {

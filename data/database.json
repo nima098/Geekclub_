@@ -1,6 +1,44 @@
 {
   "contents": [
     {
+      "id": "custom-1792907218925",
+      "title": "تست محتوای سفارشی جهت بررسی حذف",
+      "description": "",
+      "url": "https://example.com/test-article",
+      "platform": "article",
+      "embedUrl": "https://example.com/test-article",
+      "thumbnail": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"800\" height=\"450\" viewBox=\"0 0 800 450\"><rect width=\"800\" height=\"450\" fill=\"%230f172a\"/><text x=\"400\" y=\"235\" font-family=\"Tahoma,sans-serif\" font-size=\"22\" fill=\"%23f8fafc\" text-anchor=\"middle\">GeekClub Media</text></svg>",
+      "author": {
+        "name": "کاربر گیک کلاب",
+        "avatar": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"200\" height=\"200\" viewBox=\"0 0 200 200\"><rect width=\"200\" height=\"200\" rx=\"100\" fill=\"%231e293b\"/><circle cx=\"100\" cy=\"75\" r=\"38\" fill=\"%233b82f6\"/><path d=\"M 35 175 C 35 130, 165 130, 165 175 Z\" fill=\"%233b82f6\"/></svg>",
+        "handle": "@geek",
+        "isVerified": false
+      },
+      "category": "tech",
+      "tags": [
+        "محتوا",
+        "گیک_کلاب"
+      ],
+      "publishedAt": "لحظاتی پیش",
+      "readingOrWatchTime": "۵ دقیقه",
+      "likesCount": 1,
+      "dislikesCount": 0,
+      "commentsCount": 0,
+      "approvalStatus": "approved",
+      "authorUid": "",
+      "articleContent": "",
+      "sourceDomain": "web",
+      "needsEnrichment": false,
+      "videoUrl": "",
+      "mediaType": "image",
+      "images": [],
+      "slides": [],
+      "apifyFetched": false,
+      "isDeleted": true,
+      "isArchived": true,
+      "deletedAt": "2026-10-25T05:46:58.932Z"
+    },
+    {
       "id": "ig-da7z2zvjklL",
       "title": "پست منتخب در اینستاگرام",
       "description": "پست چند اسلایدی اینستاگرام شامل عکس‌ها و ویدیوهای دریافت شده از طریق Apify و آپلود شده روی CDN اختصاصی upc.geekclub.ir/s1/instagram/.",
@@ -43,7 +81,8 @@
       "commentsCount": 2,
       "approvalStatus": "approved",
       "sourceDomain": "instagram.com",
-      "isDeleted": true
+      "isDeleted": true,
+      "isArchived": true
     },
     {
       "id": "content-1792527808872",
@@ -77,7 +116,8 @@
       "articleContent": "ویدیوی به اشتراک گذاشته شده از یوتیوب.",
       "sourceDomain": "web",
       "isDeleted": true,
-      "deletedAt": "2026-10-22T22:31:54.126Z"
+      "deletedAt": "2026-10-22T22:31:54.126Z",
+      "isArchived": true
     },
     {
       "id": "yt-pending-1",
@@ -107,7 +147,10 @@
       "userReaction": null,
       "sourceDomain": "youtube.com",
       "approvalStatus": "pending",
-      "authorUid": "usr-sara"
+      "authorUid": "usr-sara",
+      "isDeleted": true,
+      "isArchived": true,
+      "deletedAt": "2026-10-25T05:38:15.977Z"
     },
     {
       "id": "yt-1",
@@ -138,7 +181,8 @@
       "userReaction": null,
       "sourceDomain": "youtube.com",
       "isDeleted": true,
-      "deletedAt": null
+      "deletedAt": null,
+      "isArchived": true
     },
     {
       "id": "art-1",
@@ -170,7 +214,7 @@
       "sourceDomain": "virgool.io",
       "articleContent": "در چند سال اخیر شاهد دوره‌ای بودیم که همه اپلیکیشن‌ها به سمت خاکستری‌های بی‌روح و دکمه‌های هم‌شکل حرکت کردند. اما اکنون کاربران به دنبال شخصیت و هویت بصری هستند.\n\nاصول کلیدی که امروزه برای هر محصول حیاتی است:\n۱. سلسله‌مراتب تایپوگرافی قدرتمند با فونت‌های رسا و خوانا\n۲. کنتراست رنگی هدفمند که مسیر چشم مخاطب را هدایت می‌کند\n۳. میکروانیمیشن‌هایی که بازخورد فوری از کنش‌های کاربر ارائه می‌دهند\n۴. طراحی واکنش‌گرا و دسترس‌پذیری برای تمامی نمایشگرها\n\nتوصیه مهم برای طراحان این است که همیشه پیش از شروع ساخت کامپوننت‌ها، سیستم طراحی (Design System) یکپارچه و مقیاس‌پذیر بسازند تا تجربه تعاملی کاربران در تمام مراحل پیوسته باقی بماند.",
       "isDeleted": true,
-      "isArchived": false,
+      "isArchived": true,
       "deletedAt": "2026-10-22T22:39:29.417Z"
     },
     {
@@ -203,7 +247,8 @@
       "sourceDomain": "instagram.com",
       "approvalStatus": "approved",
       "mediaType": "image",
-      "isDeleted": true
+      "isDeleted": true,
+      "isArchived": true
     },
     {
       "id": "aparat-1",
@@ -235,7 +280,8 @@
       "sourceDomain": "aparat.com",
       "approvalStatus": "approved",
       "isDeleted": true,
-      "deletedAt": "2026-10-22T22:32:18.245Z"
+      "deletedAt": "2026-10-22T22:32:18.245Z",
+      "isArchived": true
     },
     {
       "id": "ig-1",
@@ -385,7 +431,10 @@
       "dislikesCount": 7,
       "commentsCount": 33,
       "userReaction": null,
-      "sourceDomain": "youtube.com"
+      "sourceDomain": "youtube.com",
+      "isDeleted": true,
+      "isArchived": true,
+      "deletedAt": "2026-10-25T05:35:38.139Z"
     },
     {
       "id": "art-3",
@@ -415,7 +464,9 @@
       "commentsCount": 17,
       "userReaction": null,
       "sourceDomain": "techcrunch.ir",
-      "articleContent": "بزرگ‌ترین اشتباه بنیان‌گذاران، غرق شدن در ساخت بی‌نقص محصول قبل از صحبت با مشتریان واقعی است.\n\nچرخه ساخت - سنجش - یادگیری (Build - Measure - Learn):\n۱. فرضیه‌های اصلی خود را مشخص کنید: مشتریان چه مشکلی دارند و آیا حاضرند برای حل آن پول پرداخت کنند؟\n۲. کمینه‌محصول‌پذیرفتنی (MVP) را در سریع‌ترین زمان ممکن به دست کاربر برسانید.\n۳. داده‌های رفتاری را با معیارهای عملیاتی بسنجید نه معیارهای کاذب.\n۴. در صورت لزوم چرخش استراتژیک (Pivot) انجام دهید یا با اطمینان مقیاس کار را افزایش دهید."
+      "articleContent": "بزرگ‌ترین اشتباه بنیان‌گذاران، غرق شدن در ساخت بی‌نقص محصول قبل از صحبت با مشتریان واقعی است.\n\nچرخه ساخت - سنجش - یادگیری (Build - Measure - Learn):\n۱. فرضیه‌های اصلی خود را مشخص کنید: مشتریان چه مشکلی دارند و آیا حاضرند برای حل آن پول پرداخت کنند؟\n۲. کمینه‌محصول‌پذیرفتنی (MVP) را در سریع‌ترین زمان ممکن به دست کاربر برسانید.\n۳. داده‌های رفتاری را با معیارهای عملیاتی بسنجید نه معیارهای کاذب.\n۴. در صورت لزوم چرخش استراتژیک (Pivot) انجام دهید یا با اطمینان مقیاس کار را افزایش دهید.",
+      "isDeleted": false,
+      "isArchived": false
     }
   ],
   "comments": {},
@@ -424,5 +475,16 @@
   "settings": {
     "diag_test_1792703494610": "2026-10-22T21:11:34.610Z",
     "diag_test_1792709437127": "2026-10-22T22:50:37.127Z"
-  }
+  },
+  "softDeletedIds": [
+    "ig-da7z2zvjklL",
+    "content-1792527808872",
+    "yt-pending-1",
+    "yt-1",
+    "art-1",
+    "ig-new-dzf",
+    "aparat-1",
+    "yt-3",
+    "custom-1792907218925"
+  ]
 }

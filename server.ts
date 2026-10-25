@@ -122,6 +122,7 @@ interface DatabaseSchema {
   contents: any[];
   comments: Record<string, any[]>;
   deletedIds?: string[];
+  softDeletedIds?: string[];
   settings?: Record<string, any>;
   profiles?: Record<string, any>;
 }
@@ -133,7 +134,7 @@ function loadDatabase(): DatabaseSchema {
     return cachedDb;
   }
 
-  let dbData: DatabaseSchema = { contents: [], comments: {}, deletedIds: [], settings: {}, profiles: {} };
+  let dbData: DatabaseSchema = { contents: [], comments: {}, deletedIds: [], softDeletedIds: [], settings: {}, profiles: {} };
 
   try {
     if (fs.existsSync(DB_PATH)) {
@@ -146,6 +147,10 @@ function loadDatabase(): DatabaseSchema {
 
   if (!dbData.deletedIds || !Array.isArray(dbData.deletedIds)) {
     dbData.deletedIds = [];
+  }
+
+  if (!dbData.softDeletedIds || !Array.isArray(dbData.softDeletedIds)) {
+    dbData.softDeletedIds = [];
   }
 
   if (!dbData.profiles || typeof dbData.profiles !== 'object') {
@@ -168,8 +173,9 @@ function loadDatabase(): DatabaseSchema {
     if (Array.isArray(INITIAL_CONTENT)) {
       const existingIds = new Set(dbData.contents.map((c: any) => c.id));
       const deletedSet = new Set(dbData.deletedIds);
+      const softDeletedSet = new Set(dbData.softDeletedIds);
       for (const seed of INITIAL_CONTENT) {
-        if (seed && seed.id && !existingIds.has(seed.id) && !deletedSet.has(seed.id)) {
+        if (seed && seed.id && !existingIds.has(seed.id) && !deletedSet.has(seed.id) && !softDeletedSet.has(seed.id)) {
           dbData.contents.push({
             ...seed,
             seedStatus: 'pending_approval' // Staged for Super Admin review
@@ -179,9 +185,16 @@ function loadDatabase(): DatabaseSchema {
     }
   }
 
-  // Ensure deletedIds array exists
-  if (!dbData.deletedIds) {
-    dbData.deletedIds = [];
+  // Ensure softDeletedIds are always enforced on all items in memory
+  if (dbData.softDeletedIds && Array.isArray(dbData.softDeletedIds) && dbData.contents) {
+    const softSet = new Set(dbData.softDeletedIds.map((s) => String(s).replace(/^(post|content|custom)-/, '').trim()));
+    for (const item of dbData.contents) {
+      const cleanId = String(item.id || '').replace(/^(post|content|custom)-/, '').trim();
+      if (dbData.softDeletedIds.includes(item.id) || softSet.has(cleanId)) {
+        item.isDeleted = true;
+        item.isArchived = true;
+      }
+    }
   }
 
   // Purge any remaining Unsplash URLs and replace with CDN assets
@@ -1154,8 +1167,8 @@ app.get('/api/contents', (req: Request, res: Response) => {
     results = results.filter((c) => !c.isDeleted && !c.isArchived);
   }
 
-  // Filter out archived items by default unless explicitly requested
-  if (includeArchived !== 'true') {
+  // Filter out archived items by default unless explicitly requested or if includeDeleted is true
+  if (includeArchived !== 'true' && includeDeleted !== 'true') {
     results = results.filter((c) => !c.isArchived);
   }
 
@@ -1352,11 +1365,11 @@ function matchesContentId(item: any, id: string): boolean {
   if (!item || !id) return false;
   const itemId = String(item.id || '');
   if (itemId === id) return true;
-  const cleanId = id.replace(/^(post|content)-/, '');
-  const cleanItemId = itemId.replace(/^(post|content)-/, '');
+  const normalize = (s: string) => String(s).replace(/^(post|content|custom)-/, '').trim();
+  const cleanId = normalize(id);
+  const cleanItemId = normalize(itemId);
   if (cleanItemId === cleanId) return true;
-  if (itemId === `post-${cleanId}` || itemId === `content-${cleanId}`) return true;
-  if (id === `post-${cleanItemId}` || id === `content-${cleanItemId}`) return true;
+  if (cleanId && (itemId.endsWith(cleanId) || id.endsWith(cleanItemId))) return true;
   return false;
 }
 
@@ -1365,14 +1378,17 @@ const handleContentUpdate = (req: Request, res: Response) => {
   const { id } = req.params;
   const updates = req.body || {};
   const db = loadDatabase();
-  const cleanId = id.replace(/^(post|content)-/, '');
+  const normalize = (s: string) => String(s).replace(/^(post|content|custom)-/, '').trim();
+  const cleanId = normalize(id);
 
   let index = db.contents.findIndex((c) => matchesContentId(c, id));
 
   if (!db.deletedIds) db.deletedIds = [];
+  if (!db.softDeletedIds) db.softDeletedIds = [];
 
-  if (updates.isDeleted === false) {
-    db.deletedIds = db.deletedIds.filter((dId) => dId !== id && dId !== cleanId);
+  if (updates.isDeleted === false || updates.isArchived === false) {
+    db.deletedIds = db.deletedIds.filter((dId) => !matchesContentId({ id: dId }, id));
+    db.softDeletedIds = db.softDeletedIds.filter((sId) => !matchesContentId({ id: sId }, id));
   }
   
   if (index === -1) {
@@ -1380,7 +1396,22 @@ const handleContentUpdate = (req: Request, res: Response) => {
     db.contents.push(newItem);
     index = db.contents.length - 1;
   } else {
+    // Preserve existing soft-delete state if updates didn't explicitly modify deletion
+    const existingIsDeleted = db.contents[index].isDeleted;
+    const existingIsArchived = db.contents[index].isArchived;
+    const existingDeletedAt = db.contents[index].deletedAt;
+
     db.contents[index] = { ...db.contents[index], ...updates };
+
+    if (updates.isDeleted === undefined && existingIsDeleted) {
+      db.contents[index].isDeleted = true;
+    }
+    if (updates.isArchived === undefined && existingIsArchived) {
+      db.contents[index].isArchived = true;
+    }
+    if (updates.deletedAt === undefined && existingDeletedAt) {
+      db.contents[index].deletedAt = existingDeletedAt;
+    }
   }
   
   saveDatabase(db);
@@ -1395,6 +1426,11 @@ app.post('/api/contents/:id/soft-delete', (req: Request, res: Response) => {
   const { id } = req.params;
   const db = loadDatabase();
   const deletedAt = req.body?.deletedAt || new Date().toISOString();
+
+  if (!db.softDeletedIds) db.softDeletedIds = [];
+  if (!db.softDeletedIds.some((sId) => matchesContentId({ id: sId }, id))) {
+    db.softDeletedIds.push(id);
+  }
 
   let matched = false;
   for (const c of db.contents) {
@@ -1411,6 +1447,7 @@ app.post('/api/contents/:id/soft-delete', (req: Request, res: Response) => {
   }
 
   saveDatabase(db);
+  console.log(`[Soft Delete] Content ${id} marked as soft-deleted in database`);
   res.json({ success: true, message: 'Content soft-deleted' });
 });
 
@@ -1418,7 +1455,13 @@ app.post('/api/contents/:id/soft-delete', (req: Request, res: Response) => {
 app.post('/api/contents/:id/restore', (req: Request, res: Response) => {
   const { id } = req.params;
   const db = loadDatabase();
-  const cleanId = id.replace(/^(post|content)-/, '');
+
+  if (db.softDeletedIds) {
+    db.softDeletedIds = db.softDeletedIds.filter((sid) => !matchesContentId({ id: sid }, id));
+  }
+  if (db.deletedIds) {
+    db.deletedIds = db.deletedIds.filter((dId) => !matchesContentId({ id: dId }, id));
+  }
 
   for (const target of db.contents) {
     if (matchesContentId(target, id)) {
@@ -1429,11 +1472,8 @@ app.post('/api/contents/:id/restore', (req: Request, res: Response) => {
     }
   }
 
-  if (db.deletedIds) {
-    db.deletedIds = db.deletedIds.filter((dId) => !matchesContentId({ id: dId }, id));
-  }
-
   saveDatabase(db);
+  console.log(`[Restore] Content ${id} restored to public feed in database`);
   res.json({ success: true, message: 'Content restored to feed' });
 });
 
@@ -1441,20 +1481,25 @@ app.post('/api/contents/:id/restore', (req: Request, res: Response) => {
 const handlePermanentDelete = (req: Request, res: Response) => {
   const { id } = req.params;
   const db = loadDatabase();
-  const cleanId = id.replace(/^(post|content)-/, '');
+  const normalize = (s: string) => String(s).replace(/^(post|content|custom)-/, '').trim();
+  const cleanId = normalize(id);
 
   db.contents = db.contents.filter((c) => !matchesContentId(c, id));
   if (!db.deletedIds) db.deletedIds = [];
-  if (!db.deletedIds.includes(id)) {
+  if (!db.deletedIds.some((dId) => matchesContentId({ id: dId }, id))) {
     db.deletedIds.push(id);
   }
-  if (!db.deletedIds.includes(cleanId)) {
+  if (cleanId && !db.deletedIds.includes(cleanId)) {
     db.deletedIds.push(cleanId);
+  }
+  if (db.softDeletedIds) {
+    db.softDeletedIds = db.softDeletedIds.filter((sid) => !matchesContentId({ id: sid }, id));
   }
   if (db.comments && db.comments[id]) {
     delete db.comments[id];
   }
   saveDatabase(db);
+  console.log(`[Permanent Delete] Content ${id} removed permanently from database`);
   res.json({ success: true, message: 'Content deleted permanently' });
 };
 
