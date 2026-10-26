@@ -1,0 +1,14 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
+# Runtime data / generated files - do not publish
+data/backups/
+data/*.tmp_*
+.aistudio/
+public/uploads/

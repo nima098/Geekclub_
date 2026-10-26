@@ -1,0 +1,53 @@
+import { safeFetch } from './_ssrf.js';
+
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  const imageUrl = req.query?.url || (req.url ? new URL(req.url, 'http://localhost').searchParams.get('url') : null);
+
+  const fallbackSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="#0f172a"/><path d="M360 200 H440 V250 H360 Z" fill="#3b82f6"/><text x="400" y="225" font-family="sans-serif" font-size="22" font-weight="bold" fill="#f8fafc" text-anchor="middle">GeekClub Media</text></svg>`;
+
+  if (!imageUrl || typeof imageUrl !== 'string') {
+    res.setHeader('Content-Type', 'image/svg+xml');
+    return res.status(200).send(fallbackSvg);
+  }
+
+  // SSRF protection: DNS + every redirect hop is validated
+  try {
+    const fetchResponse = await safeFetch(imageUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+      }
+    });
+
+    if (!fetchResponse.ok) {
+      throw new Error(`Failed to fetch image: status ${fetchResponse.status}`);
+    }
+
+    const contentType = fetchResponse.headers.get('content-type') || 'image/jpeg';
+    const buffer = Buffer.from(await fetchResponse.arrayBuffer());
+
+    if (!contentType.toLowerCase().startsWith('image/') || buffer.length > 10 * 1024 * 1024) {
+      throw new Error('Not an image or too large');
+    }
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    if (contentType.includes('svg')) {
+      // A denylist can never make SVG safe - instead make sure it can never execute script
+      res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox");
+    }
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800');
+    return res.status(200).send(buffer);
+  } catch (err) {
+    console.warn('Proxy image fetch failed:', err.message);
+    res.setHeader('Content-Type', 'image/svg+xml');
+    return res.status(200).send(fallbackSvg);
+  }
+}

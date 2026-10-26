@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="50%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.2"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Rounded Squircle Background -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)"/>
+  
+  <!-- Inner Glow Ring -->
+  <rect x="24" y="24" width="464" height="464" rx="108" fill="none" stroke="url(#glowGrad)" stroke-width="6" opacity="0.6"/>
+
+  <!-- Code Brackets & Play Share Icon -->
+  <g fill="#ffffff" transform="translate(64, 64) scale(0.75)">
+    <!-- Left Bracket < -->
+    <path d="M120 160 L40 256 L120 352" fill="none" stroke="#ffffff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Right Bracket > -->
+    <path d="M392 160 L472 256 L392 352" fill="none" stroke="#ffffff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Central Play / Share Triangle -->
+    <polygon points="210,170 330,256 210,342" fill="#ffffff" filter="drop-shadow(0px 8px 16px rgba(0,0,0,0.3))"/>
+  </g>
+</svg>
