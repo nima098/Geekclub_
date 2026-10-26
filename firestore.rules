@@ -1,55 +1,89 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper functions for security validation
+
+    // ---------- Helpers ----------
     function isAuthenticated() {
       return request.auth != null;
     }
-    
+
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
-    
-    function isAdmin() {
-      return isAuthenticated() && 
-        (request.auth.token.role == 'admin' || 
-         request.auth.token.admin == true ||
-         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+
+    // The super admin is identified by a VERIFIED Google e-mail (cannot be forged by the client)
+    function isSuperAdmin() {
+      return isAuthenticated()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email == '3dsaz1990@gmail.com';
     }
 
-    // Contents: Public read for active posts, Admin write
+    function isAdmin() {
+      return isSuperAdmin()
+        || (isAuthenticated() && request.auth.token.admin == true)
+        || (isAuthenticated()
+            && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+    }
+
+    // Fields that grant privileges: only an admin may create/change them.
+    function touchesPrivilegedFields() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['role', 'isAdmin', 'autoApproveContent', 'isArchived']);
+    }
+
+    // ---------- Contents: public read, admin-only write ----------
     match /contents/{contentId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Comments: Public read, Authenticated create, Owner/Admin delete or update
+    // ---------- Comments: public read, signed-in users create their own ----------
     match /comments/{commentId} {
       allow read: if true;
       allow create: if isAuthenticated();
-      allow update, delete: if isAdmin() || (isAuthenticated() && resource.data.authorUid == request.auth.uid);
+      allow update: if isAdmin()
+                    || (isAuthenticated()
+                        && resource.data.authorUid == request.auth.uid
+                        && request.resource.data.authorUid == resource.data.authorUid);
+      allow delete: if isAdmin()
+                    || (isAuthenticated() && resource.data.authorUid == request.auth.uid);
     }
 
-    // Feedback: Public/Auth create, Admin read and manage
+    // ---------- Feedback: anyone can send, only admins can read/manage ----------
     match /feedback/{feedbackId} {
       allow create: if true;
       allow read, update, delete: if isAdmin();
     }
 
-    // Site Settings: Public read, Admin write
+    // ---------- Site settings (may contain API tokens!): admin only ----------
     match /siteSettings/{settingId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read, write: if isAdmin();
     }
 
-    // User Profiles: Public read, Owner or Admin update
+    // ---------- User profiles ----------
     match /users/{userId} {
       allow read: if true;
-      allow create, update: if isOwner(userId) || isAdmin();
+      // A user may create/update ONLY their own profile and can NEVER grant themselves privileges.
+      allow create: if isAdmin()
+                    || (isOwner(userId)
+                        && !request.resource.data.keys().hasAny(['role', 'isAdmin', 'autoApproveContent', 'isArchived']));
+      allow update: if isAdmin()
+                    || (isOwner(userId) && !touchesPrivilegedFields());
       allow delete: if isAdmin();
     }
+
+    // ---------- Public profiles (same protection as /users) ----------
+    match /profiles/{profileId} {
+      allow read: if true;
+      allow create: if isAdmin()
+                    || (isOwner(profileId)
+                        && !request.resource.data.keys().hasAny(['role', 'isAdmin', 'autoApproveContent', 'isArchived']));
+      allow update: if isAdmin()
+                    || (isOwner(profileId) && !touchesPrivilegedFields());
+      allow delete: if isAdmin();
+    }
+
+    // Everything else is denied by default (the old catch-all rule was removed).
   }
 }
-

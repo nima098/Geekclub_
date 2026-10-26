@@ -12,6 +12,10 @@
       "destination": "/api/rss"
     },
     {
+      "source": "/api/contents/:path*",
+      "destination": "/api/contents"
+    },
+    {
       "source": "/((?!api/|.*\\..*).*)",
       "destination": "/index.html"
     }

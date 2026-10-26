@@ -57,7 +57,7 @@ import {
   InboxMessage, 
   SiteAdminSettings 
 } from '../types/content';
-import { api } from '../services/api';
+import { api, getAdminHeaders } from '../services/api';
 import { 
   getCDNConfig, 
   saveCDNConfig, 
@@ -295,7 +295,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     try {
       const res = await fetch('/api/test-apify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await getAdminHeaders(),
         body: JSON.stringify({ token: apifyToken, actorId: apifyActor })
       });
       const data = await res.json();
@@ -333,7 +333,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     try {
       await fetch('/api/site-settings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await getAdminHeaders(),
         body: JSON.stringify({
           apifyApiToken: apifyToken,
           apifyActorId: apifyActor,
@@ -2016,7 +2016,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       name="cdnToken"
                       value={cdnToken}
                       onChange={(e) => setCdnToken(e.target.value)}
-                      placeholder="geekclub_cdn_secret_2026"
+                      placeholder="CDN API token"
                       className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 dir-ltr text-left font-mono focus:outline-none focus:border-amber-500"
                     />
                   </div>

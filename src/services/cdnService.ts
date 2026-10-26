@@ -24,7 +24,7 @@ const STORAGE_KEY_CDN_URL = 'geekclub_cdn_endpoint';
 const STORAGE_KEY_CDN_TOKEN = 'geekclub_cdn_token';
 
 export const DEFAULT_CDN_ENDPOINT = 'https://upc.geekclub.ir/s1/upload.php';
-export const DEFAULT_CDN_TOKEN = 'geekclub_cdn_secret_2026';
+export const DEFAULT_CDN_TOKEN = ''; // never ship a real token in the client bundle - enter it in the admin panel
 
 export const getCDNConfig = (): CDNConfig => {
   const endpointUrl = localStorage.getItem(STORAGE_KEY_CDN_URL) || DEFAULT_CDN_ENDPOINT;
@@ -324,7 +324,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // 2. Secret Token (Matches the token configured in GeekClub Admin)
-$REQUIRED_TOKEN = "geekclub_cdn_secret_2026";
+$REQUIRED_TOKEN = "CHANGE_ME_TO_A_LONG_RANDOM_SECRET";
 
 // Check Authorization Token
 $headers = getallheaders();
@@ -337,7 +337,7 @@ if (isset($headers['Authorization'])) {
     $providedToken = $_POST['api_token'];
 }
 
-if (empty($providedToken) || $providedToken !== $REQUIRED_TOKEN) {
+if (empty($providedToken) || !hash_equals($REQUIRED_TOKEN, $providedToken)) {
     http_response_code(401);
     echo json_encode(["status" => false, "message" => "خطای دسترسی: توکن امنیتی API معتبر نیست"]);
     exit;
@@ -403,12 +403,19 @@ if ($file['error'] !== UPLOAD_ERR_OK) {
 }
 
 // Allowed File Formats (Images & Videos)
-$allowedExts = ['webp', 'jpg', 'jpeg', 'png', 'gif', 'svg', 'mp4', 'webm', 'mov'];
+$allowedExts = ['webp', 'jpg', 'jpeg', 'png', 'gif', 'mp4', 'webm', 'mov']; // SVG is intentionally NOT allowed (can carry script)
 $fileExt = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
 
 if (!in_array($fileExt, $allowedExts)) {
     http_response_code(400);
     echo json_encode(["status" => false, "message" => "پسوند فایل مجاز نیست. پسوندهای مجاز: " . implode(', ', $allowedExts)]);
+    exit;
+}
+
+// Images must really be images (extension alone can be faked)
+if (in_array($fileExt, ['webp', 'jpg', 'jpeg', 'png', 'gif']) && @getimagesize($file['tmp_name']) === false) {
+    http_response_code(400);
+    echo json_encode(["status" => false, "message" => "فایل تصویر معتبر نیست"]);
     exit;
 }
 

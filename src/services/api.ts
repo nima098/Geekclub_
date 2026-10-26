@@ -9,7 +9,7 @@ import {
   query,
   where
 } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, auth } from '../lib/firebase';
 import { ContentItem, CommentItem, Platform, Category, SortOption } from '../types/content';
 import { FALLBACK_IMAGES, getAuthorAvatar } from '../utils/imageHelper';
 import { INITIAL_CONTENT, INITIAL_COMMENTS } from '../data/initialData';
@@ -19,76 +19,72 @@ const COMMENTS_COLLECTION = 'comments';
 const DELETED_IDS_KEY = 'mediahub_deleted_ids_v1';
 const ADMIN_TOKEN_KEY = 'mediahub_admin_key_v1';
 
+// SECURITY: no admin secret is shipped in the bundle anymore. The admin key is typed in by the admin
+// (verified by the server) and kept only for the current browser session.
 function getAdminToken(): string {
   try {
-    return localStorage.getItem(ADMIN_TOKEN_KEY) || sessionStorage.getItem(ADMIN_TOKEN_KEY) || '3dsaz2026';
+    return sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
   } catch {
-    return '3dsaz2026';
+    return '';
   }
 }
 
 export function setAdminToken(token: string) {
   try {
-    localStorage.setItem(ADMIN_TOKEN_KEY, token);
+    localStorage.removeItem(ADMIN_TOKEN_KEY); // clean up legacy persistent storage
     sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
   } catch {}
 }
 
-function getAdminHeaders(): Record<string, string> {
-  const token = getAdminToken();
-  return {
-    'Content-Type': 'application/json',
-    'X-Admin-Key': token,
-    'Authorization': `Bearer ${token}`
+export function clearAdminToken() {
+  try {
+    localStorage.removeItem(ADMIN_TOKEN_KEY);
+    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+  } catch {}
+}
+
+// Returns the best credential available: the admin key, or a fresh Firebase ID token of the signed-in user.
+async function getAuthToken(): Promise<string> {
+  const key = getAdminToken();
+  if (key) return key;
+  try {
+    if (auth.currentUser) return await auth.currentUser.getIdToken();
+  } catch {}
+  return '';
+}
+
+export async function getAdminHeaders(): Promise<Record<string, string>> {
+  const token = await getAuthToken();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) {
+    headers['X-Admin-Key'] = token;
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+// Used on read requests so admins also receive trash/archive data (public users never do).
+async function getReadHeaders(): Promise<Record<string, string>> {
+  const token = await getAuthToken();
+  const headers: Record<string, string> = {
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache'
   };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
 }
 
-const SOFT_DELETED_IDS_KEY = 'geekclub_soft_deleted_v3';
-
-export function getLocalSoftDeletedIds(): Set<string> {
+/** Asks the SERVER whether this admin key is valid. */
+export async function verifyAdminKey(key: string): Promise<boolean> {
   try {
-    const raw = localStorage.getItem(SOFT_DELETED_IDS_KEY);
-    if (raw) {
-      const arr = JSON.parse(raw);
-      if (Array.isArray(arr)) {
-        return new Set(arr);
-      }
-    }
-  } catch {}
-  return new Set();
-}
-
-export function addLocalSoftDeletedId(id: string) {
-  try {
-    const set = getLocalSoftDeletedIds();
-    const cleanId = String(id).replace(/^(post|content|custom)-/, '').trim();
-    set.add(id);
-    if (cleanId) set.add(cleanId);
-    localStorage.setItem(SOFT_DELETED_IDS_KEY, JSON.stringify(Array.from(set)));
-  } catch {}
-}
-
-export function removeLocalSoftDeletedId(id: string) {
-  try {
-    const set = getLocalSoftDeletedIds();
-    const cleanId = String(id).replace(/^(post|content|custom)-/, '').trim();
-    set.delete(id);
-    if (cleanId) set.delete(cleanId);
-    set.delete(`post-${cleanId}`);
-    set.delete(`content-${cleanId}`);
-    set.delete(`custom-${cleanId}`);
-    localStorage.setItem(SOFT_DELETED_IDS_KEY, JSON.stringify(Array.from(set)));
-  } catch {}
-}
-
-export function isIdSoftDeleted(id: string, softSet?: Set<string>): boolean {
-  const set = softSet || getLocalSoftDeletedIds();
-  if (!id) return false;
-  if (set.has(id)) return true;
-  const cleanId = String(id).replace(/^(post|content|custom)-/, '').trim();
-  if (cleanId && set.has(cleanId)) return true;
-  if (cleanId && (set.has(`post-${cleanId}`) || set.has(`content-${cleanId}`) || set.has(`custom-${cleanId}`))) return true;
-  return false;
+    const res = await fetch('/api/admin/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
 function getDeletedIds(): string[] {
@@ -128,7 +124,6 @@ export const api = {
     sort?: SortOption;
     includeDeleted?: boolean;
   }): Promise<ContentItem[]> {
-    const softSet = getLocalSoftDeletedIds();
     // Primary: Call server REST endpoint which handles database logic
     try {
       const params = new URLSearchParams();
@@ -136,33 +131,18 @@ export const api = {
       if (filters?.category && filters.category !== 'all') params.append('category', filters.category);
       if (filters?.search) params.append('search', filters.search);
       if (filters?.sort) params.append('sort', filters.sort);
-      if (filters?.includeDeleted) {
-        params.append('includeDeleted', 'true');
-        params.append('includeArchived', 'true');
-      }
+      params.append('includeDeleted', 'true');
       params.append('_t', Date.now().toString());
 
       const res = await fetch(`/api/contents?${params.toString()}`, {
         cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache'
-        }
+        headers: await getReadHeaders()
       });
       if (res.ok) {
         const json = await res.json();
         if (Array.isArray(json.data)) {
-          const processed = json.data.map((c: ContentItem) => {
-            if (isIdSoftDeleted(c.id, softSet)) {
-              return { ...c, isDeleted: true, isArchived: true };
-            }
-            return c;
-          });
-          try {
-            sessionStorage.setItem('geekclub_synced_contents_v2', JSON.stringify(processed));
-          } catch {}
-          return processed.filter((c: ContentItem) => {
-            if (!filters?.includeDeleted && (c.isDeleted || c.isArchived)) return false;
+          return json.data.filter((c: ContentItem) => {
+            if (!filters?.includeDeleted && c.isDeleted) return false;
             return true;
           });
         }
@@ -171,25 +151,7 @@ export const api = {
       // Server REST endpoint fallback
     }
 
-    try {
-      const cached = sessionStorage.getItem('geekclub_synced_contents_v2');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const processed = parsed.map((c: ContentItem) => {
-            if (isIdSoftDeleted(c.id, softSet)) {
-              return { ...c, isDeleted: true, isArchived: true };
-            }
-            return c;
-          });
-          return processed.filter((c: ContentItem) => filters?.includeDeleted || (!c.isDeleted && !c.isArchived));
-        }
-      }
-    } catch {}
-
-    return INITIAL_CONTENT
-      .map((c) => isIdSoftDeleted(c.id, softSet) ? { ...c, isDeleted: true, isArchived: true } : c)
-      .filter((c) => filters?.includeDeleted || (!c.isDeleted && !c.isArchived));
+    return INITIAL_CONTENT.filter((c) => filters?.includeDeleted || !c.isDeleted);
   },
 
   // Centralized polling subscription for live updates across all open browsers
@@ -197,29 +159,17 @@ export const api = {
     let intervalId: any = null;
     let isSubscribed = true;
 
-    const fetchLatest = () => {
+    const fetchLatest = async () => {
       if (!isSubscribed) return;
-      const softSet = getLocalSoftDeletedIds();
-      fetch(`/api/contents?includeDeleted=true&includeArchived=true&_t=${Date.now()}`, {
+      const readHeaders = await getReadHeaders();
+      fetch(`/api/contents?includeDeleted=true&_t=${Date.now()}`, {
         cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache'
-        }
+        headers: readHeaders
       })
         .then((res) => (res.ok ? res.json() : null))
         .then((json) => {
           if (isSubscribed && json?.data && Array.isArray(json.data)) {
-            const processed = json.data.map((c: ContentItem) => {
-              if (isIdSoftDeleted(c.id, softSet)) {
-                return { ...c, isDeleted: true, isArchived: true };
-              }
-              return c;
-            });
-            try {
-              sessionStorage.setItem('geekclub_synced_contents_v2', JSON.stringify(processed));
-            } catch {}
-            callback(processed);
+            callback(json.data);
           }
         })
         .catch(() => {});
@@ -228,8 +178,8 @@ export const api = {
     // Immediate initial fetch
     fetchLatest();
 
-    // Periodic check every 3 seconds for immediate multi-browser sync
-    intervalId = setInterval(fetchLatest, 3000);
+    // Periodic check every 4 seconds for immediate multi-browser sync
+    intervalId = setInterval(fetchLatest, 4000);
 
     return () => {
       isSubscribed = false;
@@ -295,7 +245,7 @@ export const api = {
   // 3. Update content (approval / edit / delete / reaction)
   async updateContent(id: string, updates: Partial<ContentItem>): Promise<void> {
     const encodedId = encodeURIComponent(id);
-    const headers = getAdminHeaders();
+    const headers = await getAdminHeaders();
 
     // Primary: Express REST API endpoint with POST and PATCH fallbacks
     try {
@@ -321,156 +271,96 @@ export const api = {
     } catch {}
   },
 
-  async softDeleteContent(id: string, deletedAt?: string): Promise<void> {
+  // Returns true only if the SERVER accepted the change (so the UI can react when it was refused)
+  async softDeleteContent(id: string, deletedAt?: string): Promise<boolean> {
     const timeStr = deletedAt || new Date().toISOString();
     const encodedId = encodeURIComponent(id);
-    const headers = getAdminHeaders();
-
-    // Mark in persistent local set immediately so no in-flight polling can resurrect it
-    addLocalSoftDeletedId(id);
+    const headers = await getAdminHeaders();
+    let ok = false;
 
     // Primary: Express REST API endpoint
     try {
-      const res = await fetch(`/api/contents/${encodedId}/soft-delete`, {
+      const r = await fetch(`/api/contents/${encodedId}/soft-delete`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ isDeleted: true, deletedAt: timeStr })
       });
-      if (!res.ok) {
-        await fetch(`/api/contents/${encodedId}`, {
-          method: 'PATCH',
-          headers,
-          body: JSON.stringify({ isDeleted: true, isArchived: true, deletedAt: timeStr })
-        });
-      }
+      ok = r.ok;
     } catch {
       try {
-        await fetch(`/api/contents/${encodedId}`, {
+        const r = await fetch(`/api/contents/${encodedId}`, {
           method: 'PATCH',
           headers,
-          body: JSON.stringify({ isDeleted: true, isArchived: true, deletedAt: timeStr })
+          body: JSON.stringify({ isDeleted: true, deletedAt: timeStr })
         });
+        ok = r.ok;
       } catch {}
     }
-
-    // Keep session cache in sync
-    try {
-      const cached = sessionStorage.getItem('geekclub_synced_contents_v2');
-      if (cached) {
-        const list = JSON.parse(cached);
-        if (Array.isArray(list)) {
-          const updated = list.map((c: ContentItem) =>
-            c.id === id || c.id.replace(/^(post|content|custom)-/, '') === id.replace(/^(post|content|custom)-/, '')
-              ? { ...c, isDeleted: true, isArchived: true, deletedAt: timeStr }
-              : c
-          );
-          sessionStorage.setItem('geekclub_synced_contents_v2', JSON.stringify(updated));
-        }
-      }
-    } catch {}
 
     // Secondary: Cloud Firestore
     try {
       const docRef = doc(db, CONTENTS_COLLECTION, id);
-      await setDoc(docRef, { isDeleted: true, isArchived: true, deletedAt: timeStr }, { merge: true });
+      await setDoc(docRef, { isDeleted: true, deletedAt: timeStr }, { merge: true });
     } catch {}
+    return ok;
   },
 
-  async restoreContent(id: string): Promise<void> {
+  async restoreContent(id: string): Promise<boolean> {
     const encodedId = encodeURIComponent(id);
-    const headers = getAdminHeaders();
+    const headers = await getAdminHeaders();
+    let ok = false;
 
-    // Remove from persistent local soft-deleted set
-    removeLocalSoftDeletedId(id);
-
-    // Primary: Express REST API endpoint
     try {
-      const res = await fetch(`/api/contents/${encodedId}/restore`, {
+      const r = await fetch(`/api/contents/${encodedId}/restore`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ isDeleted: false })
       });
-      if (!res.ok) {
-        await fetch(`/api/contents/${encodedId}`, {
-          method: 'PATCH',
-          headers,
-          body: JSON.stringify({ isDeleted: false, isArchived: false })
-        });
-      }
+      ok = r.ok;
     } catch {
       try {
-        await fetch(`/api/contents/${encodedId}`, {
+        const r = await fetch(`/api/contents/${encodedId}`, {
           method: 'PATCH',
           headers,
-          body: JSON.stringify({ isDeleted: false, isArchived: false })
+          body: JSON.stringify({ isDeleted: false })
         });
+        ok = r.ok;
       } catch {}
     }
 
-    // Keep session cache in sync
-    try {
-      const cached = sessionStorage.getItem('geekclub_synced_contents_v2');
-      if (cached) {
-        const list = JSON.parse(cached);
-        if (Array.isArray(list)) {
-          const updated = list.map((c: ContentItem) =>
-            c.id === id || c.id.replace(/^(post|content|custom)-/, '') === id.replace(/^(post|content|custom)-/, '')
-              ? { ...c, isDeleted: false, isArchived: false }
-              : c
-          );
-          sessionStorage.setItem('geekclub_synced_contents_v2', JSON.stringify(updated));
-        }
-      }
-    } catch {}
-
-    // Secondary: Cloud Firestore
     try {
       const docRef = doc(db, CONTENTS_COLLECTION, id);
-      await setDoc(docRef, { isDeleted: false, isArchived: false }, { merge: true });
+      await setDoc(docRef, { isDeleted: false }, { merge: true });
     } catch {}
+    return ok;
   },
 
-  async deleteContent(id: string): Promise<void> {
+  async deleteContent(id: string): Promise<boolean> {
     const encodedId = encodeURIComponent(id);
-    const headers = getAdminHeaders();
+    const headers = await getAdminHeaders();
+    let ok = false;
 
-    // Remove from local soft-deleted set
-    removeLocalSoftDeletedId(id);
-
-    // Primary: Express REST API endpoint
     try {
-      await fetch(`/api/contents/${encodedId}/permanent-delete`, {
+      const r = await fetch(`/api/contents/${encodedId}/permanent-delete`, {
         method: 'POST',
         headers
       });
+      ok = r.ok;
     } catch {
       try {
-        await fetch(`/api/contents/${encodedId}`, {
+        const r = await fetch(`/api/contents/${encodedId}`, {
           method: 'DELETE',
           headers
         });
+        ok = r.ok;
       } catch {}
     }
 
-    // Keep session cache in sync
-    try {
-      const cached = sessionStorage.getItem('geekclub_synced_contents_v2');
-      if (cached) {
-        const list = JSON.parse(cached);
-        if (Array.isArray(list)) {
-          const updated = list.filter((c: ContentItem) =>
-            c.id !== id && c.id.replace(/^(post|content|custom)-/, '') !== id.replace(/^(post|content|custom)-/, '')
-          );
-          sessionStorage.setItem('geekclub_synced_contents_v2', JSON.stringify(updated));
-        }
-      }
-    } catch {}
-
-    // Secondary: Cloud Firestore
     try {
       const docRef = doc(db, CONTENTS_COLLECTION, id);
       await deleteDoc(docRef);
     } catch {}
+    return ok;
   },
 
   // 4. React to content (like / dislike)
@@ -647,7 +537,7 @@ export const api = {
   async exportDatabase(): Promise<any> {
     try {
       const res = await fetch('/api/database/export', {
-        headers: getAdminHeaders()
+        headers: await getAdminHeaders()
       });
       if (res.ok) {
         const json = await res.json();
@@ -662,7 +552,7 @@ export const api = {
     try {
       const res = await fetch('/api/database/import', {
         method: 'POST',
-        headers: getAdminHeaders(),
+        headers: await getAdminHeaders(),
         body: JSON.stringify(jsonData)
       });
       if (res.ok) {
@@ -679,7 +569,7 @@ export const api = {
     try {
       const res = await fetch('/api/database/merge-seeds', {
         method: 'POST',
-        headers: getAdminHeaders()
+        headers: await getAdminHeaders()
       });
       if (res.ok) {
         return await res.json();
@@ -695,7 +585,7 @@ export const api = {
     try {
       const res = await fetch(`/api/contents/${id}/archive`, {
         method: 'POST',
-        headers: getAdminHeaders()
+        headers: await getAdminHeaders()
       });
       return res.ok;
     } catch {
@@ -710,7 +600,7 @@ export const api = {
     try {
       const res = await fetch(`/api/profiles/${key}/role`, {
         method: 'POST',
-        headers: getAdminHeaders(),
+        headers: await getAdminHeaders(),
         body: JSON.stringify({ role })
       });
       return res.ok;
@@ -723,7 +613,7 @@ export const api = {
   async getPendingSeeds(): Promise<ContentItem[]> {
     try {
       const res = await fetch('/api/seeds/pending', {
-        headers: getAdminHeaders()
+        headers: await getAdminHeaders()
       });
       if (res.ok) {
         const json = await res.json();
@@ -738,7 +628,7 @@ export const api = {
     try {
       const res = await fetch('/api/seeds/approve', {
         method: 'POST',
-        headers: getAdminHeaders(),
+        headers: await getAdminHeaders(),
         body: JSON.stringify({ id })
       });
       return res.ok;
@@ -752,7 +642,7 @@ export const api = {
     try {
       const res = await fetch('/api/seeds/reject', {
         method: 'POST',
-        headers: getAdminHeaders(),
+        headers: await getAdminHeaders(),
         body: JSON.stringify({ id })
       });
       return res.ok;
@@ -766,7 +656,7 @@ export const api = {
     try {
       const res = await fetch('/api/database/backup-now', {
         method: 'POST',
-        headers: getAdminHeaders()
+        headers: await getAdminHeaders()
       });
       if (res.ok) {
         return await res.json();

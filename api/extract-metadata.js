@@ -1,3 +1,5 @@
+import { safeFetch } from './_ssrf.js';
+
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -19,7 +21,7 @@ export default async function handler(req, res) {
 
   try {
     const cleanUrl = targetUrl.trim().startsWith('http') ? targetUrl.trim() : `https://${targetUrl.trim()}`;
-    const response = await fetch(cleanUrl, {
+    const response = await safeFetch(cleanUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept-Language': 'fa-IR,fa;q=0.9,en-US;q=0.8,en;q=0.7'

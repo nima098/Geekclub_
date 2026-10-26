@@ -16,7 +16,7 @@ import {
 import { UserProfile } from '../types/content';
 import { SUPER_ADMIN_USER, SUPER_ADMIN_EMAIL } from '../data/initialData';
 import { loginWithGooglePopup } from '../lib/firebase';
-import { setAdminToken } from '../services/api';
+import { setAdminToken, verifyAdminKey } from '../services/api';
 
 interface AdminPortalLoginModalProps {
   isOpen: boolean;
@@ -64,13 +64,20 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
     setTimeout(() => setCopiedDomain(false), 2500);
   };
 
-  const handleProceedAsAdmin = (pinInput?: string) => {
-    const validPin = (pinInput || securityPin).trim();
-    if (validPin !== '3dsaz' && validPin !== '3dsaz2026') {
-      setErrorMessage('پین امنیتی اشتباه است. لطفاً کد عبور مدیریت را وارد کنید.');
+  // The admin key is verified by the SERVER - nothing secret is stored in this file.
+  const handleProceedAsAdmin = async (pinInput?: string) => {
+    const pin = (pinInput || securityPin || '').trim();
+    if (!pin) {
+      setErrorMessage('لطفاً کد عبور مدیریت را وارد کنید.');
       return;
     }
-    setAdminToken(validPin);
+    setErrorMessage('');
+    const ok = await verifyAdminKey(pin);
+    if (!ok) {
+      setErrorMessage('کد عبور مدیریت اشتباه است.');
+      return;
+    }
+    setAdminToken(pin);
     onAdminLogin(SUPER_ADMIN_USER);
     onClose();
     onOpenAdminPanel();
@@ -83,7 +90,7 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
     try {
       const verified = await loginWithGooglePopup();
       if (verified.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
-        setAdminToken('3dsaz2026');
+        // Server access is granted through the verified Google ID token (checked server-side)
         onAdminLogin({
           ...SUPER_ADMIN_USER,
           displayName: verified.displayName || SUPER_ADMIN_USER.displayName,
@@ -113,10 +120,6 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
 
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!securityPin || (securityPin.trim() !== '3dsaz' && securityPin.trim() !== '3dsaz2026')) {
-      setErrorMessage('کد امنیتی یا پین مدیریت الزامی و ناپایدار است.');
-      return;
-    }
     handleProceedAsAdmin(securityPin);
   };
 
@@ -235,7 +238,6 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
                     <KeyRound className="w-3.5 h-3.5 text-indigo-400" />
                     <span>کد امنیتی یا پین مدیریت (اختیاری):</span>
                   </label>
-                  <span className="text-[10px] text-slate-500 font-mono">3dsaz2026</span>
                 </div>
 
                 <div className="flex gap-2">

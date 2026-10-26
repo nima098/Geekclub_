@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import axios from 'axios';
+import { isAdminRequest } from './_auth.js';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -8,9 +9,16 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { url } = req.body;
-  if (!url || !url.includes('instagram.com')) {
-    return res.status(400).json({ error: 'Instagram URL is required' });
+  // Costs Apify + Gemini credits: only the admin may call it
+  if (!(await isAdminRequest(req))) {
+    return res.status(401).json({ error: 'Admin authentication required' });
+  }
+
+  const { url } = req.body || {};
+  let host = '';
+  try { host = new URL(String(url)).hostname.toLowerCase(); } catch {}
+  if (!host || !(host === 'instagram.com' || host.endsWith('.instagram.com'))) {
+    return res.status(400).json({ error: 'A valid Instagram URL is required' });
   }
 
   try {
@@ -67,8 +75,7 @@ export default async function handler(req, res) {
     console.error('Download verification error:', error.message);
     return res.status(500).json({
       success: false,
-      error: error.message,
-      details: error.response?.data || null,
+      error: 'Processing failed',
     });
   }
 }

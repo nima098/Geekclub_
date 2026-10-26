@@ -6,3 +6,9 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Runtime data / generated files - do not publish
+data/backups/
+data/*.tmp_*
+.aistudio/
+public/uploads/

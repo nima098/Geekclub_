@@ -4,7 +4,10 @@ import axios from 'axios';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { INITIAL_CONTENT, INITIAL_COMMENTS } from './src/data/initialData.ts';
+import crypto from 'crypto';
+import dns from 'dns';
+import net from 'net';
+import { INITIAL_CONTENT, INITIAL_COMMENTS, SUPER_ADMIN_EMAIL } from './src/data/initialData.ts';
 
 const getDirname = (): string => {
   try {
@@ -38,7 +41,13 @@ try {
 } catch (err) {
   console.warn('[Storage Warning] Could not create uploads directory:', err);
 }
-app.use('/uploads', express.static(UPLOADS_DIR));
+app.use('/uploads', express.static(UPLOADS_DIR, {
+  setHeaders: (res) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    // Anything served from /uploads must never be able to run script (e.g. a malicious SVG)
+    res.setHeader('Content-Security-Policy', "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; sandbox");
+  }
+}));
 
 // Disable caching for HTML and assets to ensure instant updates without CTRL+F5
 app.use((_req: Request, res: Response, next) => {
@@ -53,52 +62,188 @@ app.use((_req: Request, res: Response, next) => {
   next();
 });
 
-// Secrets and Constants
-const ADMIN_KEY = process.env.ADMIN_SECRET_KEY || '3dsaz2026';
-const CDN_SECRET = process.env.CDN_SECRET || 'geekclub_cdn_secret_2026_rotated';
+// Secrets and Constants (NEVER hardcode these - configure them as environment variables)
+const GENERATED_ADMIN_KEY = crypto.randomBytes(24).toString('hex');
+const ADMIN_KEY = process.env.ADMIN_SECRET_KEY || GENERATED_ADMIN_KEY;
+if (!process.env.ADMIN_SECRET_KEY) {
+  console.warn(
+    '[Security] ADMIN_SECRET_KEY is not set. Using a temporary random admin key for this process only: ' +
+    GENERATED_ADMIN_KEY +
+    ' (set ADMIN_SECRET_KEY in your environment to make it permanent)'
+  );
+}
+const CDN_SECRET = process.env.CDN_SECRET || '';
+if (!CDN_SECRET) {
+  console.warn('[Security] CDN_SECRET is not set. Uploads to the external CDN are disabled (files stay on local storage).');
+}
+const RSS_FEED_KEY = process.env.RSS_FEED_KEY || '';
 
-// Security Middleware: Require Administrative Access
-function requireAdminAuth(req: Request, res: Response, next: express.NextFunction) {
+// Constant-time string comparison (prevents timing attacks on secrets)
+function safeEqual(a: unknown, b: unknown): boolean {
+  if (typeof a !== 'string' || typeof b !== 'string' || !a || !b) return false;
+  const ha = crypto.createHash('sha256').update(a).digest();
+  const hb = crypto.createHash('sha256').update(b).digest();
+  return crypto.timingSafeEqual(ha, hb);
+}
+
+function extractAdminToken(req: Request): string {
   const authHeader = req.headers['authorization'];
   const adminKeyHeader = req.headers['x-admin-key'];
-  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : adminKeyHeader;
+  const raw = authHeader && authHeader.startsWith('Bearer ')
+    ? authHeader.substring(7)
+    : (Array.isArray(adminKeyHeader) ? adminKeyHeader[0] : adminKeyHeader);
+  return typeof raw === 'string' ? raw.trim() : '';
+}
 
-  if (token === ADMIN_KEY || token === '3dsaz2026' || token === CDN_SECRET) {
+// Verifies a Firebase ID token (JWT) server-side. Returns the verified email or null.
+let firebaseAdminAuth: any = null;
+async function verifyFirebaseIdToken(idToken: string): Promise<{ email: string; uid: string } | null> {
+  try {
+    if (!firebaseAdminAuth) {
+      const appMod: any = await import('firebase-admin/app');
+      const authMod: any = await import('firebase-admin/auth');
+      const cfgRaw = fs.readFileSync(path.resolve(__dirname, 'firebase-applet-config.json'), 'utf-8');
+      const projectId = JSON.parse(cfgRaw).projectId;
+      const adminApp = appMod.getApps().length ? appMod.getApp() : appMod.initializeApp({ projectId });
+      firebaseAdminAuth = authMod.getAuth(adminApp);
+    }
+    const decoded = await firebaseAdminAuth.verifyIdToken(idToken);
+    if (!decoded || !decoded.email || decoded.email_verified !== true) return null;
+    return { email: String(decoded.email).toLowerCase(), uid: String(decoded.uid) };
+  } catch {
+    return null;
+  }
+}
+
+// True if the request carries a valid admin credential:
+//  - the secret ADMIN_SECRET_KEY, or
+//  - a valid Firebase ID token that belongs to the super admin email
+async function isAdminRequest(req: Request): Promise<boolean> {
+  const token = extractAdminToken(req);
+  if (!token) return false;
+  if (safeEqual(token, ADMIN_KEY)) return true;
+  if (token.split('.').length === 3) {
+    const verified = await verifyFirebaseIdToken(token);
+    if (verified && verified.email === SUPER_ADMIN_EMAIL.toLowerCase()) return true;
+  }
+  return false;
+}
+
+// Security Middleware: Require Administrative Access
+async function requireAdminAuth(req: Request, res: Response, next: express.NextFunction) {
+  if (await isAdminRequest(req)) {
     return next();
   }
-
   return res.status(401).json({
     success: false,
     error: 'دسترسی ناموفق. نیازمند احراز هویت مدیریتی می‌باشد (Access Denied: Administrative Auth Token Required).'
   });
 }
 
-// SSRF Prevention Helper
+// Very small in-memory rate limiter (per IP) for public endpoints that cost server resources
+const rateBuckets = new Map<string, { count: number; resetAt: number }>();
+function rateLimit(name: string, max: number, windowMs: number) {
+  return (req: Request, res: Response, next: express.NextFunction) => {
+    const ip = (req.ip || req.socket.remoteAddress || 'unknown');
+    const key = `${name}:${ip}`;
+    const now = Date.now();
+    const bucket = rateBuckets.get(key);
+    if (!bucket || bucket.resetAt < now) {
+      rateBuckets.set(key, { count: 1, resetAt: now + windowMs });
+      return next();
+    }
+    bucket.count++;
+    if (bucket.count > max) {
+      return res.status(429).json({ success: false, error: 'Too many requests. Please slow down.' });
+    }
+    next();
+  };
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of rateBuckets) if (v.resetAt < now) rateBuckets.delete(k);
+}, 60 * 1000).unref();
+
+// SSRF Prevention Helpers
+function isPrivateIp(ip: string): boolean {
+  if (net.isIPv4(ip)) {
+    const [a, b] = ip.split('.').map(Number);
+    return (
+      a === 0 || a === 10 || a === 127 ||
+      (a === 100 && b >= 64 && b <= 127) ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      (a === 192 && b === 0) ||
+      (a === 198 && (b === 18 || b === 19)) ||
+      a >= 224
+    );
+  }
+  if (net.isIPv6(ip)) {
+    const l = ip.toLowerCase();
+    if (l === '::' || l === '::1') return true;
+    if (l.startsWith('::ffff:')) {
+      const v4 = l.slice(7);
+      return net.isIPv4(v4) ? isPrivateIp(v4) : true;
+    }
+    return l.startsWith('fc') || l.startsWith('fd') || /^fe[89ab]/.test(l);
+  }
+  return true; // unknown format => treat as unsafe
+}
+
+// Resolves the hostname via DNS and rejects it if ANY resolved address is private/internal.
+async function assertPublicHost(hostname: string): Promise<void> {
+  const host = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  if (!host || host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal')) {
+    throw new Error('Blocked host');
+  }
+  if (net.isIP(host)) {
+    if (isPrivateIp(host)) throw new Error('Blocked private IP');
+    return;
+  }
+  const addrs = await dns.promises.lookup(host, { all: true });
+  if (!addrs.length || addrs.some((a) => isPrivateIp(a.address))) {
+    throw new Error('Blocked private network address');
+  }
+}
+
 function isSafeUrl(urlStr: string): { safe: boolean; reason?: string; parsedUrl?: URL } {
   try {
     const parsed = new URL(urlStr.trim().startsWith('http') ? urlStr.trim() : `https://${urlStr.trim()}`);
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
       return { safe: false, reason: 'Only HTTP and HTTPS protocols are allowed' };
     }
-    const hostname = parsed.hostname.toLowerCase();
-
-    // Block loopback, internal IPs, and Cloud Metadata
-    if (
-      hostname === 'localhost' ||
-      hostname === '127.0.0.1' ||
-      hostname === '::1' ||
-      hostname === '0.0.0.0' ||
-      hostname === '169.254.169.254' ||
-      hostname.startsWith('10.') ||
-      hostname.startsWith('192.168.') ||
-      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)
-    ) {
+    const hostname = parsed.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+    if (hostname === 'localhost' || hostname.endsWith('.localhost') || (net.isIP(hostname) && isPrivateIp(hostname))) {
       return { safe: false, reason: 'Access to local or private network IPs is blocked for security' };
     }
     return { safe: true, parsedUrl: parsed };
   } catch {
     return { safe: false, reason: 'Invalid URL format' };
   }
+}
+
+// SSRF-safe replacement for axios.get(userSuppliedUrl): validates DNS + EVERY redirect hop.
+async function safeAxiosGet(urlStr: string, config: any = {}, maxHops = 4): Promise<any> {
+  let current = urlStr.trim().startsWith('http') ? urlStr.trim() : `https://${urlStr.trim()}`;
+  for (let hop = 0; hop <= maxHops; hop++) {
+    const parsed = new URL(current);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new Error('Blocked protocol');
+    }
+    await assertPublicHost(parsed.hostname);
+    const resp = await axios.get(parsed.toString(), {
+      ...config,
+      maxRedirects: 0,
+      validateStatus: (st: number) => st >= 200 && st < 400
+    });
+    if (resp.status >= 300 && resp.status < 400 && resp.headers?.location) {
+      current = new URL(String(resp.headers.location), parsed).toString();
+      continue;
+    }
+    return resp;
+  }
+  throw new Error('Too many redirects');
 }
 
 // SVG Content Sanitization
@@ -122,7 +267,6 @@ interface DatabaseSchema {
   contents: any[];
   comments: Record<string, any[]>;
   deletedIds?: string[];
-  softDeletedIds?: string[];
   settings?: Record<string, any>;
   profiles?: Record<string, any>;
 }
@@ -134,7 +278,7 @@ function loadDatabase(): DatabaseSchema {
     return cachedDb;
   }
 
-  let dbData: DatabaseSchema = { contents: [], comments: {}, deletedIds: [], softDeletedIds: [], settings: {}, profiles: {} };
+  let dbData: DatabaseSchema = { contents: [], comments: {}, deletedIds: [], settings: {}, profiles: {} };
 
   try {
     if (fs.existsSync(DB_PATH)) {
@@ -147,10 +291,6 @@ function loadDatabase(): DatabaseSchema {
 
   if (!dbData.deletedIds || !Array.isArray(dbData.deletedIds)) {
     dbData.deletedIds = [];
-  }
-
-  if (!dbData.softDeletedIds || !Array.isArray(dbData.softDeletedIds)) {
-    dbData.softDeletedIds = [];
   }
 
   if (!dbData.profiles || typeof dbData.profiles !== 'object') {
@@ -173,9 +313,8 @@ function loadDatabase(): DatabaseSchema {
     if (Array.isArray(INITIAL_CONTENT)) {
       const existingIds = new Set(dbData.contents.map((c: any) => c.id));
       const deletedSet = new Set(dbData.deletedIds);
-      const softDeletedSet = new Set(dbData.softDeletedIds);
       for (const seed of INITIAL_CONTENT) {
-        if (seed && seed.id && !existingIds.has(seed.id) && !deletedSet.has(seed.id) && !softDeletedSet.has(seed.id)) {
+        if (seed && seed.id && !existingIds.has(seed.id) && !deletedSet.has(seed.id)) {
           dbData.contents.push({
             ...seed,
             seedStatus: 'pending_approval' // Staged for Super Admin review
@@ -185,16 +324,9 @@ function loadDatabase(): DatabaseSchema {
     }
   }
 
-  // Ensure softDeletedIds are always enforced on all items in memory
-  if (dbData.softDeletedIds && Array.isArray(dbData.softDeletedIds) && dbData.contents) {
-    const softSet = new Set(dbData.softDeletedIds.map((s) => String(s).replace(/^(post|content|custom)-/, '').trim()));
-    for (const item of dbData.contents) {
-      const cleanId = String(item.id || '').replace(/^(post|content|custom)-/, '').trim();
-      if (dbData.softDeletedIds.includes(item.id) || softSet.has(cleanId)) {
-        item.isDeleted = true;
-        item.isArchived = true;
-      }
-    }
+  // Ensure deletedIds array exists
+  if (!dbData.deletedIds) {
+    dbData.deletedIds = [];
   }
 
   // Purge any remaining Unsplash URLs and replace with CDN assets
@@ -272,7 +404,7 @@ function saveDatabase(db: DatabaseSchema) {
 // --- API Routes ---
 
 // 0. GET /api/proxy-image - Direct image proxy for blocked external images
-app.get('/api/proxy-image', async (req: Request, res: Response) => {
+app.get('/api/proxy-image', rateLimit('proxy-image', 120, 60_000), async (req: Request, res: Response) => {
   const imageUrl = req.query.url as string;
   if (!imageUrl) {
     return res.status(400).send('URL parameter is required');
@@ -285,7 +417,7 @@ app.get('/api/proxy-image', async (req: Request, res: Response) => {
 
   try {
     const cleanUrl = validation.parsedUrl.toString();
-    const response = await axios.get(cleanUrl, {
+    const response = await safeAxiosGet(cleanUrl, {
       responseType: 'arraybuffer',
       timeout: 10000,
       maxContentLength: 10 * 1024 * 1024, // 10MB limit
@@ -303,6 +435,13 @@ app.get('/api/proxy-image', async (req: Request, res: Response) => {
     }
 
     res.setHeader('Content-Type', contentType);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    if (!contentType.toLowerCase().startsWith('image/')) {
+      return res.status(415).json({ success: false, error: 'Only image content can be proxied' });
+    }
+    if (contentType.includes('svg')) {
+      res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox");
+    }
     res.setHeader('Cache-Control', 'public, max-age=86400');
     return res.status(200).send(buffer);
   } catch (err: any) {
@@ -327,7 +466,7 @@ async function downloadAndCacheImage(imageUrl: string, filenamePrefix: string, c
 
   try {
     const cleanUrl = validation.parsedUrl.toString();
-    const response = await axios.get(cleanUrl, {
+    const response = await safeAxiosGet(cleanUrl, {
       responseType: 'arraybuffer',
       timeout: 10000,
       maxContentLength: 10 * 1024 * 1024,
@@ -344,8 +483,12 @@ async function downloadAndCacheImage(imageUrl: string, filenamePrefix: string, c
     else if (contentType.includes('svg')) ext = 'svg';
 
     const buffer = Buffer.from(response.data);
-    if (ext === 'svg' && !isSafeSvgContent(buffer)) {
-      console.warn(`[SVG Security Warning] Skipping unsafe SVG from ${imageUrl}`);
+    if (ext === 'svg') {
+      // Remote SVGs can carry script; never store/serve them from our own origin.
+      console.warn(`[SVG Security Warning] Skipping remote SVG from ${imageUrl}`);
+      return imageUrl;
+    }
+    if (!contentType.toLowerCase().startsWith('image/')) {
       return imageUrl;
     }
 
@@ -362,6 +505,7 @@ async function downloadAndCacheImage(imageUrl: string, filenamePrefix: string, c
 
     // Upload to upc.geekclub.ir CDN
     try {
+      if (!CDN_SECRET) throw new Error('CDN_SECRET is not configured');
       const fileBlob = new Blob([buffer], { type: contentType });
       const formData = new FormData();
       formData.append('file', fileBlob, filename);
@@ -404,7 +548,7 @@ async function downloadAndCacheVideo(videoUrl: string, filenamePrefix: string, c
   try {
     const cleanUrl = videoUrl.trim().startsWith('http') ? videoUrl.trim() : `https://${videoUrl.trim()}`;
     console.log(`[Video Pipeline] Starting video download from: ${cleanUrl.substring(0, 80)}...`);
-    const response = await axios.get(cleanUrl, {
+    const response = await safeAxiosGet(cleanUrl, {
       responseType: 'arraybuffer',
       timeout: 45000,
       maxContentLength: 80 * 1024 * 1024, // Up to 80MB
@@ -428,17 +572,18 @@ async function downloadAndCacheVideo(videoUrl: string, filenamePrefix: string, c
 
     // Transfer video to CDN (upc.geekclub.ir)
     try {
+      if (!CDN_SECRET) throw new Error('CDN_SECRET is not configured');
       const fileBlob = new Blob([buffer], { type: 'video/mp4' });
       const formData = new FormData();
       formData.append('file', fileBlob, filename);
-      formData.append('api_token', 'geekclub_cdn_secret_2026');
+      formData.append('api_token', CDN_SECRET);
       formData.append('folder', cdnFolder || 'videos');
 
       const cdnResp = await fetch('https://upc.geekclub.ir/s1/upload.php', {
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer geekclub_cdn_secret_2026',
-          'X-Api-Token': 'geekclub_cdn_secret_2026'
+          'Authorization': `Bearer ${CDN_SECRET}`,
+          'X-Api-Token': CDN_SECRET
         },
         body: formData
       });
@@ -462,7 +607,7 @@ async function downloadAndCacheVideo(videoUrl: string, filenamePrefix: string, c
 }
 
 // 0.1. POST /api/transfer-to-cdn - Server-side external image downloader & CDN uploader
-app.post('/api/transfer-to-cdn', async (req: Request, res: Response) => {
+app.post('/api/transfer-to-cdn', rateLimit('transfer-cdn', 20, 60_000), async (req: Request, res: Response) => {
   const { imageUrl, folder, filenamePrefix } = req.body;
   if (!imageUrl) {
     return res.status(400).json({ success: false, error: 'imageUrl parameter is required' });
@@ -557,7 +702,7 @@ export async function extractMetadataForUrl(targetUrl: string): Promise<Extracte
     }
 
     try {
-      const pageRes = await axios.get(cleanUrl, {
+      const pageRes = await safeAxiosGet(cleanUrl, {
         timeout: 6000,
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -909,7 +1054,7 @@ async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMe
 
   // 4. General Web Article / Webpage
   try {
-    const pageRes = await axios.get(cleanUrl, {
+    const pageRes = await safeAxiosGet(cleanUrl, {
       timeout: 8000,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -1032,6 +1177,10 @@ async function enrichDatabaseContent(id: string, url: string) {
     }
 
     const db = loadDatabase();
+    // BUGFIX: a delayed background enrichment must not re-create content that was deleted meanwhile.
+    if (isTombstoned(db, id)) {
+      return null;
+    }
     let item = db.contents.find((c: any) => c.id === id || (url && c.url && c.url.trim().toLowerCase() === url.trim().toLowerCase()));
     
     if (!item) {
@@ -1137,38 +1286,44 @@ async function enrichDatabaseContent(id: string, url: string) {
 }
 
 // 0.2. GET /api/extract-metadata & /api/metadata/extract
-app.get('/api/extract-metadata', async (req: Request, res: Response) => {
+app.get('/api/extract-metadata', rateLimit('extract-meta', 30, 60_000), async (req: Request, res: Response) => {
   const targetUrl = req.query.url as string;
   return extractMetadataHandler(targetUrl, res);
 });
 
-app.get('/api/metadata/extract', async (req: Request, res: Response) => {
+app.get('/api/metadata/extract', rateLimit('extract-meta', 30, 60_000), async (req: Request, res: Response) => {
   const targetUrl = req.query.url as string;
   return extractMetadataHandler(targetUrl, res);
 });
 
 // 1. GET /api/contents - List all contents with optional filters
-app.get('/api/contents', (req: Request, res: Response) => {
+app.get('/api/contents', async (req: Request, res: Response) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
 
   const db = loadDatabase();
   let results = [...db.contents];
-  const { platform, category, search, sort, includeArchived, includePending, includeDeleted } = req.query;
+  const { platform, category, search, sort } = req.query;
+  // Trash / archive / pending seeds are admin-only data - ignore these flags for the public.
+  const admin = await isAdminRequest(req);
+  const includeArchived = admin ? req.query.includeArchived : undefined;
+  const includePending = admin ? req.query.includePending : undefined;
+  const includeDeleted = admin ? req.query.includeDeleted : undefined;
 
   // Always filter out permanently deleted IDs first
   if (db.deletedIds && Array.isArray(db.deletedIds) && db.deletedIds.length > 0) {
-    results = results.filter((c) => !db.deletedIds!.some((delId) => matchesContentId(c, delId)));
+    const delSet = new Set(db.deletedIds);
+    results = results.filter((c) => !delSet.has(c.id));
   }
 
   // Filter out soft-deleted items unless explicitly requested (includeDeleted === 'true')
   if (includeDeleted !== 'true') {
-    results = results.filter((c) => !c.isDeleted && !c.isArchived);
+    results = results.filter((c) => !c.isDeleted);
   }
 
-  // Filter out archived items by default unless explicitly requested or if includeDeleted is true
-  if (includeArchived !== 'true' && includeDeleted !== 'true') {
+  // Filter out archived items by default unless explicitly requested
+  if (includeArchived !== 'true') {
     results = results.filter((c) => !c.isArchived);
   }
 
@@ -1220,7 +1375,7 @@ async function ensureCDNImage(imageUrl: string, _folder = 'contents'): Promise<s
 
 
 // 2. POST /api/contents - Add new content
-app.post('/api/contents', async (req: Request, res: Response) => {
+app.post('/api/contents', rateLimit('add-content', 30, 60_000), async (req: Request, res: Response) => {
   const { 
     id,
     title, 
@@ -1254,6 +1409,9 @@ app.post('/api/contents', async (req: Request, res: Response) => {
   }
 
   const db = loadDatabase();
+  if (isTombstoned(db, contentId)) {
+    return res.status(410).json({ success: false, error: 'This content id was permanently deleted' });
+  }
   const existingIdx = db.contents.findIndex((c: any) => c.id === contentId);
   const newItem = {
     id: contentId,
@@ -1323,7 +1481,7 @@ app.post('/api/contents', async (req: Request, res: Response) => {
 });
 
 // 2.1 POST /api/contents/:id/enrich & GET /api/contents/:id/enrich - Synchronize/enrich content metadata & CDN cover
-app.post('/api/contents/:id/enrich', async (req: Request, res: Response) => {
+app.post('/api/contents/:id/enrich', rateLimit('enrich', 30, 60_000), async (req: Request, res: Response) => {
   const { id } = req.params;
   const db = loadDatabase();
   const item = db.contents.find((c) => c.id === id);
@@ -1342,7 +1500,7 @@ app.post('/api/contents/:id/enrich', async (req: Request, res: Response) => {
   return res.json({ success: true, data: meta });
 });
 
-app.get('/api/contents/:id/enrich', async (req: Request, res: Response) => {
+app.get('/api/contents/:id/enrich', rateLimit('enrich', 30, 60_000), async (req: Request, res: Response) => {
   const { id } = req.params;
   const db = loadDatabase();
   const item = db.contents.find((c) => c.id === id);
@@ -1361,59 +1519,65 @@ app.get('/api/contents/:id/enrich', async (req: Request, res: Response) => {
   return res.json({ success: true, data: meta });
 });
 
+// A "tombstone" is an id that was permanently deleted. Nothing may silently re-create it.
+function isTombstoned(db: DatabaseSchema, id: string): boolean {
+  if (!id || !db.deletedIds || db.deletedIds.length === 0) return false;
+  const cleanId = id.replace(/^(post|content)-/, '');
+  return db.deletedIds.includes(id) || db.deletedIds.includes(cleanId);
+}
+
+// Fields a NON-admin client may change (used by the background metadata enrichment after adding a link)
+const NON_ADMIN_UPDATABLE_FIELDS = new Set([
+  'title', 'description', 'thumbnail', 'videoUrl', 'mediaType', 'images', 'slides',
+  'needsEnrichment', 'apifyFetched', 'articleContent', 'embedUrl', 'readingOrWatchTime', 'tags', 'sourceDomain'
+]);
+
 function matchesContentId(item: any, id: string): boolean {
   if (!item || !id) return false;
   const itemId = String(item.id || '');
   if (itemId === id) return true;
-  const normalize = (s: string) => String(s).replace(/^(post|content|custom)-/, '').trim();
-  const cleanId = normalize(id);
-  const cleanItemId = normalize(itemId);
+  const cleanId = id.replace(/^(post|content)-/, '');
+  const cleanItemId = itemId.replace(/^(post|content)-/, '');
   if (cleanItemId === cleanId) return true;
-  if (cleanId && (itemId.endsWith(cleanId) || id.endsWith(cleanItemId))) return true;
+  if (itemId === `post-${cleanId}` || itemId === `content-${cleanId}`) return true;
+  if (id === `post-${cleanItemId}` || id === `content-${cleanItemId}`) return true;
   return false;
 }
 
 // 2.2 PATCH /api/contents/:id & POST /api/contents/:id/update - Update content fields in local db
-const handleContentUpdate = (req: Request, res: Response) => {
+const handleContentUpdate = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const updates = req.body || {};
+  const rawUpdates = (req.body && typeof req.body === 'object') ? req.body : {};
+  const admin = await isAdminRequest(req);
   const db = loadDatabase();
-  const normalize = (s: string) => String(s).replace(/^(post|content|custom)-/, '').trim();
-  const cleanId = normalize(id);
+  const cleanId = id.replace(/^(post|content)-/, '');
 
-  let index = db.contents.findIndex((c) => matchesContentId(c, id));
-
-  if (!db.deletedIds) db.deletedIds = [];
-  if (!db.softDeletedIds) db.softDeletedIds = [];
-
-  if (updates.isDeleted === false || updates.isArchived === false) {
-    db.deletedIds = db.deletedIds.filter((dId) => !matchesContentId({ id: dId }, id));
-    db.softDeletedIds = db.softDeletedIds.filter((sId) => !matchesContentId({ id: sId }, id));
+  // Non-admin clients may only push enrichment fields - never moderation/delete/like state.
+  let updates: Record<string, any> = rawUpdates;
+  if (!admin) {
+    updates = {};
+    for (const k of Object.keys(rawUpdates)) {
+      if (NON_ADMIN_UPDATABLE_FIELDS.has(k)) updates[k] = rawUpdates[k];
+    }
   }
-  
+  delete updates.id; // the id can never be changed through an update
+
+  const index = db.contents.findIndex((c) => matchesContentId(c, id));
+  const explicitRestore = admin && updates.isDeleted === false;
+
+  // BUGFIX: an update must NEVER re-create an item that was deleted (this made deleted posts "come back").
   if (index === -1) {
-    const newItem = { id, ...updates };
-    db.contents.push(newItem);
-    index = db.contents.length - 1;
-  } else {
-    // Preserve existing soft-delete state if updates didn't explicitly modify deletion
-    const existingIsDeleted = db.contents[index].isDeleted;
-    const existingIsArchived = db.contents[index].isArchived;
-    const existingDeletedAt = db.contents[index].deletedAt;
-
-    db.contents[index] = { ...db.contents[index], ...updates };
-
-    if (updates.isDeleted === undefined && existingIsDeleted) {
-      db.contents[index].isDeleted = true;
+    if (isTombstoned(db, id) && !explicitRestore) {
+      return res.status(410).json({ success: false, error: 'Content was permanently deleted' });
     }
-    if (updates.isArchived === undefined && existingIsArchived) {
-      db.contents[index].isArchived = true;
-    }
-    if (updates.deletedAt === undefined && existingDeletedAt) {
-      db.contents[index].deletedAt = existingDeletedAt;
-    }
+    return res.status(404).json({ success: false, error: 'Content not found' });
   }
-  
+
+  if (explicitRestore && db.deletedIds) {
+    db.deletedIds = db.deletedIds.filter((dId) => dId !== id && dId !== cleanId);
+  }
+
+  db.contents[index] = { ...db.contents[index], ...updates };
   saveDatabase(db);
   res.json({ success: true, data: db.contents[index] });
 };
@@ -1421,94 +1585,79 @@ const handleContentUpdate = (req: Request, res: Response) => {
 app.patch('/api/contents/:id', handleContentUpdate);
 app.post('/api/contents/:id/update', handleContentUpdate);
 
-// Dedicated POST /api/contents/:id/soft-delete
-app.post('/api/contents/:id/soft-delete', (req: Request, res: Response) => {
+// Dedicated POST /api/contents/:id/soft-delete (admin only)
+app.post('/api/contents/:id/soft-delete', requireAdminAuth, (req: Request, res: Response) => {
   const { id } = req.params;
   const db = loadDatabase();
   const deletedAt = req.body?.deletedAt || new Date().toISOString();
 
-  if (!db.softDeletedIds) db.softDeletedIds = [];
-  if (!db.softDeletedIds.some((sId) => matchesContentId({ id: sId }, id))) {
-    db.softDeletedIds.push(id);
+  const target = db.contents.find((c) => matchesContentId(c, id));
+  if (!target) {
+    // BUGFIX: do not invent a placeholder item for an unknown id.
+    return res.status(404).json({ success: false, error: 'Content not found' });
   }
-
-  let matched = false;
-  for (const c of db.contents) {
-    if (matchesContentId(c, id)) {
-      c.isDeleted = true;
-      c.isArchived = true;
-      c.deletedAt = deletedAt;
-      matched = true;
-    }
-  }
-  if (!matched) {
-    const newItem = { id, title: 'محتوای حذف‌شده', url: '', isDeleted: true, isArchived: true, deletedAt };
-    db.contents.push(newItem);
-  }
+  target.isDeleted = true;
+  target.deletedAt = deletedAt;
 
   saveDatabase(db);
-  console.log(`[Soft Delete] Content ${id} marked as soft-deleted in database`);
-  res.json({ success: true, message: 'Content soft-deleted' });
+  res.json({ success: true, data: target, message: 'Content soft-deleted' });
 });
 
 // Dedicated POST /api/contents/:id/restore
-app.post('/api/contents/:id/restore', (req: Request, res: Response) => {
+app.post('/api/contents/:id/restore', requireAdminAuth, (req: Request, res: Response) => {
   const { id } = req.params;
   const db = loadDatabase();
+  const cleanId = id.replace(/^(post|content)-/, '');
 
-  if (db.softDeletedIds) {
-    db.softDeletedIds = db.softDeletedIds.filter((sid) => !matchesContentId({ id: sid }, id));
+  let target = db.contents.find((c) => matchesContentId(c, id));
+  if (target) {
+    target.isDeleted = false;
+    target.isArchived = false;
+    delete target.deletedAt;
+    delete target.archivedAt;
   }
+
   if (db.deletedIds) {
-    db.deletedIds = db.deletedIds.filter((dId) => !matchesContentId({ id: dId }, id));
-  }
-
-  for (const target of db.contents) {
-    if (matchesContentId(target, id)) {
-      target.isDeleted = false;
-      target.isArchived = false;
-      delete target.deletedAt;
-      delete target.archivedAt;
-    }
+    db.deletedIds = db.deletedIds.filter((dId) => dId !== id && dId !== cleanId);
   }
 
   saveDatabase(db);
-  console.log(`[Restore] Content ${id} restored to public feed in database`);
-  res.json({ success: true, message: 'Content restored to feed' });
+  res.json({ success: true, data: target, message: 'Content restored to feed' });
 });
 
 // Dedicated POST & DELETE for permanent deletion
 const handlePermanentDelete = (req: Request, res: Response) => {
   const { id } = req.params;
   const db = loadDatabase();
-  const normalize = (s: string) => String(s).replace(/^(post|content|custom)-/, '').trim();
-  const cleanId = normalize(id);
+  const cleanId = id.replace(/^(post|content)-/, '');
 
   db.contents = db.contents.filter((c) => !matchesContentId(c, id));
   if (!db.deletedIds) db.deletedIds = [];
-  if (!db.deletedIds.some((dId) => matchesContentId({ id: dId }, id))) {
+  if (!db.deletedIds.includes(id)) {
     db.deletedIds.push(id);
   }
-  if (cleanId && !db.deletedIds.includes(cleanId)) {
+  if (!db.deletedIds.includes(cleanId)) {
     db.deletedIds.push(cleanId);
-  }
-  if (db.softDeletedIds) {
-    db.softDeletedIds = db.softDeletedIds.filter((sid) => !matchesContentId({ id: sid }, id));
   }
   if (db.comments && db.comments[id]) {
     delete db.comments[id];
   }
   saveDatabase(db);
-  console.log(`[Permanent Delete] Content ${id} removed permanently from database`);
   res.json({ success: true, message: 'Content deleted permanently' });
 };
 
-app.delete('/api/contents/:id', handlePermanentDelete);
-app.post('/api/contents/:id/permanent-delete', handlePermanentDelete);
-app.post('/api/contents/:id/delete', handlePermanentDelete);
+app.delete('/api/contents/:id', requireAdminAuth, handlePermanentDelete);
+app.post('/api/contents/:id/permanent-delete', requireAdminAuth, handlePermanentDelete);
+app.post('/api/contents/:id/delete', requireAdminAuth, handlePermanentDelete);
 
 // 2.9 GET /api/database-diagnostic - Comprehensive database connectivity and health test
-app.get('/api/database-diagnostic', (_req: Request, res: Response) => {
+// Lets the login screen check an admin key/ID token on the SERVER (no secrets live in the browser bundle)
+app.post('/api/admin/verify', rateLimit('admin-verify', 10, 60_000), async (req: Request, res: Response) => {
+  if (await isAdminRequest(req)) return res.json({ success: true });
+  return res.status(401).json({ success: false, error: 'Invalid admin credentials' });
+});
+
+app.get('/api/database-diagnostic', requireAdminAuth, (_req: Request, res: Response) => {
   const startTime = Date.now();
   try {
     const db = loadDatabase();
@@ -1522,11 +1671,13 @@ app.get('/api/database-diagnostic', (_req: Request, res: Response) => {
     const profilesCount = db.profiles ? Object.keys(db.profiles).length : 0;
     const deletedIdsCount = db.deletedIds ? db.deletedIds.length : 0;
 
-    // Test atomic write capability
-    const testKey = `diag_test_${Date.now()}`;
-    db.settings = { ...(db.settings || {}), [testKey]: new Date().toISOString() };
-    saveDatabase(db);
-    const writeOk = true;
+    // Test write capability without touching real data
+    let writeOk = true;
+    try {
+      fs.accessSync(path.dirname(DB_PATH), fs.constants.W_OK);
+    } catch {
+      writeOk = false;
+    }
 
     return res.json({
       success: true,
@@ -1629,7 +1780,7 @@ app.get('/api/contents/:id/comments', (req: Request, res: Response) => {
 });
 
 // 5. POST /api/contents/:id/comments - Add new comment
-app.post('/api/contents/:id/comments', (req: Request, res: Response) => {
+app.post('/api/contents/:id/comments', rateLimit('comments', 20, 60_000), (req: Request, res: Response) => {
   const { id } = req.params;
   const { text, author } = req.body;
 
@@ -1723,14 +1874,11 @@ app.post('/api/test-apify', requireAdminAuth, async (req: Request, res: Response
 });
 
 // 8. GET & POST /api/site-settings - Global site & API settings persistence
-app.get('/api/site-settings', (req: Request, res: Response) => {
+app.get('/api/site-settings', async (req: Request, res: Response) => {
   const db = loadDatabase();
   const settings = { ...(db.settings || {}) };
 
-  const authHeader = req.headers['authorization'];
-  const adminKeyHeader = req.headers['x-admin-key'];
-  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : adminKeyHeader;
-  const isAdmin = token === ADMIN_KEY || token === '3dsaz2026' || token === CDN_SECRET;
+  const isAdmin = await isAdminRequest(req);
 
   if (!isAdmin) {
     delete settings.apifyApiToken;
@@ -1749,15 +1897,29 @@ app.post('/api/site-settings', requireAdminAuth, (req: Request, res: Response) =
 });
 
 // 8.1. GET & POST /api/profiles - User profiles persistence
-app.get('/api/profiles', (req: Request, res: Response) => {
+app.get('/api/profiles', async (req: Request, res: Response) => {
   const db = loadDatabase();
-  res.json({ success: true, data: db.profiles || {} });
+  if (await isAdminRequest(req)) {
+    return res.json({ success: true, data: db.profiles || {} });
+  }
+  // Public view: hide e-mail addresses unless the user explicitly made them public.
+  const publicProfiles: Record<string, any> = {};
+  for (const [k, v] of Object.entries(db.profiles || {})) {
+    const copy: any = { ...(v as any) };
+    if (copy.hideEmail !== false) delete copy.email;
+    publicProfiles[k] = copy;
+  }
+  res.json({ success: true, data: publicProfiles });
 });
 
-app.post('/api/profiles', (req: Request, res: Response) => {
-  const profile = req.body;
+app.post('/api/profiles', rateLimit('profiles', 30, 60_000), async (req: Request, res: Response) => {
+  const profile = (req.body && typeof req.body === 'object') ? { ...req.body } : null;
   if (!profile || (!profile.uid && !profile.email && !profile.username)) {
     return res.status(400).json({ success: false, error: 'Valid profile object with uid, email, or username is required' });
+  }
+  // SECURITY: privilege fields can only be changed by an admin (prevents self-promotion to admin).
+  if (!(await isAdminRequest(req))) {
+    for (const f of ['role', 'isAdmin', 'isArchived', 'archivedAt', 'autoApproveContent']) delete profile[f];
   }
 
   const db = loadDatabase();
@@ -1863,6 +2025,7 @@ app.post('/api/contents/:id/archive', requireAdminAuth, (req: Request, res: Resp
   res.json({ success: true, message: 'محتوا با موفقیت منتقل به آرشیو ادمین شد.', data: content });
 });
 
+// 8.6. POST /api/contents/:id/restore - Restore soft-deleted content (Admin Protected)
 // 8.7. POST /api/profiles/:key/archive - Soft delete user profile (Admin Protected)
 app.post('/api/profiles/:key/archive', requireAdminAuth, (req: Request, res: Response) => {
   const { key } = req.params;
@@ -1974,7 +2137,7 @@ app.get('/api/rss', (req: Request, res: Response) => {
 
   const { platform, category, key } = req.query || {};
 
-  if (key !== ADMIN_KEY && key !== 'geekclub_admin_secure_key') {
+  if (!(RSS_FEED_KEY && safeEqual(typeof key === 'string' ? key : '', RSS_FEED_KEY)) && !(typeof key === 'string' && safeEqual(key, ADMIN_KEY))) {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     return res.status(403).send('Access denied. Admin secure key required for RSS feed / دسترسی غیرمجاز. فید RSS فقط با کلید امنیتی مدیر کل مجاز است.');
   }

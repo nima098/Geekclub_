@@ -1,5 +1,6 @@
 import { INITIAL_CONTENT } from './data.js';
 import fs from 'fs';
+import crypto from 'crypto';
 import path from 'path';
 
 export default function handler(req, res) {
@@ -13,7 +14,8 @@ export default function handler(req, res) {
 
   const { platform, category, key } = req.query || {};
 
-  if (key !== 'geekclub_admin_secure_key') {
+  const expected = process.env.RSS_FEED_KEY || '';
+  if (!expected || typeof key !== 'string' || key.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(key), Buffer.from(expected))) {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     return res.status(403).send('Access denied. Admin secure key required for RSS feed / دسترسی غیرمجاز. فید RSS فقط با کلید امنیتی مدیر کل مجاز است.');
   }

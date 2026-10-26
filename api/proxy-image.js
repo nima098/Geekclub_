@@ -1,3 +1,5 @@
+import { safeFetch } from './_ssrf.js';
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -15,29 +17,9 @@ export default async function handler(req, res) {
     return res.status(200).send(fallbackSvg);
   }
 
-  // SSRF Validation
+  // SSRF protection: DNS + every redirect hop is validated
   try {
-    const parsed = new URL(imageUrl.trim().startsWith('http') ? imageUrl.trim() : `https://${imageUrl.trim()}`);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      res.setHeader('Content-Type', 'image/svg+xml');
-      return res.status(400).send(fallbackSvg);
-    }
-    const hostname = parsed.hostname.toLowerCase();
-    if (
-      hostname === 'localhost' ||
-      hostname === '127.0.0.1' ||
-      hostname === '::1' ||
-      hostname === '0.0.0.0' ||
-      hostname === '169.254.169.254' ||
-      hostname.startsWith('10.') ||
-      hostname.startsWith('192.168.') ||
-      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)
-    ) {
-      res.setHeader('Content-Type', 'image/svg+xml');
-      return res.status(400).send(fallbackSvg);
-    }
-
-    const fetchResponse = await fetch(parsed.toString(), {
+    const fetchResponse = await safeFetch(imageUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
@@ -51,18 +33,13 @@ export default async function handler(req, res) {
     const contentType = fetchResponse.headers.get('content-type') || 'image/jpeg';
     const buffer = Buffer.from(await fetchResponse.arrayBuffer());
 
+    if (!contentType.toLowerCase().startsWith('image/') || buffer.length > 10 * 1024 * 1024) {
+      throw new Error('Not an image or too large');
+    }
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     if (contentType.includes('svg')) {
-      const text = buffer.toString('utf-8').toLowerCase();
-      if (
-        text.includes('<script') ||
-        text.includes('javascript:') ||
-        text.includes('onload=') ||
-        text.includes('onerror=') ||
-        text.includes('onclick=')
-      ) {
-        res.setHeader('Content-Type', 'image/svg+xml');
-        return res.status(400).send(fallbackSvg);
-      }
+      // A denylist can never make SVG safe - instead make sure it can never execute script
+      res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox");
     }
 
     res.setHeader('Content-Type', contentType);

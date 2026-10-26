@@ -29,7 +29,7 @@ export const RSSModal: React.FC<RSSModalProps> = ({ isOpen, onClose }) => {
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://geekclub.ir';
   
   const getFeedUrl = (filter: string) => {
-    const secretKey = 'key=geekclub_admin_secure_key';
+    const secretKey = 'key=YOUR_RSS_FEED_KEY'; // replace with the RSS_FEED_KEY value configured on the server
     if (filter === 'all') return `${origin}/api/rss?${secretKey}`;
     if (filter.startsWith('platform:')) {
       const p = filter.replace('platform:', '');

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Navbar 
 } from './components/Navbar';
@@ -107,26 +107,57 @@ const STORAGE_KEYS = {
   USER: 'mediahub_user_v1'
 };
 
+// --- Optimistic delete/restore protection ---------------------------------------------------------
+// BUGFIX ("deleted content comes back after a few seconds"): the feed is re-fetched every 4 seconds and
+// the response REPLACED the local state. A poll that was already in flight (or hit a stale server
+// instance) therefore brought the deleted item back. We now remember local delete/restore actions and
+// re-apply them on top of every poll result until the server confirms the change.
+type PendingKind = 'soft' | 'restore' | 'perm';
+interface PendingOverride { kind: PendingKind; at: number; deletedAt?: string; }
+const PENDING_OVERRIDE_TTL_MS = 2 * 60 * 1000;
+const stripContentPrefix = (id: string) => id.replace(/^(post|content)-/, '');
+
 export default function App() {
+  const pendingOverridesRef = useRef<Map<string, PendingOverride>>(new Map());
+
+  const applyPendingOverrides = (items: ContentItem[]): ContentItem[] => {
+    const overrides = pendingOverridesRef.current;
+    if (overrides.size === 0) return items;
+    const now = Date.now();
+    let result = items;
+
+    for (const [id, ov] of Array.from(overrides.entries())) {
+      if (now - ov.at > PENDING_OVERRIDE_TTL_MS) {
+        overrides.delete(id);
+        continue;
+      }
+      const clean = stripContentPrefix(id);
+      const isMatch = (c: ContentItem) => c.id === id || stripContentPrefix(c.id) === clean;
+      const serverItem = result.find(isMatch);
+
+      if (ov.kind === 'perm') {
+        if (!serverItem) { overrides.delete(id); continue; } // server confirmed the deletion
+        result = result.filter((c) => !isMatch(c));
+      } else if (ov.kind === 'soft') {
+        if (!serverItem || serverItem.isDeleted) { overrides.delete(id); continue; } // confirmed
+        result = result.map((c) => (isMatch(c) ? { ...c, isDeleted: true, deletedAt: ov.deletedAt } : c));
+      } else if (ov.kind === 'restore') {
+        if (serverItem && !serverItem.isDeleted) { overrides.delete(id); continue; } // confirmed
+        result = result.map((c) => (isMatch(c) ? { ...c, isDeleted: false, deletedAt: undefined } : c));
+      }
+    }
+    return result;
+  };
+
   // --- Server-Authoritative Contents State ---
   const [contents, setContents] = useState<ContentItem[]>(() => {
     try {
-      // Clear legacy localStorage content cache to ensure 100% server authority
+      // Clear legacy localStorage content cache and soft-delete blacklists to ensure 100% server authority
       localStorage.removeItem('mediahub_content_v1');
       localStorage.removeItem('mediahub_soft_deleted_v2');
       localStorage.removeItem('mediahub_deleted_ids_v1');
 
-      // Check session cache for already-synced server contents
-      const cached = sessionStorage.getItem('geekclub_synced_contents_v2');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-
-      // Initial fallback: only include active non-deleted items from INITIAL_CONTENT
-      const itemsToProcess = INITIAL_CONTENT.filter((item) => !item.isDeleted && !item.isArchived);
+      const itemsToProcess = INITIAL_CONTENT;
 
       // Verified CDN covers on upc.geekclub.ir
       const VERIFIED_CDN_COVERS: Record<string, string> = {
@@ -170,7 +201,7 @@ export default function App() {
         };
       });
     } catch {
-      return INITIAL_CONTENT.filter((item) => !item.isDeleted && !item.isArchived);
+      return INITIAL_CONTENT;
     }
   });
 
@@ -471,16 +502,17 @@ export default function App() {
   useEffect(() => {
     async function syncBackendData() {
       const serverContents = await api.getContents({ includeDeleted: true });
-      if (Array.isArray(serverContents) && serverContents.length > 0) {
-        setContents(serverContents);
+      if (Array.isArray(serverContents)) {
+        setContents(applyPendingOverrides(serverContents));
       }
     }
     syncBackendData();
 
     // Subscribe to server live contents updates across all users & open browsers
     const unsubscribe = api.subscribeContents((items) => {
-      if (Array.isArray(items) && items.length > 0) {
-        setContents(items);
+      // BUGFIX: an EMPTY list is valid (e.g. the last item was deleted) and must not be ignored.
+      if (Array.isArray(items)) {
+        setContents(applyPendingOverrides(items));
       }
     });
 
@@ -1099,54 +1131,70 @@ export default function App() {
   };
 
   // --- Soft-Delete & Trash Handlers ---
+  const refreshContentsFromServer = async () => {
+    const fresh = await api.getContents({ includeDeleted: true });
+    if (Array.isArray(fresh)) setContents(applyPendingOverrides(fresh));
+  };
+
   const handleToggleSoftDelete = async (contentId: string, shouldDelete: boolean) => {
     const deletedAtStr = shouldDelete ? new Date().toLocaleDateString('fa-IR') : undefined;
-    const normalize = (s: string) => String(s).replace(/^(post|content|custom)-/, '').trim();
-    const cleanId = normalize(contentId);
+    const cleanId = stripContentPrefix(contentId);
 
-    setContents((prev) => {
-      const updated = prev.map((c) => {
-        const cCleanId = normalize(c.id);
-        if (c.id === contentId || cCleanId === cleanId || c.id.endsWith(cleanId) || contentId.endsWith(cCleanId)) {
+    // Remember the action so background polling cannot undo it before the server confirms it
+    pendingOverridesRef.current.set(contentId, {
+      kind: shouldDelete ? 'soft' : 'restore',
+      at: Date.now(),
+      deletedAt: deletedAtStr
+    });
+
+    setContents((prev) =>
+      prev.map((c) => {
+        if (c.id === contentId || stripContentPrefix(c.id) === cleanId) {
           return {
             ...c,
             isDeleted: shouldDelete,
-            isArchived: shouldDelete,
             deletedAt: deletedAtStr
           };
         }
         return c;
-      });
-      try {
-        sessionStorage.setItem('geekclub_synced_contents_v2', JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
+      })
+    );
+
+    const ok = shouldDelete
+      ? await api.softDeleteContent(contentId, deletedAtStr)
+      : await api.restoreContent(contentId);
+
+    if (!ok) {
+      // The server refused / was unreachable: undo the optimistic change instead of silently reverting later
+      pendingOverridesRef.current.delete(contentId);
+      await refreshContentsFromServer();
+      addToast('error', 'تغییر روی سرور ذخیره نشد. دسترسی مدیریتی یا اتصال به سرور را بررسی کنید.');
+      return;
+    }
 
     if (shouldDelete) {
-      await api.softDeleteContent(contentId, deletedAtStr);
       addToast('info', 'محتوا به سطل بازیافت منتقل شد و از فید پنهان گردید (قابل بازگردانی از پنل ادمین).');
     } else {
-      await api.restoreContent(contentId);
       addToast('success', 'محتوا با موفقیت از سطل بازیافت به فید عمومی بازگردانده شد.');
     }
   };
 
   const handlePermanentDelete = async (contentId: string) => {
-    const normalize = (s: string) => String(s).replace(/^(post|content|custom)-/, '').trim();
-    const cleanId = normalize(contentId);
+    const cleanId = stripContentPrefix(contentId);
 
-    setContents((prev) => {
-      const updated = prev.filter((c) => {
-        const cCleanId = normalize(c.id);
-        return c.id !== contentId && cCleanId !== cleanId && !c.id.endsWith(cleanId);
-      });
-      try {
-        sessionStorage.setItem('geekclub_synced_contents_v2', JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
-    await api.deleteContent(contentId);
+    pendingOverridesRef.current.set(contentId, { kind: 'perm', at: Date.now() });
+
+    setContents((prev) =>
+      prev.filter((c) => c.id !== contentId && stripContentPrefix(c.id) !== cleanId)
+    );
+
+    const ok = await api.deleteContent(contentId);
+    if (!ok) {
+      pendingOverridesRef.current.delete(contentId);
+      await refreshContentsFromServer();
+      addToast('error', 'حذف دائمی روی سرور انجام نشد. دسترسی مدیریتی یا اتصال به سرور را بررسی کنید.');
+      return;
+    }
     addToast('error', 'محتوا به طور کامل از حافظه دیتابیس حذف گردید.');
   };
 
@@ -1215,14 +1263,14 @@ export default function App() {
   );
 
   const trashCount = useMemo(() => {
-    return contents.filter((c) => c.isDeleted || c.isArchived).length;
+    return contents.filter((c) => c.isDeleted).length;
   }, [contents]);
 
   // --- Filtered & Sorted Content List ---
   const filteredContents = useMemo(() => {
     // If Single Post Permalink Mode is active
     if (singlePostId) {
-      const match = contents.filter((item) => !item.isDeleted && !item.isArchived && (item.id === singlePostId || item.id.endsWith(singlePostId)));
+      const match = contents.filter((item) => !item.isDeleted && (item.id === singlePostId || item.id.endsWith(singlePostId)));
       if (match.length > 0) {
         return match;
       }
@@ -1232,11 +1280,11 @@ export default function App() {
       .filter((item) => {
         // Trash filter for admin
         if (showTrashOnly) {
-          return Boolean(item.isDeleted || item.isArchived);
+          return Boolean(item.isDeleted);
         }
 
         // Soft-delete filter: Exclude items in trash from public feed
-        if (item.isDeleted || item.isArchived) {
+        if (item.isDeleted) {
           return false;
         }
 
@@ -1333,7 +1381,7 @@ export default function App() {
         unreadInboxCount={inbox.filter((m) => !m.read).length}
         onToggleSavedOnly={() => setShowSavedOnly(!showSavedOnly)}
         showSavedOnly={showSavedOnly}
-        totalItemsCount={contents.filter((c) => !c.isDeleted && !c.isArchived).length}
+        totalItemsCount={contents.filter((c) => !c.isDeleted).length}
         theme={theme}
         onToggleTheme={handleToggleTheme}
         onGoHome={handleGoHome}
