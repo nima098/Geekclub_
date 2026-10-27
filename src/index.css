@@ -19,9 +19,25 @@
     font-family: 'Vazirmatn', 'Vazir', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   }
   
+  html {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scroll-padding-top: 80px;
+  }
+
   html, body {
     overflow-x: hidden;
     max-width: 100vw;
+    overscroll-behavior-y: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* GPU Hardware Acceleration for Navbar & Blur Containers to ensure 60fps smooth scrolling */
+  nav, header, .backdrop-blur-md, .backdrop-blur-xl, .backdrop-blur-2xl {
+    transform: translateZ(0);
+    backface-visibility: hidden;
   }
 
   html, body, button, input, textarea, select {
