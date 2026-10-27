@@ -34,11 +34,16 @@ export async function loginWithGooglePopup(): Promise<{
   try {
     const result = await signInWithPopup(auth, googleProvider);
     const user = result.user;
+    const rawPhoto = user.photoURL || '';
+    const safePhoto = rawPhoto && (rawPhoto.includes('googleusercontent.com') || rawPhoto.includes('ggpht.com'))
+      ? `/api/proxy-image?url=${encodeURIComponent(rawPhoto)}`
+      : rawPhoto || `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" rx="50" fill="%233b82f6"/><text x="50" y="63" font-family="Tahoma,sans-serif" font-size="42" font-weight="bold" fill="%23ffffff" text-anchor="middle" dominant-baseline="middle">گ</text></svg>`;
+
     return {
       uid: user.uid,
       displayName: user.displayName || 'کاربر گوگل',
       email: user.email || '',
-      photoURL: user.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user.displayName || 'User')}`
+      photoURL: safePhoto
     };
   } catch (error: any) {
     console.error('Google Sign-In Error:', error);

@@ -8,6 +8,14 @@ import crypto from 'crypto';
 import dns from 'dns';
 import net from 'net';
 import { INITIAL_CONTENT, INITIAL_COMMENTS, SUPER_ADMIN_EMAIL } from './src/data/initialData.ts';
+import {
+  initPostgres,
+  isPostgresConnected,
+  getPostgresDiagnostic,
+  loadDatabaseFromPostgres,
+  saveDatabaseToPostgres,
+  recordPostgresBackup
+} from './src/db/postgres.ts';
 
 const getDirname = (): string => {
   try {
@@ -373,6 +381,7 @@ function createDatabaseBackup(): { success: boolean; filename: string; path: str
     fs.writeFileSync(backupPath, JSON.stringify(db, null, 2), 'utf-8');
     db.settings = { ...(db.settings || {}), lastBackupAt: new Date().toISOString() };
     saveDatabase(db);
+    recordPostgresBackup(filename, '12h_auto').catch(() => {});
     console.log(`[Auto Backup] 12-hour database backup created: ${filename}`);
     return { success: true, filename, path: backupPath, timestamp: new Date().toISOString() };
   } catch (err: any) {
@@ -398,6 +407,13 @@ function saveDatabase(db: DatabaseSchema) {
     fs.renameSync(tempPath, DB_PATH);
   } catch (err: any) {
     console.warn('[Database Warning] Could not save database file to disk atomically:', err.message);
+  }
+
+  // Mirror state to PostgreSQL if connected
+  if (isPostgresConnected()) {
+    saveDatabaseToPostgres(db).catch((err) => {
+      console.warn('[PostgreSQL Sync Warning] Error writing to PostgreSQL:', err.message);
+    });
   }
 }
 
@@ -1657,7 +1673,7 @@ app.post('/api/admin/verify', rateLimit('admin-verify', 10, 60_000), async (req:
   return res.status(401).json({ success: false, error: 'Invalid admin credentials' });
 });
 
-app.get('/api/database-diagnostic', requireAdminAuth, (_req: Request, res: Response) => {
+app.get('/api/database-diagnostic', requireAdminAuth, async (_req: Request, res: Response) => {
   const startTime = Date.now();
   try {
     const db = loadDatabase();
@@ -1679,6 +1695,8 @@ app.get('/api/database-diagnostic', requireAdminAuth, (_req: Request, res: Respo
       writeOk = false;
     }
 
+    const pgDiagnostic = await getPostgresDiagnostic();
+
     return res.json({
       success: true,
       timestamp: new Date().toISOString(),
@@ -1686,6 +1704,7 @@ app.get('/api/database-diagnostic', requireAdminAuth, (_req: Request, res: Respo
       databasePath: DB_PATH,
       fileSizeKb: stats ? Math.round(stats.size / 1024) : 0,
       latencyMs,
+      postgres: pgDiagnostic,
       metrics: {
         totalContents,
         activeContents,
@@ -1713,6 +1732,59 @@ app.get('/api/database-diagnostic', requireAdminAuth, (_req: Request, res: Respo
       },
       message: 'خطا در دسترسی به دیتابیس سرور: ' + err.message
     });
+  }
+});
+
+// 2.91 POST /api/database/migrate-to-postgres - Manually migrate all JSON data to PostgreSQL
+app.post('/api/database/migrate-to-postgres', requireAdminAuth, async (_req: Request, res: Response) => {
+  try {
+    const isReady = isPostgresConnected() || (await initPostgres());
+    if (!isReady) {
+      return res.status(400).json({
+        success: false,
+        message: 'اتصال به دیتابیس PostgreSQL برقرار نشد. لطفاً متغیر DATABASE_URL را در فایل .env سرور مقداردهی نمایید.'
+      });
+    }
+
+    const currentDb = loadDatabase();
+    const saveSuccess = await saveDatabaseToPostgres(currentDb);
+    const details = await getPostgresDiagnostic();
+
+    return res.json({
+      success: saveSuccess,
+      message: saveSuccess ? 'کلیه محتواها، پروفایل‌ها، کامنت‌ها و تنظیمات با موفقیت به پایگاه داده رابطه‌ای PostgreSQL منتقل شدند.' : 'خطا در مهاجرت به PostgreSQL',
+      details
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      success: false,
+      message: 'خطا در فرآیند مهاجرت: ' + err.message
+    });
+  }
+});
+
+// 2.92 POST /api/database/backup-drive - Record Google Drive backup timestamp and file reference
+app.post('/api/database/backup-drive', requireAdminAuth, async (req: Request, res: Response) => {
+  try {
+    const { fileId, fileName } = req.body || {};
+    const db = loadDatabase();
+    db.settings = {
+      ...(db.settings || {}),
+      lastDriveBackupAt: new Date().toISOString(),
+      lastDriveFileId: fileId,
+      lastDriveFileName: fileName
+    };
+    saveDatabase(db);
+    if (fileName) {
+      await recordPostgresBackup(fileName, 'google_drive', fileId);
+    }
+    return res.json({
+      success: true,
+      message: 'اطلاعات پشتیبان‌گیری در گوگل درایو با موفقیت ثبت شد.',
+      lastDriveBackupAt: db.settings.lastDriveBackupAt
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
   }
 });
 
@@ -2220,6 +2292,28 @@ async function syncPlatformCoverImages() {
 
 // --- Development & Production Middleware ---
 async function startServer() {
+  // 1. Initialize PostgreSQL if environment variables are set
+  try {
+    const pgConnected = await initPostgres();
+    if (pgConnected) {
+      const pgData = await loadDatabaseFromPostgres();
+      if (pgData && pgData.contents && pgData.contents.length > 0) {
+        cachedDb = pgData;
+        console.log(`[Database] Successfully loaded ${pgData.contents.length} contents from PostgreSQL database.`);
+      } else {
+        // PostgreSQL is connected but empty: migrate existing local database.json data automatically
+        const currentLocalDb = loadDatabase();
+        if (currentLocalDb.contents && currentLocalDb.contents.length > 0) {
+          console.log(`[Database] Migrating ${currentLocalDb.contents.length} items from database.json to PostgreSQL...`);
+          await saveDatabaseToPostgres(currentLocalDb);
+          console.log('[Database] Initial auto-migration to PostgreSQL completed successfully!');
+        }
+      }
+    }
+  } catch (err: any) {
+    console.warn('[Database] PostgreSQL startup check:', err.message);
+  }
+
   if (!IS_VERCEL) {
     syncPlatformCoverImages().catch((err) => console.warn('Sync cover images warning:', err));
   }

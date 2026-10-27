@@ -136,10 +136,34 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   };
 
   useEffect(() => {
-    if (activeTab === 'diagnostic' && !diagnosticReport) {
+    if ((activeTab === 'diagnostic' || activeTab === 'database') && !diagnosticReport) {
       handleRunDiagnostic();
     }
   }, [activeTab]);
+
+  // PostgreSQL Migration State
+  const [isMigratingPostgres, setIsMigratingPostgres] = useState(false);
+  const [postgresMigrationMessage, setPostgresMigrationMessage] = useState<{ success: boolean; text: string } | null>(null);
+
+  const handleMigrateToPostgres = async () => {
+    setIsMigratingPostgres(true);
+    setPostgresMigrationMessage(null);
+    try {
+      const res = await api.migrateToPostgres();
+      setPostgresMigrationMessage({
+        success: res.success,
+        text: res.message || (res.success ? 'اطلاعات با موفقیت به پایگاه داده PostgreSQL منتقل گردید.' : 'خطا در مهاجرت به PostgreSQL')
+      });
+      handleRunDiagnostic();
+    } catch (err: any) {
+      setPostgresMigrationMessage({
+        success: false,
+        text: err.message || 'خطا در برقراری ارتباط با سرور'
+      });
+    } finally {
+      setIsMigratingPostgres(false);
+    }
+  };
 
   // Google Drive 12-Hour Automated Sync States
   const [driveUser, setDriveUser] = useState<{ email: string; displayName: string } | null>(null);
@@ -201,6 +225,15 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           text: `پشتیبان دیتابیس با موفقیت به گوگل درایو متصل شده ارسال شد (${res.fileName})`,
           link: res.webViewLink
         });
+        // Record backup in server and postgres backup history
+        try {
+          const adminHeaders = await getAdminHeaders();
+          await fetch('/api/database/backup-drive', {
+            method: 'POST',
+            headers: adminHeaders,
+            body: JSON.stringify({ fileId: res.fileId, fileName: res.fileName })
+          });
+        } catch {}
       } else {
         setDriveSyncMessage({
           success: false,
@@ -1311,6 +1344,92 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       متصل (ai-studio-mediahub)
                     </span>
                   </div>
+                </div>
+              </div>
+
+              {/* PostgreSQL Relational Database Section */}
+              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-700 pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-sky-500/20 text-sky-400">
+                      <Database className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
+                        پایگاه داده رابطه‌ای PostgreSQL (موتور اختصاصی سرور مجازی)
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                          diagnosticReport?.postgres?.connected
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                            : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                        }`}>
+                          {diagnosticReport?.postgres?.connected ? 'PostgreSQL متصل و فعال' : 'در حال اجرا با JSON Store'}
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-300">
+                        معماری دوگانه: پایداری بر روی دیسک با پشتیبانی کامل از PostgreSQL جهت جستجوهای سریع، روابط ساختاری و ارتقای ده‌هزار محتوایی
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-750 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-200">وضعیت اتصال پایگاه داده:</span>
+                      {diagnosticReport?.postgres?.connected ? (
+                        <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                          <CheckCircle2 className="w-4 h-4" />
+                          متصل به PostgreSQL ({diagnosticReport.postgres.tableCounts?.contents || contents.length} محتوا ثبت‌شده)
+                        </span>
+                      ) : (
+                        <span className="text-xs font-bold text-amber-300 flex items-center gap-1">
+                          <AlertTriangle className="w-4 h-4 text-amber-400" />
+                          آماده فعال‌سازی با تنظیم متغیر DATABASE_URL در سرور مجازی
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                      {diagnosticReport?.postgres?.connected
+                        ? `پایگاه داده فعال: ${diagnosticReport.postgres.engine} (پینگ سرور: ${diagnosticReport.postgres.pingMs} میلی‌ثانیه)`
+                        : 'تمامی کوئری‌ها در حال حاضر از حافظه سریع دیسک و همگام‌سازی ابری تامین می‌شوند.'}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={handleMigrateToPostgres}
+                      disabled={isMigratingPostgres}
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-md shadow-sky-600/20 cursor-pointer disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${isMigratingPostgres ? 'animate-spin' : ''}`} />
+                      {isMigratingPostgres ? 'در حال مهاجرت داده‌ها...' : 'همگام‌سازی و مهاجرت به PostgreSQL'}
+                    </button>
+                  </div>
+                </div>
+
+                {postgresMigrationMessage && (
+                  <div
+                    className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${
+                      postgresMigrationMessage.success
+                        ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                        : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+                    }`}
+                  >
+                    {postgresMigrationMessage.success ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <AlertTriangle className="w-4 h-4 text-rose-400" />}
+                    <span>{postgresMigrationMessage.text}</span>
+                  </div>
+                )}
+
+                {/* CloudPanel Quick Setup Instructions */}
+                <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 text-[11px] text-slate-300 space-y-1.5">
+                  <span className="font-bold text-sky-400 block">راهنمای راه‌اندازی PostgreSQL در CloudPanel سرور مجازی (OVH):</span>
+                  <ol className="list-decimal list-inside space-y-1 text-slate-400 pr-1">
+                    <li>در پنل مدیریت <span className="text-slate-200 font-mono">CloudPanel</span> وارد منوی <span className="text-slate-200">Databases</span> شوید.</li>
+                    <li>یک دیتابیس با نوع <span className="text-sky-300 font-mono">PostgreSQL</span>، نام <span className="text-sky-300 font-mono">geekclub_db</span> و کاربر بسازید.</li>
+                    <li>در فایل <span className="text-amber-300 font-mono">.env</span> سرور، متغیر اتصال را وارد کنید: <span className="text-emerald-400 font-mono text-[10px]">DATABASE_URL="postgresql://user:password@127.0.0.1:5432/geekclub_db"</span></li>
+                    <li>سرویس نود را در CloudPanel ریستارت کنید؛ تمامی جداول و ایندکس‌ها خودکار ساخته و با اطلاعات فعلی همگام می‌شوند.</li>
+                  </ol>
                 </div>
               </div>
 

@@ -684,6 +684,19 @@ export const api = {
     } catch (err: any) {
       return { success: false, message: err.message || 'خطا در ارتباط با سرور' };
     }
+  },
+
+  // 21. Migrate existing JSON database to PostgreSQL
+  async migrateToPostgres(): Promise<{ success: boolean; message?: string; details?: any }> {
+    try {
+      const res = await fetch('/api/database/migrate-to-postgres', {
+        method: 'POST',
+        headers: await getAdminHeaders()
+      });
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, message: err.message || 'خطا در مهاجرت به دیتابیس PostgreSQL' };
+    }
   }
 };
 

@@ -199,7 +199,7 @@ export const handleImageError = (
     return;
   }
 
-  // 5. If failed on external image (Unsplash, YouTube, Instagram), fallback directly to offline SVG Data URI
+  // 5. If failed on external image (Unsplash, YouTube, Instagram, Google Avatars), fallback directly to offline SVG Data URI
   const safeSvg = (fallbackUrl && fallbackUrl.startsWith('data:')) 
     ? fallbackUrl 
     : getPlatformFallbackImage(platform);
@@ -207,4 +207,19 @@ export const handleImageError = (
   if (target.src !== safeSvg) {
     target.src = safeSvg;
   }
+};
+
+/**
+ * Automatically proxies Google user profile pictures and external blocked images through /api/proxy-image
+ * so they load properly in Iran without being filtered.
+ */
+export const getProxiedImageUrl = (url?: string | null): string => {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('/')) {
+    return url;
+  }
+  if (url.includes('googleusercontent.com') || url.includes('ggpht.com')) {
+    return `/api/proxy-image?url=${encodeURIComponent(url)}`;
+  }
+  return url;
 };
