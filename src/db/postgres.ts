@@ -257,9 +257,21 @@ export async function loadDatabaseFromPostgres(): Promise<{
 
     const deletedRes = await pool.query('SELECT id FROM geekclub_deleted_records');
     const deletedIds = deletedRes.rows.map((r) => r.id);
+    const deletedSet = new Set<string>();
+    for (const dId of deletedIds) {
+      if (!dId) continue;
+      const strId = String(dId);
+      deletedSet.add(strId);
+      const cleanId = strId.replace(/^(post|content)-/, '');
+      deletedSet.add(cleanId);
+      deletedSet.add(`post-${cleanId}`);
+      deletedSet.add(`content-${cleanId}`);
+    }
+
+    const filteredContents = contents.filter((c: any) => c && c.id && !deletedSet.has(String(c.id)));
 
     return {
-      contents,
+      contents: filteredContents,
       comments,
       deletedIds,
       settings,
@@ -396,9 +408,15 @@ export async function saveDatabaseToPostgres(dbData: {
       }
     }
 
-    // 5. Sync Deleted IDs
-    if (Array.isArray(dbData.deletedIds)) {
+    // 5. Sync Deleted IDs and purge permanently deleted items from PostgreSQL tables
+    if (Array.isArray(dbData.deletedIds) && dbData.deletedIds.length > 0) {
       for (const delId of dbData.deletedIds) {
+        if (!delId) continue;
+        const cleanId = String(delId).replace(/^(post|content)-/, '');
+        await client.query(
+          `DELETE FROM geekclub_contents WHERE id = $1 OR id = $2 OR id = $3 OR id = $4`,
+          [delId, cleanId, `post-${cleanId}`, `content-${cleanId}`]
+        );
         await client.query(
           `INSERT INTO geekclub_deleted_records (id, deleted_at)
            VALUES ($1, NOW())

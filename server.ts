@@ -29,6 +29,29 @@ const getDirname = (): string => {
 const __dirname = getDirname();
 
 const app = express();
+app.disable('etag');
+
+// Self-destroying Service Worker endpoint to immediately purge stale browser PWA caches
+app.get(['/sw.js', '/service-worker.js', '/registerSW.js', '/workbox-*.js'], (_req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, proxy-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.send(`
+    self.addEventListener('install', function() { self.skipWaiting(); });
+    self.addEventListener('activate', function(event) {
+      event.waitUntil(
+        caches.keys().then(function(keys) {
+          return Promise.all(keys.map(function(key) { return caches.delete(key); }));
+        }).then(function() {
+          return self.clients.claim();
+        })
+      );
+    });
+    self.registration.unregister();
+  `);
+});
+
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 const IS_VERCEL = Boolean(process.env.VERCEL || process.env.NOW_BUILDER);
 
@@ -313,16 +336,60 @@ function loadDatabase(): DatabaseSchema {
     dbData.comments = INITIAL_COMMENTS || {};
   }
 
+  // Ensure deletedIds array exists
+  if (!dbData.deletedIds || !Array.isArray(dbData.deletedIds)) {
+    dbData.deletedIds = [];
+  }
+
+  // Build comprehensive tombstone set for deleted IDs (including prefixes post-, content-)
+  const deletedSet = new Set<string>();
+  for (const dId of dbData.deletedIds) {
+    if (!dId) continue;
+    const strId = String(dId);
+    deletedSet.add(strId);
+    const cleanId = strId.replace(/^(post|content)-/, '');
+    deletedSet.add(cleanId);
+    deletedSet.add(`post-${cleanId}`);
+    deletedSet.add(`content-${cleanId}`);
+  }
+
   // Fallback to INITIAL_CONTENT only if database file did not exist or contents was null/undefined
   if (!dbData.contents || !Array.isArray(dbData.contents)) {
-    dbData.contents = Array.isArray(INITIAL_CONTENT) ? INITIAL_CONTENT.map((seed: any) => ({ ...seed, seedStatus: 'active' })) : [];
+    dbData.contents = Array.isArray(INITIAL_CONTENT)
+      ? INITIAL_CONTENT.filter((seed: any) => seed && seed.id && !deletedSet.has(String(seed.id)))
+          .map((seed: any) => ({ ...seed, seedStatus: 'active' }))
+      : [];
   } else {
-    // Smart seed merger per user policy: Combine any missing default seed items into staging/pending queue for Admin approval
+    // Purge any tombstoned/deleted items that might have re-entered dbData.contents
+    dbData.contents = dbData.contents.filter((c: any) => {
+      if (!c || !c.id) return false;
+      const cId = String(c.id);
+      const cleanCId = cId.replace(/^(post|content)-/, '');
+      return !deletedSet.has(cId) && !deletedSet.has(cleanCId);
+    });
+
+    // Smart seed merger per user policy: Combine missing default seed items into staging queue ONLY if never deleted
     if (Array.isArray(INITIAL_CONTENT)) {
-      const existingIds = new Set(dbData.contents.map((c: any) => c.id));
-      const deletedSet = new Set(dbData.deletedIds);
+      const existingSet = new Set<string>();
+      for (const item of dbData.contents) {
+        if (!item || !item.id) continue;
+        const itemId = String(item.id);
+        const cleanItemId = itemId.replace(/^(post|content)-/, '');
+        existingSet.add(itemId);
+        existingSet.add(cleanItemId);
+        existingSet.add(`post-${cleanItemId}`);
+        existingSet.add(`content-${cleanItemId}`);
+      }
+
       for (const seed of INITIAL_CONTENT) {
-        if (seed && seed.id && !existingIds.has(seed.id) && !deletedSet.has(seed.id)) {
+        if (!seed || !seed.id) continue;
+        const seedId = String(seed.id);
+        const cleanSeedId = seedId.replace(/^(post|content)-/, '');
+
+        const isExisting = existingSet.has(seedId) || existingSet.has(cleanSeedId);
+        const isDeleted = deletedSet.has(seedId) || deletedSet.has(cleanSeedId);
+
+        if (!isExisting && !isDeleted) {
           dbData.contents.push({
             ...seed,
             seedStatus: 'pending_approval' // Staged for Super Admin review
@@ -330,11 +397,6 @@ function loadDatabase(): DatabaseSchema {
         }
       }
     }
-  }
-
-  // Ensure deletedIds array exists
-  if (!dbData.deletedIds) {
-    dbData.deletedIds = [];
   }
 
   // Purge any remaining Unsplash URLs and replace with CDN assets
@@ -1649,14 +1711,16 @@ const handlePermanentDelete = (req: Request, res: Response) => {
 
   db.contents = db.contents.filter((c) => !matchesContentId(c, id));
   if (!db.deletedIds) db.deletedIds = [];
-  if (!db.deletedIds.includes(id)) {
-    db.deletedIds.push(id);
+  const variations = [id, cleanId, `post-${cleanId}`, `content-${cleanId}`];
+  for (const v of variations) {
+    if (v && !db.deletedIds.includes(v)) {
+      db.deletedIds.push(v);
+    }
   }
-  if (!db.deletedIds.includes(cleanId)) {
-    db.deletedIds.push(cleanId);
-  }
-  if (db.comments && db.comments[id]) {
-    delete db.comments[id];
+  if (db.comments) {
+    for (const v of variations) {
+      if (v && db.comments[v]) delete db.comments[v];
+    }
   }
   saveDatabase(db);
   res.json({ success: true, message: 'Content deleted permanently' });
