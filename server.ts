@@ -95,12 +95,12 @@ app.use((_req: Request, res: Response, next) => {
 
 // Secrets and Constants (NEVER hardcode these - configure them as environment variables)
 const GENERATED_ADMIN_KEY = crypto.randomBytes(24).toString('hex');
-const ADMIN_KEY = process.env.ADMIN_SECRET_KEY || GENERATED_ADMIN_KEY;
-if (!process.env.ADMIN_SECRET_KEY) {
+const ADMIN_KEY = process.env.ADMIN_SECRET_KEY || process.env.ADMIN_KEY || GENERATED_ADMIN_KEY;
+if (!process.env.ADMIN_SECRET_KEY && !process.env.ADMIN_KEY) {
   console.warn(
-    '[Security] ADMIN_SECRET_KEY is not set. Using a temporary random admin key for this process only: ' +
+    '[Security] ADMIN_SECRET_KEY or ADMIN_KEY is not set. Using a temporary random admin key for this process only: ' +
     GENERATED_ADMIN_KEY +
-    ' (set ADMIN_SECRET_KEY in your environment to make it permanent)'
+    ' (set ADMIN_SECRET_KEY or ADMIN_KEY in your environment to make it permanent)'
   );
 }
 const CDN_SECRET = process.env.CDN_SECRET || '';

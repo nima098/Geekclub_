@@ -152,10 +152,6 @@ export default function App() {
   // --- Server-Authoritative Contents State ---
   const [contents, setContents] = useState<ContentItem[]>(() => {
     try {
-      // Clear legacy localStorage content cache
-      localStorage.removeItem('mediahub_content_v1');
-      localStorage.removeItem('mediahub_soft_deleted_v2');
-
       const localDeletedIds: string[] = (function() {
         try {
           const raw = localStorage.getItem('mediahub_deleted_ids_v1');
@@ -164,11 +160,29 @@ export default function App() {
       })();
       const localDelSet = new Set(localDeletedIds);
 
-      const itemsToProcess = INITIAL_CONTENT.filter((item) => {
+      // 1. Prefer real server contents cached from previous visits
+      let itemsToProcess: ContentItem[] = [];
+      const cached = localStorage.getItem('mediahub_content_v2');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            itemsToProcess = parsed;
+          }
+        } catch {}
+      }
+
+      // 2. Only fallback to INITIAL_CONTENT if no local cache exists
+      if (itemsToProcess.length === 0) {
+        itemsToProcess = INITIAL_CONTENT;
+      }
+
+      itemsToProcess = itemsToProcess.filter((item) => {
         if (!item || !item.id) return false;
+        if (item.isDeleted) return false;
         const strId = String(item.id);
         const clean = strId.replace(/^(post|content)-/, '');
-        return !localDelSet.has(strId) && !localDelSet.has(clean) && !localDelSet.has(`post-${clean}`);
+        return !localDelSet.has(strId) && !localDelSet.has(clean) && !localDelSet.has(`post-${clean}`) && !localDelSet.has(`content-${clean}`);
       });
 
       // Verified CDN covers on upc.geekclub.ir
@@ -522,7 +536,11 @@ export default function App() {
     async function syncBackendData() {
       const serverContents = await api.getContents({ includeDeleted: true });
       if (Array.isArray(serverContents)) {
-        setContents(applyPendingOverrides(serverContents));
+        const fresh = applyPendingOverrides(serverContents);
+        setContents(fresh);
+        try {
+          localStorage.setItem('mediahub_content_v2', JSON.stringify(fresh.filter((c) => !c.isDeleted)));
+        } catch {}
       }
     }
     syncBackendData();
@@ -531,7 +549,11 @@ export default function App() {
     const unsubscribe = api.subscribeContents((items) => {
       // BUGFIX: an EMPTY list is valid (e.g. the last item was deleted) and must not be ignored.
       if (Array.isArray(items)) {
-        setContents(applyPendingOverrides(items));
+        const fresh = applyPendingOverrides(items);
+        setContents(fresh);
+        try {
+          localStorage.setItem('mediahub_content_v2', JSON.stringify(fresh.filter((c) => !c.isDeleted)));
+        } catch {}
       }
     });
 
@@ -1166,8 +1188,8 @@ export default function App() {
       deletedAt: deletedAtStr
     });
 
-    setContents((prev) =>
-      prev.map((c) => {
+    setContents((prev) => {
+      const updated = prev.map((c) => {
         if (c.id === contentId || stripContentPrefix(c.id) === cleanId) {
           return {
             ...c,
@@ -1176,8 +1198,12 @@ export default function App() {
           };
         }
         return c;
-      })
-    );
+      });
+      try {
+        localStorage.setItem('mediahub_content_v2', JSON.stringify(updated.filter((c) => !c.isDeleted)));
+      } catch {}
+      return updated;
+    });
 
     const ok = shouldDelete
       ? await api.softDeleteContent(contentId, deletedAtStr)
@@ -1203,9 +1229,13 @@ export default function App() {
 
     pendingOverridesRef.current.set(contentId, { kind: 'perm', at: Date.now() });
 
-    setContents((prev) =>
-      prev.filter((c) => c.id !== contentId && stripContentPrefix(c.id) !== cleanId)
-    );
+    setContents((prev) => {
+      const updated = prev.filter((c) => c.id !== contentId && stripContentPrefix(c.id) !== cleanId);
+      try {
+        localStorage.setItem('mediahub_content_v2', JSON.stringify(updated.filter((c) => !c.isDeleted)));
+      } catch {}
+      return updated;
+    });
 
     const ok = await api.deleteContent(contentId);
     if (!ok) {
