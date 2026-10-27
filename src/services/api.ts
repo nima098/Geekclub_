@@ -44,27 +44,25 @@ async function getAuthToken(): Promise<string> {
 
 export async function getAdminHeaders(): Promise<Record<string, string>> {
   const token = await getAuthToken();
-  const finalToken = token || 'geekclub-admin';
   const headers: Record<string, string> = { 
-    'Content-Type': 'application/json',
-    'X-Admin-Key': finalToken,
-    'Authorization': `Bearer ${finalToken}`
+    'Content-Type': 'application/json'
   };
+
+  if (token) {
+    headers['X-Admin-Key'] = token;
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
   try {
     const rawUser = localStorage.getItem('mediahub_user_v1');
     if (rawUser) {
       const u = JSON.parse(rawUser);
-      if (u.email) headers['X-Admin-Email'] = u.email;
-      if (u.isAdmin) headers['X-Admin-Role'] = 'admin';
-    } else {
-      headers['X-Admin-Email'] = '3dsaz1990@gmail.com';
-      headers['X-Admin-Role'] = 'admin';
+      if (u.email && u.isAdmin) {
+        headers['X-Admin-Email'] = u.email;
+        headers['X-Admin-Role'] = 'admin';
+      }
     }
-  } catch {
-    headers['X-Admin-Email'] = '3dsaz1990@gmail.com';
-    headers['X-Admin-Role'] = 'admin';
-  }
+  } catch {}
 
   return headers;
 }
@@ -72,15 +70,27 @@ export async function getAdminHeaders(): Promise<Record<string, string>> {
 // Used on read requests so admins also receive trash/archive data (public users never do).
 async function getReadHeaders(): Promise<Record<string, string>> {
   const token = await getAuthToken();
-  const finalToken = token || 'geekclub-admin';
   const headers: Record<string, string> = {
     'Cache-Control': 'no-cache, no-store, must-revalidate',
-    'Pragma': 'no-cache',
-    'Authorization': `Bearer ${finalToken}`,
-    'X-Admin-Key': finalToken,
-    'X-Admin-Email': '3dsaz1990@gmail.com',
-    'X-Admin-Role': 'admin'
+    'Pragma': 'no-cache'
   };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+    headers['X-Admin-Key'] = token;
+  }
+
+  try {
+    const rawUser = localStorage.getItem('mediahub_user_v1');
+    if (rawUser) {
+      const u = JSON.parse(rawUser);
+      if (u.email && u.isAdmin) {
+        headers['X-Admin-Email'] = u.email;
+        headers['X-Admin-Role'] = 'admin';
+      }
+    }
+  } catch {}
+
   return headers;
 }
 

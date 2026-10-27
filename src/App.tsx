@@ -67,7 +67,6 @@ import {
 import { 
   INITIAL_CONTENT, 
   INITIAL_COMMENTS, 
-  DEFAULT_USER,
   SUPER_ADMIN_USER,
   SUPER_ADMIN_EMAIL,
   INITIAL_INBOX,
@@ -285,9 +284,9 @@ export default function App() {
         }
         return parsed;
       }
-      return DEFAULT_USER;
+      return null;
     } catch {
-      return DEFAULT_USER;
+      return null;
     }
   });
 
