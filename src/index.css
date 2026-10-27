@@ -20,7 +20,7 @@
   }
   
   html {
-    scroll-behavior: smooth;
+    scroll-behavior: auto !important;
     -webkit-overflow-scrolling: touch;
     scroll-padding-top: 80px;
     overflow-y: auto;
@@ -29,15 +29,8 @@
   body {
     overflow-y: auto;
     overflow-x: hidden;
-    text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-  }
-
-  /* GPU Hardware Acceleration for Navbar & Blur Containers to ensure 60fps smooth scrolling */
-  nav, header, .backdrop-blur-md, .backdrop-blur-xl, .backdrop-blur-2xl {
-    transform: translateZ(0);
-    backface-visibility: hidden;
   }
 
   html, body, button, input, textarea, select {
