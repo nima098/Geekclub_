@@ -543,11 +543,31 @@ export default function App() {
 
   // Synchronize with centralized server database in real-time
   useEffect(() => {
+    const updateDeletedIdsCache = (items: ContentItem[]) => {
+      try {
+        const deletedFromItems = items.filter((c) => c && c.isDeleted).map((c) => String(c.id));
+        if (deletedFromItems.length > 0) {
+          const raw = localStorage.getItem('mediahub_deleted_ids_v1');
+          const existing: string[] = raw ? JSON.parse(raw) : [];
+          const allDelSet = new Set<string>([...existing]);
+          for (const dId of deletedFromItems) {
+            allDelSet.add(dId);
+            const clean = dId.replace(/^(post|content)-/, '');
+            allDelSet.add(clean);
+            allDelSet.add(`post-${clean}`);
+            allDelSet.add(`content-${clean}`);
+          }
+          localStorage.setItem('mediahub_deleted_ids_v1', JSON.stringify(Array.from(allDelSet)));
+        }
+      } catch {}
+    };
+
     async function syncBackendData() {
       const serverContents = await api.getContents({ includeDeleted: true });
       if (Array.isArray(serverContents)) {
         const fresh = applyPendingOverrides(serverContents);
         setContents(fresh);
+        updateDeletedIdsCache(fresh);
         try {
           localStorage.setItem('mediahub_content_v2', JSON.stringify(fresh.filter((c) => !c.isDeleted)));
         } catch {}
@@ -561,6 +581,7 @@ export default function App() {
       if (Array.isArray(items)) {
         const fresh = applyPendingOverrides(items);
         setContents(fresh);
+        updateDeletedIdsCache(fresh);
         try {
           localStorage.setItem('mediahub_content_v2', JSON.stringify(fresh.filter((c) => !c.isDeleted)));
         } catch {}

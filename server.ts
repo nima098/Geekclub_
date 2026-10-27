@@ -375,10 +375,19 @@ function loadDatabase(): DatabaseSchema {
   if (!dbData.deletedIds || !Array.isArray(dbData.deletedIds)) {
     dbData.deletedIds = [];
   }
+  const rawSoftDelIds: string[] = Array.isArray((dbData as any).softDeletedIds)
+    ? (dbData as any).softDeletedIds
+    : [];
 
   // Build comprehensive tombstone set for deleted IDs (including prefixes post-, content-)
   const deletedSet = new Set<string>();
-  for (const dId of dbData.deletedIds) {
+  const rawDeletedList = Array.from(new Set([
+    ...dbData.deletedIds,
+    ...rawSoftDelIds,
+    ...((dbData.contents || []).filter((c: any) => c && (c.isDeleted || c.isArchived)).map((c: any) => c.id))
+  ]));
+
+  for (const dId of rawDeletedList) {
     if (!dId) continue;
     const strId = String(dId);
     deletedSet.add(strId);
@@ -388,6 +397,9 @@ function loadDatabase(): DatabaseSchema {
     deletedSet.add(`content-${cleanId}`);
   }
 
+  // Keep dbData.deletedIds synchronized with all deleted IDs
+  dbData.deletedIds = Array.from(deletedSet);
+
   // Fallback to INITIAL_CONTENT only if database file did not exist or contents was null/undefined
   if (!dbData.contents || !Array.isArray(dbData.contents)) {
     dbData.contents = Array.isArray(INITIAL_CONTENT)
@@ -395,12 +407,15 @@ function loadDatabase(): DatabaseSchema {
           .map((seed: any) => ({ ...seed, seedStatus: 'active' }))
       : [];
   } else {
-    // Purge any tombstoned/deleted items that might have re-entered dbData.contents
-    dbData.contents = dbData.contents.filter((c: any) => {
-      if (!c || !c.id) return false;
+    // Purge any tombstoned/deleted items that might have re-entered dbData.contents or mark them as isDeleted: true
+    dbData.contents = dbData.contents.map((c: any) => {
+      if (!c || !c.id) return c;
       const cId = String(c.id);
       const cleanCId = cId.replace(/^(post|content)-/, '');
-      return !deletedSet.has(cId) && !deletedSet.has(cleanCId);
+      if (deletedSet.has(cId) || deletedSet.has(cleanCId)) {
+        return { ...c, isDeleted: true, isArchived: true };
+      }
+      return c;
     });
 
     // Smart seed merger per user policy: Combine missing default seed items into staging queue ONLY if never deleted
@@ -422,7 +437,7 @@ function loadDatabase(): DatabaseSchema {
         const cleanSeedId = seedId.replace(/^(post|content)-/, '');
 
         const isExisting = existingSet.has(seedId) || existingSet.has(cleanSeedId);
-        const isDeleted = deletedSet.has(seedId) || deletedSet.has(cleanSeedId);
+        const isDeleted = deletedSet.has(seedId) || deletedSet.has(cleanSeedId) || seed.isDeleted;
 
         if (!isExisting && !isDeleted) {
           dbData.contents.push({
@@ -1716,6 +1731,15 @@ app.post('/api/contents/:id/soft-delete', requireAdminAuth, (req: Request, res: 
   }
   target.isDeleted = true;
   target.deletedAt = deletedAt;
+
+  const cleanId = id.replace(/^(post|content)-/, '');
+  if (!db.deletedIds) db.deletedIds = [];
+  if (!db.deletedIds.includes(id)) db.deletedIds.push(id);
+  if (!db.deletedIds.includes(cleanId)) db.deletedIds.push(cleanId);
+
+  if (!Array.isArray((db as any).softDeletedIds)) (db as any).softDeletedIds = [];
+  if (!(db as any).softDeletedIds.includes(id)) (db as any).softDeletedIds.push(id);
+  if (!(db as any).softDeletedIds.includes(cleanId)) (db as any).softDeletedIds.push(cleanId);
 
   saveDatabase(db);
   res.json({ success: true, data: target, message: 'Content soft-deleted' });
