@@ -494,9 +494,6 @@ export default function App() {
   useEffect(() => {
     try {
       localStorage.setItem('geekclub_users_list_v1', JSON.stringify(usersList));
-      usersList.forEach((u) => {
-        api.saveProfile(u).catch(() => {});
-      });
     } catch (e) {
       console.warn('LocalStorage save error:', e);
     }
@@ -1052,6 +1049,7 @@ export default function App() {
     };
 
     setUser(resolvedUser);
+    api.saveProfile(resolvedUser).catch(() => {});
     setUsersList((prev) => {
       const idx = prev.findIndex(
         (u) => u.uid === resolvedUser.uid || (u.email && resolvedUser.email && u.email.toLowerCase() === resolvedUser.email.toLowerCase())
@@ -1153,6 +1151,7 @@ export default function App() {
   // --- Profile, Inbox & Guestbook Handlers ---
   const handleUpdateUser = (updatedUser: UserProfile) => {
     setUser(updatedUser);
+    api.saveProfile(updatedUser).catch(() => {});
     setUsersList((prev) =>
       prev.map((u) => (u.uid === updatedUser.uid ? { ...u, ...updatedUser } : u))
     );
