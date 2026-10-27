@@ -1366,7 +1366,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#090d16] light:bg-[#efefef] text-slate-100 light:text-slate-900 flex flex-col font-sans selection:bg-indigo-600 selection:text-white w-full max-w-full overflow-x-hidden">
+    <div className="min-h-screen bg-[#090d16] light:bg-[#efefef] text-slate-100 light:text-slate-900 flex flex-col font-sans selection:bg-indigo-600 selection:text-white w-full">
       {/* Top Navigation */}
       <Navbar
         user={user}
