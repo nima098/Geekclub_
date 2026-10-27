@@ -268,7 +268,12 @@ export async function loadDatabaseFromPostgres(): Promise<{
       deletedSet.add(`content-${cleanId}`);
     }
 
-    const filteredContents = contents.filter((c: any) => c && c.id && !deletedSet.has(String(c.id)));
+    const filteredContents = contents.filter((c: any) => {
+      if (!c || !c.id) return false;
+      const strId = String(c.id);
+      const clean = strId.replace(/^(post|content)-/, '');
+      return !deletedSet.has(strId) && !deletedSet.has(clean) && !deletedSet.has(`post-${clean}`) && !deletedSet.has(`content-${clean}`);
+    });
 
     return {
       contents: filteredContents,

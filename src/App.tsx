@@ -152,12 +152,24 @@ export default function App() {
   // --- Server-Authoritative Contents State ---
   const [contents, setContents] = useState<ContentItem[]>(() => {
     try {
-      // Clear legacy localStorage content cache and soft-delete blacklists to ensure 100% server authority
+      // Clear legacy localStorage content cache
       localStorage.removeItem('mediahub_content_v1');
       localStorage.removeItem('mediahub_soft_deleted_v2');
-      localStorage.removeItem('mediahub_deleted_ids_v1');
 
-      const itemsToProcess = INITIAL_CONTENT;
+      const localDeletedIds: string[] = (function() {
+        try {
+          const raw = localStorage.getItem('mediahub_deleted_ids_v1');
+          return raw ? JSON.parse(raw) : [];
+        } catch { return []; }
+      })();
+      const localDelSet = new Set(localDeletedIds);
+
+      const itemsToProcess = INITIAL_CONTENT.filter((item) => {
+        if (!item || !item.id) return false;
+        const strId = String(item.id);
+        const clean = strId.replace(/^(post|content)-/, '');
+        return !localDelSet.has(strId) && !localDelSet.has(clean) && !localDelSet.has(`post-${clean}`);
+      });
 
       // Verified CDN covers on upc.geekclub.ir
       const VERIFIED_CDN_COVERS: Record<string, string> = {
