@@ -2474,6 +2474,7 @@ function injectInitialDataIntoHtml(html: string): string {
     const distPath = path.resolve(__dirname, 'dist');
     app.use(
       express.static(distPath, {
+        index: false,
         etag: false,
         setHeaders: (res) => {
           res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, proxy-revalidate, max-age=0');
@@ -2499,9 +2500,22 @@ function injectInitialDataIntoHtml(html: string): string {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: 'spa',
+      appType: 'custom',
     });
     app.use(vite.middlewares);
+    app.get('*', async (req, res, next) => {
+      const url = req.originalUrl;
+      if (url.startsWith('/api') || url.startsWith('/socket.io')) return next();
+      try {
+        let template = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
+        template = await vite.transformIndexHtml(url, template);
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.send(injectInitialDataIntoHtml(template));
+      } catch (e: any) {
+        vite.ssrFixStacktrace(e);
+        next(e);
+      }
+    });
   }
 
   if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {

@@ -150,11 +150,28 @@ export default function App() {
   };
 
   // --- Server-Authoritative Contents State ---
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(() => {
+    if (typeof window !== 'undefined' && Array.isArray((window as any).__INITIAL_DATA__)) return false;
+    try {
+      const cached = localStorage.getItem('mediahub_content_v2');
+      if (cached && JSON.parse(cached).length > 0) return false;
+    } catch {}
+    return true;
+  });
+
   const [contents, setContents] = useState<ContentItem[]>(() => {
     try {
       // 0. Primary: Server-injected authoritative initial data (zero latency, zero flicker)
       if (typeof window !== 'undefined' && Array.isArray((window as any).__INITIAL_DATA__)) {
-        return (window as any).__INITIAL_DATA__;
+        const raw = (window as any).__INITIAL_DATA__;
+        const serverDel: string[] = Array.isArray((window as any).__DELETED_IDS__) ? (window as any).__DELETED_IDS__ : [];
+        const delSet = new Set(serverDel.map((s) => String(s)));
+        return raw.filter((c: ContentItem) => {
+          if (!c || c.isDeleted) return false;
+          const strId = String(c.id);
+          const clean = strId.replace(/^(post|content)-/, '');
+          return !delSet.has(strId) && !delSet.has(clean) && !delSet.has(`post-${clean}`) && !delSet.has(`content-${clean}`);
+        });
       }
 
       const serverDelIds: string[] = typeof window !== 'undefined' && Array.isArray((window as any).__DELETED_IDS__)
@@ -563,14 +580,20 @@ export default function App() {
     };
 
     async function syncBackendData() {
-      const serverContents = await api.getContents({ includeDeleted: true });
-      if (Array.isArray(serverContents)) {
-        const fresh = applyPendingOverrides(serverContents);
-        setContents(fresh);
-        updateDeletedIdsCache(fresh);
-        try {
-          localStorage.setItem('mediahub_content_v2', JSON.stringify(fresh.filter((c) => !c.isDeleted)));
-        } catch {}
+      try {
+        const serverContents = await api.getContents({ includeDeleted: true });
+        if (Array.isArray(serverContents)) {
+          const fresh = applyPendingOverrides(serverContents);
+          setContents(fresh);
+          updateDeletedIdsCache(fresh);
+          try {
+            localStorage.setItem('mediahub_content_v2', JSON.stringify(fresh.filter((c) => !c.isDeleted)));
+          } catch {}
+        }
+      } catch (err) {
+        console.warn('Initial server sync warning:', err);
+      } finally {
+        setIsInitialLoading(false);
       }
     }
     syncBackendData();
@@ -582,6 +605,7 @@ export default function App() {
         const fresh = applyPendingOverrides(items);
         setContents(fresh);
         updateDeletedIdsCache(fresh);
+        setIsInitialLoading(false);
         try {
           localStorage.setItem('mediahub_content_v2', JSON.stringify(fresh.filter((c) => !c.isDeleted)));
         } catch {}
@@ -1588,7 +1612,23 @@ export default function App() {
         )}
 
         {/* Content Grid */}
-        {filteredContents.length > 0 ? (
+        {isInitialLoading && filteredContents.length === 0 ? (
+          <div className={getGridClasses()}>
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <div key={n} className="rounded-3xl border border-slate-800/80 bg-slate-900/60 p-4 space-y-4 animate-pulse">
+                <div className="w-full h-48 bg-slate-800/80 rounded-2xl" />
+                <div className="space-y-2">
+                  <div className="h-4 bg-slate-800 rounded-lg w-3/4" />
+                  <div className="h-3 bg-slate-800/60 rounded-lg w-1/2" />
+                </div>
+                <div className="flex items-center gap-3 pt-2">
+                  <div className="w-8 h-8 rounded-full bg-slate-800" />
+                  <div className="h-3 bg-slate-800 rounded w-24" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredContents.length > 0 ? (
           <div className={getGridClasses()}>
             {filteredContents.map((item) => (
               <ContentCard

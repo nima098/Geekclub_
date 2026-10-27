@@ -1,15 +1,4 @@
-import { 
-  collection, 
-  doc, 
-  getDocs, 
-  getDoc, 
-  setDoc, 
-  updateDoc, 
-  deleteDoc, 
-  query,
-  where
-} from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
+import { auth } from '../lib/firebase';
 import { ContentItem, CommentItem, Platform, Category, SortOption } from '../types/content';
 import { FALLBACK_IMAGES, getAuthorAvatar } from '../utils/imageHelper';
 import { INITIAL_CONTENT, INITIAL_COMMENTS } from '../data/initialData';
@@ -255,11 +244,6 @@ export const api = {
       });
     } catch {}
 
-    // Secondary: Cloud Firestore (silent error catch for 403 networks)
-    try {
-      await setDoc(doc(db, CONTENTS_COLLECTION, newId), newItem);
-    } catch {}
-
     return newItem;
   },
 
@@ -284,12 +268,6 @@ export const api = {
         });
       } catch {}
     }
-
-    // Secondary: Cloud Firestore
-    try {
-      const docRef = doc(db, CONTENTS_COLLECTION, id);
-      await setDoc(docRef, updates, { merge: true });
-    } catch {}
   },
 
   // Returns true only if the SERVER accepted the change (so the UI can react when it was refused)
@@ -317,12 +295,6 @@ export const api = {
         ok = r.ok;
       } catch {}
     }
-
-    // Secondary: Cloud Firestore
-    try {
-      const docRef = doc(db, CONTENTS_COLLECTION, id);
-      await setDoc(docRef, { isDeleted: true, deletedAt: timeStr }, { merge: true });
-    } catch {}
 
     addDeletedId(id);
     return ok;
@@ -352,11 +324,6 @@ export const api = {
     }
 
     removeDeletedId(id);
-
-    try {
-      const docRef = doc(db, CONTENTS_COLLECTION, id);
-      await setDoc(docRef, { isDeleted: false }, { merge: true });
-    } catch {}
     return ok;
   },
 
@@ -382,11 +349,6 @@ export const api = {
     }
 
     addDeletedId(id);
-
-    try {
-      const docRef = doc(db, CONTENTS_COLLECTION, id);
-      await deleteDoc(docRef);
-    } catch {}
     return ok;
   },
 
@@ -405,51 +367,6 @@ export const api = {
       }
     } catch {}
 
-    // Secondary: Cloud Firestore
-    try {
-      const docRef = doc(db, CONTENTS_COLLECTION, id);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const content = docSnap.data() as ContentItem;
-        const prevReaction = content.userReaction;
-        let newLikes = content.likesCount || 0;
-        let newDislikes = content.dislikesCount || 0;
-        let newReaction: 'like' | 'dislike' | null = reaction;
-
-        if (reaction === 'like') {
-          if (prevReaction === 'like') {
-            newLikes = Math.max(0, newLikes - 1);
-            newReaction = null;
-          } else if (prevReaction === 'dislike') {
-            newLikes = newLikes + 1;
-            newDislikes = Math.max(0, newDislikes - 1);
-          } else {
-            newLikes = newLikes + 1;
-          }
-        } else if (reaction === 'dislike') {
-          if (prevReaction === 'dislike') {
-            newDislikes = Math.max(0, newDislikes - 1);
-            newReaction = null;
-          } else if (prevReaction === 'like') {
-            newDislikes = newDislikes + 1;
-            newLikes = Math.max(0, newLikes - 1);
-          } else {
-            newDislikes = newDislikes + 1;
-          }
-        }
-
-        const updatedData = {
-          likesCount: newLikes,
-          dislikesCount: newDislikes,
-          userReaction: newReaction
-        };
-
-        await updateDoc(docRef, updatedData);
-        return { ...content, ...updatedData };
-      }
-    } catch {}
-
     return null;
   },
 
@@ -461,16 +378,6 @@ export const api = {
         const json = await res.json();
         if (Array.isArray(json.data)) return json.data;
       }
-    } catch {}
-
-    try {
-      const q = query(collection(db, COMMENTS_COLLECTION), where('contentId', '==', contentId));
-      const snapshot = await getDocs(q);
-      const comments = snapshot.docs.map(docSnap => ({
-        id: docSnap.id,
-        ...docSnap.data()
-      } as CommentItem));
-      if (comments.length > 0) return comments;
     } catch {}
 
     return INITIAL_COMMENTS[contentId] || [];
@@ -501,10 +408,6 @@ export const api = {
       });
     } catch {}
 
-    try {
-      await setDoc(doc(db, COMMENTS_COLLECTION, newCommentId), newComment);
-    } catch {}
-
     return newComment;
   },
 
@@ -519,7 +422,7 @@ export const api = {
     return null;
   },
 
-  // 8. Save user profile to REST API and Cloud Firestore
+  // 8. Save user profile to REST API
   async saveProfile(profile: any): Promise<void> {
     if (!profile) return;
     try {
@@ -529,16 +432,9 @@ export const api = {
         body: JSON.stringify(profile)
       });
     } catch {}
-
-    try {
-      if (profile.uid) {
-        const docRef = doc(db, 'profiles', profile.uid);
-        await setDoc(docRef, profile, { merge: true });
-      }
-    } catch {}
   },
 
-  // 9. Fetch profiles from REST API or Firestore
+  // 9. Fetch profiles from REST API
   async getProfiles(): Promise<Record<string, any>> {
     try {
       const res = await fetch('/api/profiles');
@@ -546,15 +442,6 @@ export const api = {
         const json = await res.json();
         if (json.data && typeof json.data === 'object') return json.data;
       }
-    } catch {}
-
-    try {
-      const snapshot = await getDocs(collection(db, 'profiles'));
-      const profilesMap: Record<string, any> = {};
-      snapshot.docs.forEach((docSnap) => {
-        profilesMap[docSnap.id] = docSnap.data();
-      });
-      return profilesMap;
     } catch {}
 
     return {};
