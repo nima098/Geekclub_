@@ -127,7 +127,8 @@ export const INITIAL_CONTENT: ContentItem[] = [
     userReaction: null,
     sourceDomain: 'youtube.com',
     approvalStatus: 'pending',
-    authorUid: 'usr-sara'
+    authorUid: 'usr-sara',
+    isDeleted: true
   },
   {
     id: 'yt-1',
@@ -367,7 +368,8 @@ export const INITIAL_CONTENT: ContentItem[] = [
     dislikesCount: 7,
     commentsCount: 33,
     userReaction: null,
-    sourceDomain: 'youtube.com'
+    sourceDomain: 'youtube.com',
+    isDeleted: true
   },
   {
     id: 'art-3',

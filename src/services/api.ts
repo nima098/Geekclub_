@@ -323,6 +323,8 @@ export const api = {
       const docRef = doc(db, CONTENTS_COLLECTION, id);
       await setDoc(docRef, { isDeleted: true, deletedAt: timeStr }, { merge: true });
     } catch {}
+
+    addDeletedId(id);
     return ok;
   },
 

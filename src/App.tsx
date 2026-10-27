@@ -152,13 +152,22 @@ export default function App() {
   // --- Server-Authoritative Contents State ---
   const [contents, setContents] = useState<ContentItem[]>(() => {
     try {
+      // 0. Primary: Server-injected authoritative initial data (zero latency, zero flicker)
+      if (typeof window !== 'undefined' && Array.isArray((window as any).__INITIAL_DATA__)) {
+        return (window as any).__INITIAL_DATA__;
+      }
+
+      const serverDelIds: string[] = typeof window !== 'undefined' && Array.isArray((window as any).__DELETED_IDS__)
+        ? (window as any).__DELETED_IDS__
+        : [];
+
       const localDeletedIds: string[] = (function() {
         try {
           const raw = localStorage.getItem('mediahub_deleted_ids_v1');
           return raw ? JSON.parse(raw) : [];
         } catch { return []; }
       })();
-      const localDelSet = new Set(localDeletedIds);
+      const localDelSet = new Set([...serverDelIds, ...localDeletedIds]);
 
       // 1. Prefer real server contents cached from previous visits
       let itemsToProcess: ContentItem[] = [];
@@ -180,6 +189,7 @@ export default function App() {
       itemsToProcess = itemsToProcess.filter((item) => {
         if (!item || !item.id) return false;
         if (item.isDeleted) return false;
+        if (item.seedStatus === 'pending_approval') return false;
         const strId = String(item.id);
         const clean = strId.replace(/^(post|content)-/, '');
         return !localDelSet.has(strId) && !localDelSet.has(clean) && !localDelSet.has(`post-${clean}`) && !localDelSet.has(`content-${clean}`);
@@ -1218,6 +1228,24 @@ export default function App() {
     }
 
     if (shouldDelete) {
+      try {
+        const raw = localStorage.getItem('mediahub_deleted_ids_v1');
+        const curr = raw ? JSON.parse(raw) : [];
+        const toAdd = [contentId, cleanId, `post-${cleanId}`, `content-${cleanId}`];
+        localStorage.setItem('mediahub_deleted_ids_v1', JSON.stringify(Array.from(new Set([...curr, ...toAdd]))));
+      } catch {}
+    } else {
+      try {
+        const raw = localStorage.getItem('mediahub_deleted_ids_v1');
+        if (raw) {
+          const curr = JSON.parse(raw);
+          const filtered = curr.filter((id: string) => id !== contentId && id !== cleanId && id !== `post-${cleanId}` && id !== `content-${cleanId}`);
+          localStorage.setItem('mediahub_deleted_ids_v1', JSON.stringify(filtered));
+        }
+      } catch {}
+    }
+
+    if (shouldDelete) {
       addToast('info', 'محتوا به سطل بازیافت منتقل شد و از فید پنهان گردید (قابل بازگردانی از پنل ادمین).');
     } else {
       addToast('success', 'محتوا با موفقیت از سطل بازیافت به فید عمومی بازگردانده شد.');
@@ -1228,6 +1256,13 @@ export default function App() {
     const cleanId = stripContentPrefix(contentId);
 
     pendingOverridesRef.current.set(contentId, { kind: 'perm', at: Date.now() });
+
+    try {
+      const raw = localStorage.getItem('mediahub_deleted_ids_v1');
+      const curr = raw ? JSON.parse(raw) : [];
+      const toAdd = [contentId, cleanId, `post-${cleanId}`, `content-${cleanId}`];
+      localStorage.setItem('mediahub_deleted_ids_v1', JSON.stringify(Array.from(new Set([...curr, ...toAdd]))));
+    } catch {}
 
     setContents((prev) => {
       const updated = prev.filter((c) => c.id !== contentId && stripContentPrefix(c.id) !== cleanId);

@@ -2422,6 +2422,30 @@ async function startServer() {
     syncPlatformCoverImages().catch((err) => console.warn('Sync cover images warning:', err));
   }
 
+function injectInitialDataIntoHtml(html: string): string {
+  try {
+    const db = loadDatabase();
+    const active = (db.contents || []).filter((c: any) => !c.isDeleted && !c.isArchived && c.seedStatus !== 'pending_approval');
+    const allDeletedIds = Array.from(new Set([
+      ...(db.deletedIds || []),
+      ...((db as any).softDeletedIds || []),
+      ...(db.contents || []).filter((c: any) => c.isDeleted).map((c: any) => c.id)
+    ]));
+
+    const safeData = JSON.stringify(active).replace(/<\/script/gi, '<\\/script');
+    const safeDel = JSON.stringify(allDeletedIds).replace(/<\/script/gi, '<\\/script');
+    const injection = `<script id="__INITIAL_DATA__">window.__INITIAL_DATA__ = ${safeData}; window.__DELETED_IDS__ = ${safeDel};</script>`;
+
+    if (html.includes('</head>')) {
+      return html.replace('</head>', `${injection}\n</head>`);
+    }
+    return injection + html;
+  } catch (err: any) {
+    console.warn('[HTML Injection Warning]:', err.message);
+    return html;
+  }
+}
+
   if (process.env.NODE_ENV === 'production') {
     const distPath = path.resolve(__dirname, 'dist');
     app.use(
@@ -2438,7 +2462,13 @@ async function startServer() {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, proxy-revalidate, max-age=0');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
-      res.sendFile(path.resolve(distPath, 'index.html'));
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      try {
+        const rawHtml = fs.readFileSync(path.resolve(distPath, 'index.html'), 'utf-8');
+        res.send(injectInitialDataIntoHtml(rawHtml));
+      } catch {
+        res.sendFile(path.resolve(distPath, 'index.html'));
+      }
     });
   } else {
     // Mount Vite in middleware mode for seamless development
