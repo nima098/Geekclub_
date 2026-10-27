@@ -251,12 +251,19 @@ export default function App() {
   useEffect(() => {
     try {
       localStorage.setItem('geekclub_theme_v1', theme);
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]');
       if (theme === 'light') {
         document.documentElement.classList.add('light');
         document.documentElement.classList.remove('dark');
+        document.documentElement.style.backgroundColor = '#efefef';
+        document.documentElement.style.color = '#0f172a';
+        if (metaThemeColor) metaThemeColor.setAttribute('content', '#efefef');
       } else {
         document.documentElement.classList.add('dark');
         document.documentElement.classList.remove('light');
+        document.documentElement.style.backgroundColor = '#090d16';
+        document.documentElement.style.color = '#f8fafc';
+        if (metaThemeColor) metaThemeColor.setAttribute('content', '#090d16');
       }
     } catch {
       // ignore

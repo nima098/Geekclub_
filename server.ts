@@ -2386,14 +2386,11 @@ async function startServer() {
     const distPath = path.resolve(__dirname, 'dist');
     app.use(
       express.static(distPath, {
-        setHeaders: (res, filepath) => {
-          if (filepath.endsWith('.html')) {
-            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, proxy-revalidate, max-age=0');
-            res.setHeader('Pragma', 'no-cache');
-            res.setHeader('Expires', '0');
-          } else if (filepath.includes('/assets/')) {
-            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-          }
+        etag: false,
+        setHeaders: (res) => {
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, proxy-revalidate, max-age=0');
+          res.setHeader('Pragma', 'no-cache');
+          res.setHeader('Expires', '0');
         }
       })
     );

@@ -5,6 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>گیک کلاب - اشتراک و مرور محتوا</title>
     <script>
+      // Instant inline theme restoration to prevent Dark/Light mode flash (FOUC)
+      (function() {
+        try {
+          var saved = localStorage.getItem('geekclub_theme_v1');
+          if (saved === 'light') {
+            document.documentElement.classList.add('light');
+            document.documentElement.classList.remove('dark');
+            document.documentElement.style.backgroundColor = '#efefef';
+            document.documentElement.style.color = '#0f172a';
+          } else {
+            document.documentElement.classList.add('dark');
+            document.documentElement.classList.remove('light');
+            document.documentElement.style.backgroundColor = '#090d16';
+            document.documentElement.style.color = '#f8fafc';
+          }
+        } catch (e) {}
+      })();
+
       // Immediately unregister Service Workers & purge CacheStorage on HTML load to prevent stale app caching
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function(regs) {
@@ -88,7 +106,7 @@
     <link rel="alternate" type="application/rss+xml" title="فید RSS گیک‌کلاب (XML)" href="/rss.xml" />
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
   </head>
-  <body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-indigo-500 selection:text-white">
+  <body class="bg-[#090d16] light:bg-[#efefef] text-slate-100 light:text-slate-900 font-sans antialiased selection:bg-indigo-500 selection:text-white transition-colors duration-150 min-h-screen">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
