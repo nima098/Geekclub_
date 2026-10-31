@@ -5,8 +5,8 @@
 
 import firebaseConfig from '../../firebase-applet-config.json';
 
-// Official public Google OAuth Client ID for this project
-const DEFAULT_GOOGLE_CLIENT_ID = firebaseConfig.oAuthClientId || '843845722817-q1jfaeo8tiuv7gaqec5ligdmrkdi7678.apps.googleusercontent.com';
+// Official public Google OAuth Client ID for this project (geekclubir)
+const DEFAULT_GOOGLE_CLIENT_ID = firebaseConfig.oAuthClientId || '179971798076-05o98jtrbupk5kr49nsmlr37035b7hm0.apps.googleusercontent.com';
 
 declare global {
   interface Window {
