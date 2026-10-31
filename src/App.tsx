@@ -25,9 +25,6 @@ import {
 import { 
   UsernameSetupModal 
 } from './components/UsernameSetupModal';
-import {
-  LoginModal
-} from './components/LoginModal';
 import { 
   DomainAuthHelpModal 
 } from './components/DomainAuthHelpModal';
@@ -343,7 +340,6 @@ export default function App() {
 
   // Modals & Auth State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isLoggingInWithGoogle, setIsLoggingInWithGoogle] = useState(false);
   const [tempGoogleUser, setTempGoogleUser] = useState<{
     uid: string;
@@ -1492,7 +1488,7 @@ export default function App() {
       <Navbar
         user={user}
         onOpenAddModal={() => setIsAddModalOpen(true)}
-        onStartGoogleLogin={() => setIsLoginModalOpen(true)}
+        onStartGoogleLogin={handleDirectGoogleLogin}
         isLoggingIn={isLoggingInWithGoogle}
         onOpenProfileModal={() => setIsProfileModalOpen(true)}
         onOpenFeedbackModal={() => setIsFeedbackModalOpen(true)}
@@ -1518,7 +1514,7 @@ export default function App() {
       {/* Guest Welcome Banner */}
       {!user && (
         <WelcomeBanner
-          onStartGoogleLogin={() => setIsLoginModalOpen(true)}
+          onStartGoogleLogin={handleDirectGoogleLogin}
           onOpenAddModal={() => setIsAddModalOpen(true)}
           isLoggingIn={isLoggingInWithGoogle}
         />
@@ -1788,15 +1784,6 @@ export default function App() {
             setActiveCommentsItem(item);
           }
         }}
-      />
-
-      {/* Direct Local Login / Signup Modal */}
-      <LoginModal
-        isOpen={isLoginModalOpen}
-        onClose={() => setIsLoginModalOpen(false)}
-        existingUsers={usersList}
-        onLogin={handleLogin}
-        onStartGoogleLogin={handleDirectGoogleLogin}
       />
 
       {/* Username Setup Modal - Asked immediately after successful Google login */}
