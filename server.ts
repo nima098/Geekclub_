@@ -1012,7 +1012,7 @@ async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMe
   }
 
   try {
-    const actorEndpoint = `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items?token=${token}&timeout=60`;
+    const actorEndpoint = `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items?token=${token}&timeout=10`;
     console.log(`[Apify Pipeline] Executing Apify actor ${actorId} for ${instagramUrl}...`);
 
     const apifyResponse = await axios.post(
@@ -1024,7 +1024,7 @@ async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMe
         searchLimit: 1
       },
       {
-        timeout: 65000,
+        timeout: 12000,
         headers: {
           'Content-Type': 'application/json'
         }
@@ -1298,18 +1298,26 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
   return null;
 }
 
-  // 3. Instagram metadata extraction (Apify + multi-tier fallback)
+  // 3. Instagram metadata extraction (Fast Public Bridge -> Apify -> Multi-tier fallback)
   if (cleanUrl.includes('instagram.com')) {
-    // Attempt Apify extraction first
-    const apifyResult = await fetchInstagramViaApify(cleanUrl);
-    if (apifyResult && apifyResult.success) {
-      return apifyResult;
+    // Tier 1: Fast Public Bridge extraction (responds in ~1 second, VPS-friendly)
+    try {
+      const bridgeResult = await fetchInstagramViaPublicBridges(cleanUrl);
+      if (bridgeResult && bridgeResult.success && bridgeResult.title) {
+        return bridgeResult;
+      }
+    } catch (bridgeErr: any) {
+      console.warn('Instagram Public Bridge notice:', bridgeErr.message);
     }
 
-    // Attempt Public Bridge extraction (VPS-friendly, no Apify token needed)
-    const bridgeResult = await fetchInstagramViaPublicBridges(cleanUrl);
-    if (bridgeResult && bridgeResult.success) {
-      return bridgeResult;
+    // Tier 2: Attempt Apify extraction
+    try {
+      const apifyResult = await fetchInstagramViaApify(cleanUrl);
+      if (apifyResult && apifyResult.success) {
+        return apifyResult;
+      }
+    } catch (apifyErr: any) {
+      console.warn('Apify extraction notice:', apifyErr.message);
     }
 
     // Fallback extraction if Apify is not configured or failed
