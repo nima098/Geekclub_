@@ -3,8 +3,10 @@
  * Connects directly to Google Cloud Console (accounts.google.com) bypassing Firebase APIs.
  */
 
-// Official public Google Client ID for Google Identity Services
-const DEFAULT_GOOGLE_CLIENT_ID = '347411930377-aistudio.apps.googleusercontent.com';
+import firebaseConfig from '../../firebase-applet-config.json';
+
+// Official public Google OAuth Client ID for this project
+const DEFAULT_GOOGLE_CLIENT_ID = firebaseConfig.oAuthClientId || '843845722817-q1jfaeo8tiuv7gaqec5ligdmrkdi7678.apps.googleusercontent.com';
 
 declare global {
   interface Window {
