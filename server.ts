@@ -1012,7 +1012,7 @@ async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMe
   }
 
   try {
-    const actorEndpoint = `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items?token=${token}&timeout=10`;
+    const actorEndpoint = `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items?token=${token}&timeout=60`;
     console.log(`[Apify Pipeline] Executing Apify actor ${actorId} for ${instagramUrl}...`);
 
     const apifyResponse = await axios.post(
@@ -1024,7 +1024,7 @@ async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMe
         searchLimit: 1
       },
       {
-        timeout: 12000,
+        timeout: 65000,
         headers: {
           'Content-Type': 'application/json'
         }
@@ -1298,73 +1298,53 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
   return null;
 }
 
-  // 3. Instagram metadata extraction (Fast Public Bridge -> Apify -> Multi-tier fallback)
+  // 3. Instagram metadata extraction (Lightning-fast non-blocking with strict timeouts < 3s)
   if (cleanUrl.includes('instagram.com')) {
-    // Tier 1: Fast Public Bridge extraction (responds in ~1 second, VPS-friendly)
+    // Tier 1: Fast Public Bridge extraction with strict 2.5s timeout
     try {
-      const bridgeResult = await fetchInstagramViaPublicBridges(cleanUrl);
+      const bridgePromise = fetchInstagramViaPublicBridges(cleanUrl);
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Bridge timeout')), 2500));
+      const bridgeResult: any = await Promise.race([bridgePromise, timeoutPromise]);
       if (bridgeResult && bridgeResult.success && bridgeResult.title) {
         return bridgeResult;
       }
-    } catch (bridgeErr: any) {
-      console.warn('Instagram Public Bridge notice:', bridgeErr.message);
+    } catch (err: any) {
+      console.warn('Instagram Public Bridge fast notice:', err.message);
     }
 
-    // Tier 2: Attempt Apify extraction
+    // Tier 2: Quick Apify attempt with strict 3-second timeout (non-blocking)
     try {
-      const apifyResult = await fetchInstagramViaApify(cleanUrl);
+      const apifyPromise = fetchInstagramViaApify(cleanUrl);
+      const apifyTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Apify timeout')), 3000));
+      const apifyResult: any = await Promise.race([apifyPromise, apifyTimeout]);
       if (apifyResult && apifyResult.success) {
         return apifyResult;
       }
-    } catch (apifyErr: any) {
-      console.warn('Apify extraction notice:', apifyErr.message);
+    } catch (err: any) {
+      console.warn('Apify fast timeout notice (falling back to instant metadata for sub-3s response):', err.message);
     }
 
-    // Fallback extraction if Apify is not configured or failed
-    let title = 'پست منتخب در اینستاگرام';
-    let authorName = 'پیج اینستاگرام';
-    let description = 'محتوای به اشتراک گذاشته شده در اینستاگرام. برای مشاهده تعاملی روی کارت کلیک نمایید.';
-    let rawThumb = '';
-    let rawVideo = '';
-
-    try {
-      const noembed = await axios.get(`https://noembed.com/embed?url=${encodeURIComponent(cleanUrl)}`, { timeout: 6000 });
-      if (noembed.data) {
-        if (noembed.data.title) title = noembed.data.title;
-        if (noembed.data.author_name) authorName = noembed.data.author_name;
-        if (noembed.data.thumbnail_url) rawThumb = noembed.data.thumbnail_url;
-      }
-    } catch {}
-
-    let finalThumbnail = rawThumb;
-    if (rawThumb) {
-      finalThumbnail = await downloadAndCacheImage(rawThumb, `cover_ig_${Date.now()}`);
-    }
-
-    let finalVideo = '';
-    if (rawVideo) {
-      finalVideo = await downloadAndCacheVideo(rawVideo, `vid_ig_${Date.now()}`);
-    }
+    // Fast Instant Fallback (Guarantees response in < 2 seconds)
+    const shortcodeMatch = cleanUrl.match(/instagram\.com\/(?:p|reel|reels|tv)\/([a-zA-Z0-9_-]+)/i);
+    const shortcode = shortcodeMatch ? shortcodeMatch[1] : 'post';
+    const isReel = cleanUrl.includes('reel');
 
     return {
       success: true,
       platform: 'instagram',
-      title,
-      description,
-      authorName,
-      thumbnail: finalThumbnail,
-      image: finalThumbnail,
-      author: authorName,
-      videoUrl: finalVideo || undefined,
-      mediaType: finalVideo ? 'video' : 'image',
-      embedUrl: cleanUrl.replace(/\/$/, '') + '/embed',
-      readingOrWatchTime: cleanUrl.includes('reel') ? 'ریلز اینستاگرام' : 'پست اینستاگرام',
-      tags: ['اینستاگرام', 'ریلز', 'رسانه'],
+      title: isReel ? `ریلز اینستاگرام (${shortcode})` : `پست اینستاگرام (${shortcode})`,
+      description: `محتوای اشتراک‌گذاری شده از اینستاگرام. برای مشاهده تعاملی روی کارت کلیک نمایید.`,
+      authorName: 'اینستاگرام',
+      author: 'اینستاگرام',
+      thumbnail: `https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_da3d8448.jpg`,
+      image: `https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_da3d8448.jpg`,
+      embedUrl: `https://www.instagram.com/p/${shortcode}/embed`,
+      mediaType: isReel ? 'video' : 'image',
+      readingOrWatchTime: isReel ? 'ریلز اینستاگرام' : 'پست اینستاگرام',
+      tags: ['اینستاگرام', 'رسانه'],
       data: {
-        title,
-        author_name: authorName,
-        thumbnail_url: finalThumbnail,
-        video_url: finalVideo
+        instantFallback: true,
+        shortcode
       }
     };
   }
@@ -2163,7 +2143,7 @@ app.post('/api/debug/apify-test', requireAdminAuth, async (req: Request, res: Re
       });
     }
 
-    const actorEndpoint = `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items?token=${token}&timeout=15`;
+    const actorEndpoint = `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items?token=${token}&timeout=60`;
     logs.push(`[Apify Test] Requesting endpoint: https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items`);
 
     const apifyResponse = await axios.post(
@@ -2175,7 +2155,7 @@ app.post('/api/debug/apify-test', requireAdminAuth, async (req: Request, res: Re
         searchLimit: 1
       },
       {
-        timeout: 20000,
+        timeout: 65000,
         headers: { 'Content-Type': 'application/json' }
       }
     );

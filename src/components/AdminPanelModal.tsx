@@ -138,7 +138,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   // Apify Diagnostic States
   const [apifyDiagnosticReport, setApifyDiagnosticReport] = useState<any>(null);
   const [isCheckingApifyDiag, setIsCheckingApifyDiag] = useState(false);
-  const [testInstagramUrl, setTestInstagramUrl] = useState('https://www.instagram.com/reel/DF_sample/');
+  const [testInstagramUrl, setTestInstagramUrl] = useState('https://www.instagram.com/reel/C8_sample/');
   const [apifyTestRunResult, setApifyTestRunResult] = useState<any>(null);
   const [isRunningApifyTest, setIsRunningApifyTest] = useState(false);
 
@@ -1914,9 +1914,14 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
                 {/* Live Extraction Test Box */}
                 <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
-                  <h5 className="text-xs font-bold text-slate-200 flex items-center gap-2">
-                    <Search className="w-4 h-4 text-pink-400" />
-                    تست زنده استخراج لینک نمونه اینستاگرام
+                  <h5 className="text-xs font-bold text-slate-200 flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Search className="w-4 h-4 text-pink-400" />
+                      تست زنده استخراج لینک نمونه اینستاگرام
+                    </span>
+                    <span className="text-[10px] text-amber-400 font-normal">
+                      نکته: فقط لینک مستقیم پست یا ریلز (/p/ یا /reel/) پشتیبانی می‌شود
+                    </span>
                   </h5>
                   <div className="flex flex-col sm:flex-row gap-2">
                     <input
