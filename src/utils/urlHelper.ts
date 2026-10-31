@@ -105,11 +105,15 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
   const cleanUrl = rawUrl.trim();
   const parsed = parseContentUrl(cleanUrl);
 
-  // 1. PRIMARY STEP: Use Server-side Proxy (/api/extract-metadata)
-  // This bypasses client-side censorship/filtering in Iran, CORS restrictions,
-  // and automatically downloads the real YouTube/Aparat cover image and uploads it to upc.geekclub.ir CDN!
+  // 1. PRIMARY STEP: Use Server-side Proxy (/api/extract-metadata) with strict 3s timeout
   try {
-    const res = await fetch(`/api/extract-metadata?url=${encodeURIComponent(cleanUrl)}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const res = await fetch(`/api/extract-metadata?url=${encodeURIComponent(cleanUrl)}`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
     if (res.ok) {
       const data = await res.json();
       if (data.success && (data.title || data.thumbnail)) {
@@ -130,7 +134,7 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
       }
     }
   } catch (err) {
-    console.warn('Server metadata extract request error, falling back to local heuristic extraction:', err);
+    console.warn('Server metadata extract timeout or error, executing instant local fallback:', err);
   }
 
   // Default fallback values
