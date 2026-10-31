@@ -621,6 +621,33 @@ export const api = {
     } catch (err: any) {
       return { success: false, message: err.message || 'خطا در مهاجرت به دیتابیس PostgreSQL' };
     }
+  },
+
+  // 22. Check Apify diagnostic and token status
+  async checkApifyDiagnostic(): Promise<any> {
+    try {
+      const res = await fetch('/api/debug/apify', {
+        headers: await getAdminHeaders()
+      });
+      if (res.ok) return await res.json();
+      return { success: false, message: 'HTTP error ' + res.status };
+    } catch (err: any) {
+      return { success: false, message: err.message };
+    }
+  },
+
+  // 23. Test Apify Instagram extraction for a given URL
+  async testApifyExtraction(url?: string): Promise<any> {
+    try {
+      const res = await fetch('/api/debug/apify-test', {
+        method: 'POST',
+        headers: await getAdminHeaders(),
+        body: JSON.stringify({ url })
+      });
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, error: err.message, message: 'خطا در ارتباط با سرور تست' };
+    }
   }
 };
 

@@ -2100,6 +2100,156 @@ app.post('/api/database/backup-drive', requireAdminAuth, async (req: Request, re
   }
 });
 
+// Apify Diagnostic & Testing Endpoints
+app.get('/api/debug/apify', requireAdminAuth, async (_req: Request, res: Response) => {
+  const db = loadDatabase();
+  const envToken = process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN || '';
+  const settingToken = db.settings?.apifyApiToken || '';
+  const token = envToken || settingToken;
+  const actorId = process.env.APIFY_ACTOR_ID || db.settings?.apifyActorId || 'apify~instagram-scraper';
+
+  let apiReachable = false;
+  let userProfile: any = null;
+  let apiError = '';
+
+  if (token) {
+    try {
+      const resp = await axios.get(`https://api.apify.com/v2/users/me?token=${token}`, { timeout: 8000 });
+      if (resp.data && resp.data.data) {
+        apiReachable = true;
+        userProfile = resp.data.data;
+      }
+    } catch (err: any) {
+      apiError = err.response?.data?.error?.message || err.message || 'Failed to connect to Apify API';
+    }
+  }
+
+  return res.json({
+    success: true,
+    configured: Boolean(token),
+    tokenSource: envToken ? 'environment (ENV)' : (settingToken ? 'database settings' : 'none'),
+    tokenMasked: token ? token.substring(0, 6) + '...' + token.substring(token.length - 4) : '',
+    actorId,
+    apiReachable,
+    userProfile,
+    apiError,
+    message: apiReachable 
+      ? 'ارتباط با Apify API برقرار و توکن معتبر است.' 
+      : (token ? 'توکن تنظیم شده است اما ارتباط با Apify API ناموفق بود: ' + apiError : 'توکن Apify تنظیم نشده است.')
+  });
+});
+
+app.post('/api/debug/apify-test', requireAdminAuth, async (req: Request, res: Response) => {
+  const { url } = req.body || {};
+  const targetUrl = url || 'https://www.instagram.com/reel/DF_sample/';
+  const startTime = Date.now();
+  
+  const logs: string[] = [];
+  logs.push(`[Apify Test] Starting test extraction for URL: ${targetUrl}`);
+
+  try {
+    const db = loadDatabase();
+    const token = process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN || db.settings?.apifyApiToken;
+    const actorId = process.env.APIFY_ACTOR_ID || db.settings?.apifyActorId || 'apify~instagram-scraper';
+
+    logs.push(`[Apify Test] Token configured: ${Boolean(token)}`);
+    logs.push(`[Apify Test] Actor ID: ${actorId}`);
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        logs,
+        error: 'توکن Apify تنظیم نشده است. لطفاً توکن API را در تنظیمات یا متغیرهای محیطی وارد کنید.'
+      });
+    }
+
+    const actorEndpoint = `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items?token=${token}&timeout=15`;
+    logs.push(`[Apify Test] Requesting endpoint: https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items`);
+
+    const apifyResponse = await axios.post(
+      actorEndpoint,
+      {
+        directUrls: [targetUrl],
+        resultsType: 'posts',
+        resultsLimit: 1,
+        searchLimit: 1
+      },
+      {
+        timeout: 20000,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+
+    const items = apifyResponse.data;
+    const durationMs = Date.now() - startTime;
+    logs.push(`[Apify Test] Response received in ${durationMs}ms. Items count: ${Array.isArray(items) ? items.length : 'non-array'}`);
+
+    if (Array.isArray(items) && items.length > 0) {
+      logs.push(`[Apify Test SUCCESS] Successfully retrieved item from Apify dataset.`);
+      return res.json({
+        success: true,
+        durationMs,
+        logs,
+        item: items[0],
+        message: 'استخراج داده از Apify با موفقیت انجام شد.'
+      });
+    } else {
+      logs.push(`[Apify Test WARNING] Apify returned empty items array.`);
+      return res.json({
+        success: false,
+        durationMs,
+        logs,
+        rawResponse: items,
+        message: 'آپایفای پاسخ داد اما هیچ آیتمی در دیتاست یافت نشد. ممکن است پست خصوصی باشد یا لینک نامعتبر باشد.'
+      });
+    }
+  } catch (err: any) {
+    const durationMs = Date.now() - startTime;
+    const errDetails = err.response?.data || err.message;
+    logs.push(`[Apify Test ERROR] Failed: ${JSON.stringify(errDetails)}`);
+    return res.status(500).json({
+      success: false,
+      durationMs,
+      logs,
+      error: err.message,
+      errorResponse: err.response?.data,
+      message: 'خطا در اجرای اکتور آپایفای: ' + (err.response?.data?.error?.message || err.message)
+    });
+  }
+});
+
+app.post('/api/test-apify', requireAdminAuth, async (req: Request, res: Response) => {
+  const { token, actorId } = req.body || {};
+  const db = loadDatabase();
+  const activeToken = token || process.env.APIFY_API_TOKEN || db.settings?.apifyApiToken;
+  const activeActor = actorId || process.env.APIFY_ACTOR_ID || db.settings?.apifyActorId || 'apify~instagram-scraper';
+
+  if (!activeToken) {
+    return res.status(400).json({ success: false, message: 'توکن Apify وارد نشده است.' });
+  }
+
+  try {
+    const resp = await axios.get(`https://api.apify.com/v2/users/me?token=${activeToken}`, { timeout: 8000 });
+    if (resp.data && resp.data.data) {
+      return res.json({
+        success: true,
+        message: 'اتصال با Apify با موفقیت برقرار شد و توکن معتبر است.',
+        data: {
+          username: resp.data.data.username,
+          email: resp.data.data.email,
+          actorId: activeActor
+        }
+      });
+    }
+    return res.status(400).json({ success: false, message: 'توکن Apify توسط سرور Apify تایید نشد.' });
+  } catch (err: any) {
+    return res.status(400).json({
+      success: false,
+      message: 'خطا در ارتباط با سرور Apify: ' + (err.response?.data?.error?.message || err.message)
+    });
+  }
+});
+
 // 3. POST /api/contents/:id/reaction - Like or Dislike
 app.post('/api/contents/:id/reaction', (req: Request, res: Response) => {
   const { id } = req.params;

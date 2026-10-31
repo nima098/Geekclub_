@@ -135,8 +135,43 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     }
   };
 
+  // Apify Diagnostic States
+  const [apifyDiagnosticReport, setApifyDiagnosticReport] = useState<any>(null);
+  const [isCheckingApifyDiag, setIsCheckingApifyDiag] = useState(false);
+  const [testInstagramUrl, setTestInstagramUrl] = useState('https://www.instagram.com/reel/DF_sample/');
+  const [apifyTestRunResult, setApifyTestRunResult] = useState<any>(null);
+  const [isRunningApifyTest, setIsRunningApifyTest] = useState(false);
+
+  const handleRunApifyDiagnostic = async () => {
+    setIsCheckingApifyDiag(true);
+    try {
+      const res = await api.checkApifyDiagnostic();
+      setApifyDiagnosticReport(res);
+    } catch (err: any) {
+      setApifyDiagnosticReport({ success: false, message: err.message });
+    } finally {
+      setIsCheckingApifyDiag(false);
+    }
+  };
+
+  const handleRunApifyLiveTest = async () => {
+    setIsRunningApifyTest(true);
+    setApifyTestRunResult(null);
+    try {
+      const res = await api.testApifyExtraction(testInstagramUrl);
+      setApifyTestRunResult(res);
+    } catch (err: any) {
+      setApifyTestRunResult({ success: false, error: err.message, message: 'خطا در ارتباط با سرور تست' });
+    } finally {
+      setIsRunningApifyTest(false);
+    }
+  };
+
   useEffect(() => {
-    if ((activeTab === 'diagnostic' || activeTab === 'database') && !diagnosticReport) {
+    if (activeTab === 'diagnostic') {
+      if (!diagnosticReport) handleRunDiagnostic();
+      if (!apifyDiagnosticReport) handleRunApifyDiagnostic();
+    } else if (activeTab === 'database' && !diagnosticReport) {
       handleRunDiagnostic();
     }
   }, [activeTab]);
@@ -1820,6 +1855,125 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     <p className="text-xs">در حال برقراری ارتباط با سرور و اجرای تست‌های سلامت دیتابیس...</p>
                   </div>
                 )}
+              </div>
+
+              {/* Apify Instagram Extraction Diagnostic Card */}
+              <div className="p-6 rounded-2xl bg-slate-800/90 border border-slate-700/80 shadow-xl space-y-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-700 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 rounded-2xl bg-pink-500/20 text-pink-400 ring-2 ring-pink-500/30">
+                      <Instagram className="w-7 h-7" />
+                    </div>
+                    <div>
+                      <h4 className="text-base sm:text-lg font-black text-slate-100 flex items-center gap-2">
+                        عیب‌یابی اتصال و استخراج محتوا از Apify (اینستاگرام)
+                        <span className="text-[10px] bg-pink-500/20 text-pink-300 px-2.5 py-0.5 rounded-full border border-pink-500/30">
+                          Apify Inspector
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-300">
+                        بررسی وضعیت توکن API، تست اتصال به سرور Apify و شبیه‌سازی استخراج پست نمونه اینستاگرام
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleRunApifyDiagnostic}
+                    disabled={isCheckingApifyDiag}
+                    className="px-5 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs flex items-center gap-2 transition active:scale-95 shadow-lg shadow-pink-600/30 cursor-pointer disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${isCheckingApifyDiag ? 'animate-spin' : ''}`} />
+                    {isCheckingApifyDiag ? 'در حال بررسی...' : 'بررسی توکن و اتصال Apify'}
+                  </button>
+                </div>
+
+                {apifyDiagnosticReport && (
+                  <div className={`p-4 rounded-xl border flex items-center justify-between gap-3 ${
+                    apifyDiagnosticReport.apiReachable
+                      ? 'bg-emerald-500/15 text-emerald-200 border-emerald-500/40'
+                      : 'bg-amber-500/15 text-amber-200 border-amber-500/40'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      {apifyDiagnosticReport.apiReachable ? (
+                        <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0" />
+                      ) : (
+                        <AlertTriangle className="w-6 h-6 text-amber-400 shrink-0" />
+                      )}
+                      <div>
+                        <h5 className="text-sm font-bold">
+                          {apifyDiagnosticReport.apiReachable ? 'اتصال به Apify API موفق و توکن معتبر است' : 'هشدار در اتصال به Apify'}
+                        </h5>
+                        <p className="text-xs opacity-90 mt-0.5">
+                          {apifyDiagnosticReport.message} {apifyDiagnosticReport.tokenMasked ? `(توکن: ${apifyDiagnosticReport.tokenMasked}, منبع: ${apifyDiagnosticReport.tokenSource})` : ''}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Live Extraction Test Box */}
+                <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
+                  <h5 className="text-xs font-bold text-slate-200 flex items-center gap-2">
+                    <Search className="w-4 h-4 text-pink-400" />
+                    تست زنده استخراج لینک نمونه اینستاگرام
+                  </h5>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      id="testInstagramUrlInput"
+                      name="testInstagramUrl"
+                      value={testInstagramUrl}
+                      onChange={(e) => setTestInstagramUrl(e.target.value)}
+                      placeholder="لینک پست یا ریلز اینستاگرام را وارد کنید..."
+                      className="flex-1 px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-pink-500 dir-ltr font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRunApifyLiveTest}
+                      disabled={isRunningApifyTest || !testInstagramUrl.trim()}
+                      className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-md shadow-indigo-600/20 cursor-pointer disabled:opacity-50 shrink-0"
+                    >
+                      <Sparkles className={`w-4 h-4 ${isRunningApifyTest ? 'animate-spin' : ''}`} />
+                      {isRunningApifyTest ? 'در حال استخراج...' : 'اجرای تست استخراج'}
+                    </button>
+                  </div>
+
+                  {apifyTestRunResult && (
+                    <div className={`p-4 rounded-xl border text-xs space-y-2 ${
+                      apifyTestRunResult.success
+                        ? 'bg-emerald-500/10 text-emerald-200 border-emerald-500/30'
+                        : 'bg-rose-500/10 text-rose-200 border-rose-500/30'
+                    }`}>
+                      <div className="flex items-center justify-between font-bold">
+                        <span className="flex items-center gap-1.5">
+                          {apifyTestRunResult.success ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <AlertTriangle className="w-4 h-4 text-rose-400" />}
+                          {apifyTestRunResult.message}
+                        </span>
+                        {apifyTestRunResult.durationMs && (
+                          <span className="font-mono text-[10px] text-slate-400">زمان اجرا: {apifyTestRunResult.durationMs}ms</span>
+                        )}
+                      </div>
+
+                      {/* Logs trace */}
+                      {apifyTestRunResult.logs && Array.isArray(apifyTestRunResult.logs) && (
+                        <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 font-mono text-[10px] text-slate-300 space-y-1 max-h-36 overflow-y-auto dir-ltr text-left">
+                          {apifyTestRunResult.logs.map((log: string, idx: number) => (
+                            <div key={idx} className={log.includes('ERROR') ? 'text-rose-400 font-bold' : log.includes('SUCCESS') ? 'text-emerald-400 font-bold' : 'text-slate-300'}>
+                              {log}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {apifyTestRunResult.error && (
+                        <div className="p-2 rounded bg-rose-950/40 text-rose-300 font-mono text-[11px]">
+                          خطا: {apifyTestRunResult.error}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
