@@ -171,13 +171,19 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
           setFetchedMeta(meta);
           setDetectedPlatform(meta.platform);
           setEmbedUrl(meta.embedUrl);
+          if (meta.title) setTitle(meta.title);
+          if (meta.description) setDescription(meta.description);
+          if (meta.thumbnail) setThumbnail(meta.thumbnail);
+          if (meta.authorName) setAuthorName(meta.authorName);
+          if (meta.readingOrWatchTime) setReadingOrWatchTime(meta.readingOrWatchTime);
+          if (meta.tags && meta.tags.length > 0) setTagsInput(meta.tags.join(', '));
         }
       } catch (err) {
         console.error('Error fetching metadata:', err);
       } finally {
         if (active) setIsLoadingMeta(false);
       }
-    }, 150);
+    }, 200);
 
     return () => {
       active = false;
@@ -187,24 +193,12 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
 
   useEffect(() => {
     if (fetchedMeta) {
-      if (!title && fetchedMeta.title) {
-        setTitle(fetchedMeta.title);
-      }
-      if (!description && fetchedMeta.description) {
-        setDescription(fetchedMeta.description);
-      }
-      if (!thumbnail && fetchedMeta.thumbnail) {
-        setThumbnail(fetchedMeta.thumbnail);
-      }
-      if (!authorName && fetchedMeta.authorName) {
-        setAuthorName(fetchedMeta.authorName);
-      }
-      if (!readingOrWatchTime && fetchedMeta.readingOrWatchTime) {
-        setReadingOrWatchTime(fetchedMeta.readingOrWatchTime);
-      }
-      if (!tagsInput && fetchedMeta.tags && fetchedMeta.tags.length > 0) {
-        setTagsInput(fetchedMeta.tags.join(', '));
-      }
+      if (fetchedMeta.title) setTitle(fetchedMeta.title);
+      if (fetchedMeta.description) setDescription(fetchedMeta.description);
+      if (fetchedMeta.thumbnail) setThumbnail(fetchedMeta.thumbnail);
+      if (fetchedMeta.authorName) setAuthorName(fetchedMeta.authorName);
+      if (fetchedMeta.readingOrWatchTime) setReadingOrWatchTime(fetchedMeta.readingOrWatchTime);
+      if (fetchedMeta.tags && fetchedMeta.tags.length > 0) setTagsInput(fetchedMeta.tags.join(', '));
     }
   }, [fetchedMeta]);
 

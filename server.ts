@@ -1005,26 +1005,30 @@ async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMe
   const token = process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN || db.settings?.apifyApiToken;
   const actorId = process.env.APIFY_ACTOR_ID || db.settings?.apifyActorId || 'apify~instagram-scraper';
 
-  console.log(`[Apify Pipeline] Checking Instagram URL via Apify: ${instagramUrl}`);
+  const match = instagramUrl.match(/instagram\.com\/(?:p|reel|reels|tv)\/([a-zA-Z0-9_-]+)/i);
+  const shortcode = match ? match[1] : '';
+  const cleanDirectUrl = shortcode ? `https://www.instagram.com/p/${shortcode}/` : instagramUrl.split('?')[0];
+
+  console.log(`[Apify Pipeline] Checking Instagram URL via Apify: ${cleanDirectUrl} (shortcode: ${shortcode || 'unknown'})`);
   if (!token) {
     console.warn(`[Apify Pipeline Notice] APIFY_API_TOKEN is not configured in process.env or settings. Falling back to multi-tier extraction.`);
     return null;
   }
 
   try {
-    const actorEndpoint = `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items?token=${token}&timeout=60`;
-    console.log(`[Apify Pipeline] Executing Apify actor ${actorId} for ${instagramUrl}...`);
+    const actorEndpoint = `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items?token=${token}&timeout=25`;
+    console.log(`[Apify Pipeline] Executing Apify actor ${actorId} for ${cleanDirectUrl}...`);
 
     const apifyResponse = await axios.post(
       actorEndpoint,
       {
-        directUrls: [instagramUrl],
+        directUrls: [cleanDirectUrl],
         resultsType: 'posts',
         resultsLimit: 1,
         searchLimit: 1
       },
       {
-        timeout: 65000,
+        timeout: 30000,
         headers: {
           'Content-Type': 'application/json'
         }
@@ -1312,16 +1316,16 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
       console.warn('Instagram Public Bridge fast notice:', err.message);
     }
 
-    // Tier 2: Quick Apify attempt with strict 3-second timeout (non-blocking)
+    // Tier 2: Apify attempt with 8.5-second timeout (matches ~4.8s Apify response)
     try {
       const apifyPromise = fetchInstagramViaApify(cleanUrl);
-      const apifyTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Apify timeout')), 3000));
+      const apifyTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Apify timeout')), 8500));
       const apifyResult: any = await Promise.race([apifyPromise, apifyTimeout]);
       if (apifyResult && apifyResult.success) {
         return apifyResult;
       }
     } catch (err: any) {
-      console.warn('Apify fast timeout notice (falling back to instant metadata for sub-3s response):', err.message);
+      console.warn('Apify extraction notice (falling back to instant metadata):', err.message);
     }
 
     // Fast Instant Fallback (Guarantees response in < 2 seconds)
@@ -2090,6 +2094,7 @@ app.get('/api/debug/apify', requireAdminAuth, async (_req: Request, res: Respons
 
   let apiReachable = false;
   let userProfile: any = null;
+  let activeRuns: any[] = [];
   let apiError = '';
 
   if (token) {
@@ -2102,6 +2107,14 @@ app.get('/api/debug/apify', requireAdminAuth, async (_req: Request, res: Respons
     } catch (err: any) {
       apiError = err.response?.data?.error?.message || err.message || 'Failed to connect to Apify API';
     }
+
+    // Query active / running runs on Apify
+    try {
+      const runsResp = await axios.get(`https://api.apify.com/v2/actor-runs?status=RUNNING&limit=10&token=${token}`, { timeout: 6000 });
+      if (runsResp.data?.data?.items) {
+        activeRuns = runsResp.data.data.items;
+      }
+    } catch {}
   }
 
   return res.json({
@@ -2112,11 +2125,44 @@ app.get('/api/debug/apify', requireAdminAuth, async (_req: Request, res: Respons
     actorId,
     apiReachable,
     userProfile,
+    activeRunsCount: activeRuns.length,
+    activeRuns: activeRuns.map(r => ({ id: r.id, actId: r.actId, startedAt: r.startedAt })),
     apiError,
     message: apiReachable 
-      ? 'ارتباط با Apify API برقرار و توکن معتبر است.' 
+      ? `ارتباط با Apify API برقرار است (تعداد اجرای فعال هم‌زمان: ${activeRuns.length} از ۵)` 
       : (token ? 'توکن تنظیم شده است اما ارتباط با Apify API ناموفق بود: ' + apiError : 'توکن Apify تنظیم نشده است.')
   });
+});
+
+// Abort all stuck/running Actor runs on Apify
+app.post('/api/debug/apify-abort-all', requireAdminAuth, async (_req: Request, res: Response) => {
+  const db = loadDatabase();
+  const token = process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN || db.settings?.apifyApiToken;
+
+  if (!token) {
+    return res.status(400).json({ success: false, message: 'توکن Apify تنظیم نشده است.' });
+  }
+
+  try {
+    const runsResp = await axios.get(`https://api.apify.com/v2/actor-runs?status=RUNNING&limit=20&token=${token}`, { timeout: 8000 });
+    const runs = runsResp.data?.data?.items || [];
+
+    let abortedCount = 0;
+    for (const r of runs) {
+      try {
+        await axios.post(`https://api.apify.com/v2/actor-runs/${r.id}/abort?token=${token}`, {}, { timeout: 5000 });
+        abortedCount++;
+      } catch {}
+    }
+
+    return res.json({
+      success: true,
+      message: `تعداد ${abortedCount} پردازش معلق در Apify متوقف و صف ۵ ظرفیتی آزاد گردید.`,
+      abortedCount
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: 'خطا در متوقف‌سازی پردازش‌ها: ' + err.message });
+  }
 });
 
 app.post('/api/debug/apify-test', requireAdminAuth, async (req: Request, res: Response) => {
@@ -2143,19 +2189,38 @@ app.post('/api/debug/apify-test', requireAdminAuth, async (req: Request, res: Re
       });
     }
 
-    const actorEndpoint = `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items?token=${token}&timeout=60`;
+    const match = targetUrl.match(/instagram\.com\/(?:p|reel|reels|tv)\/([a-zA-Z0-9_-]+)/i);
+    const shortcode = match ? match[1] : '';
+    
+    // Check if URL is invalid / dummy (e.g. /popular/reel-with-car)
+    if (!shortcode || targetUrl.includes('/popular/') || targetUrl.includes('sample')) {
+      logs.push(`[Apify Test ERROR] Invalid Instagram URL format: ${targetUrl}`);
+      logs.push(`[Apify Test NOTICE] Instagram post links must have a real alphanumeric code, e.g. https://www.instagram.com/reel/DC2G5oMoQ-Y/ or https://www.instagram.com/p/DB7lK_yInh4/`);
+      return res.status(400).json({
+        success: false,
+        durationMs: Date.now() - startTime,
+        logs,
+        error: 'فرمت لینک نامعتبر است',
+        message: 'لینک وارد شده دارای شناسه پست معتبر اینستاگرام نیست. لطفاً لینک یک پست یا ریلز واقعی را وارد کنید (مثال: https://www.instagram.com/reel/DC2G5oMoQ-Y/ یا https://www.instagram.com/p/DB7lK_yInh4/).'
+      });
+    }
+
+    const cleanDirectUrl = `https://www.instagram.com/p/${shortcode}/`;
+    logs.push(`[Apify Test] Normalized target URL: ${cleanDirectUrl} (Shortcode: ${shortcode})`);
+
+    const actorEndpoint = `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items?token=${token}&timeout=30`;
     logs.push(`[Apify Test] Requesting endpoint: https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items`);
 
     const apifyResponse = await axios.post(
       actorEndpoint,
       {
-        directUrls: [targetUrl],
+        directUrls: [cleanDirectUrl],
         resultsType: 'posts',
         resultsLimit: 1,
         searchLimit: 1
       },
       {
-        timeout: 65000,
+        timeout: 35000,
         headers: { 'Content-Type': 'application/json' }
       }
     );

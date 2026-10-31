@@ -154,12 +154,30 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     }
   };
 
+  const [isAbortingRuns, setIsAbortingRuns] = useState(false);
+  const [abortResultMsg, setAbortResultMsg] = useState<string | null>(null);
+
+  const handleAbortAllApifyRuns = async () => {
+    setIsAbortingRuns(true);
+    setAbortResultMsg(null);
+    try {
+      const res = await api.abortAllApifyRuns();
+      setAbortResultMsg(res.message || 'عملیات آزادسازی صف پردازش‌ها با موفقیت انجام شد.');
+      handleRunApifyDiagnostic();
+    } catch (err: any) {
+      setAbortResultMsg('خطا: ' + err.message);
+    } finally {
+      setIsAbortingRuns(false);
+    }
+  };
+
   const handleRunApifyLiveTest = async () => {
     setIsRunningApifyTest(true);
     setApifyTestRunResult(null);
     try {
       const res = await api.testApifyExtraction(testInstagramUrl);
       setApifyTestRunResult(res);
+      handleRunApifyDiagnostic();
     } catch (err: any) {
       setApifyTestRunResult({ success: false, error: err.message, message: 'خطا در ارتباط با سرور تست' });
     } finally {
@@ -1877,16 +1895,35 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={handleRunApifyDiagnostic}
-                    disabled={isCheckingApifyDiag}
-                    className="px-5 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs flex items-center gap-2 transition active:scale-95 shadow-lg shadow-pink-600/30 cursor-pointer disabled:opacity-50"
-                  >
-                    <RefreshCw className={`w-4 h-4 ${isCheckingApifyDiag ? 'animate-spin' : ''}`} />
-                    {isCheckingApifyDiag ? 'در حال بررسی...' : 'بررسی توکن و اتصال Apify'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleAbortAllApifyRuns}
+                      disabled={isAbortingRuns}
+                      className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-2 transition active:scale-95 shadow-lg shadow-rose-600/30 cursor-pointer disabled:opacity-50"
+                      title="در صورت بروز خطای 5 concurrent Actor runs، با این دکمه کانتینرهای معلق متوقف می‌شوند"
+                    >
+                      <Trash2 className={`w-4 h-4 ${isAbortingRuns ? 'animate-spin' : ''}`} />
+                      {isAbortingRuns ? 'در حال آزادسازی...' : 'آزادسازی صف کانتینرهای Apify'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRunApifyDiagnostic}
+                      disabled={isCheckingApifyDiag}
+                      className="px-5 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs flex items-center gap-2 transition active:scale-95 shadow-lg shadow-pink-600/30 cursor-pointer disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${isCheckingApifyDiag ? 'animate-spin' : ''}`} />
+                      {isCheckingApifyDiag ? 'در حال بررسی...' : 'بررسی توکن و اتصال Apify'}
+                    </button>
+                  </div>
                 </div>
+
+                {abortResultMsg && (
+                  <div className="p-3 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-xs text-indigo-300 font-bold flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <span>{abortResultMsg}</span>
+                  </div>
+                )}
 
                 {apifyDiagnosticReport && (
                   <div className={`p-4 rounded-xl border flex items-center justify-between gap-3 ${
@@ -1901,8 +1938,17 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         <AlertTriangle className="w-6 h-6 text-amber-400 shrink-0" />
                       )}
                       <div>
-                        <h5 className="text-sm font-bold">
+                        <h5 className="text-sm font-bold flex items-center gap-2">
                           {apifyDiagnosticReport.apiReachable ? 'اتصال به Apify API موفق و توکن معتبر است' : 'هشدار در اتصال به Apify'}
+                          {apifyDiagnosticReport.activeRunsCount !== undefined && (
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
+                              apifyDiagnosticReport.activeRunsCount >= 5 
+                                ? 'bg-rose-500/30 text-rose-300 border border-rose-500/50 animate-pulse'
+                                : 'bg-slate-800 text-slate-300'
+                            }`}>
+                              اجراهای هم‌زمان: {apifyDiagnosticReport.activeRunsCount} از ۵
+                            </span>
+                          )}
                         </h5>
                         <p className="text-xs opacity-90 mt-0.5">
                           {apifyDiagnosticReport.message} {apifyDiagnosticReport.tokenMasked ? `(توکن: ${apifyDiagnosticReport.tokenMasked}, منبع: ${apifyDiagnosticReport.tokenSource})` : ''}

@@ -648,6 +648,19 @@ export const api = {
     } catch (err: any) {
       return { success: false, error: err.message, message: 'خطا در ارتباط با سرور تست' };
     }
+  },
+
+  // 24. Abort all stuck/hanging Apify runs to release 5 concurrent limit
+  async abortAllApifyRuns(): Promise<any> {
+    try {
+      const res = await fetch('/api/debug/apify-abort-all', {
+        method: 'POST',
+        headers: await getAdminHeaders()
+      });
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, message: err.message };
+    }
   }
 };
 

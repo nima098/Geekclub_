@@ -46,7 +46,7 @@ export function parseContentUrl(inputUrl: string): ParsedUrlResult {
 
   // Check Instagram
   const instagramMatch = url.match(
-    /(?:instagram\.com\/(?:p|reel|tv)\/([a-zA-Z0-9_-]+))/i
+    /(?:instagram\.com\/(?:p|reel|reels|tv)\/([a-zA-Z0-9_-]+))/i
   );
   if (instagramMatch && instagramMatch[1]) {
     const postCode = instagramMatch[1];
@@ -108,7 +108,7 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
   // 1. PRIMARY STEP: Use Server-side Proxy (/api/extract-metadata) with strict 3s timeout
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     const res = await fetch(`/api/extract-metadata?url=${encodeURIComponent(cleanUrl)}`, {
       signal: controller.signal
     });
