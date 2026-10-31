@@ -1174,12 +1174,142 @@ async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMe
   return null;
 }
 
+// Helper to fetch Instagram via public bridge services & embed frames (VPS-friendly)
+async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<ExtractedMetaResult | null> {
+  const match = instagramUrl.match(/instagram\.com\/(?:p|reel|reels|tv)\/([a-zA-Z0-9_-]+)/i);
+  if (!match || !match[1]) return null;
+
+  const shortcode = match[1];
+  console.log(`[Instagram Bridge Pipeline] Extracting Instagram post ${shortcode}...`);
+
+  let title = '';
+  let caption = '';
+  let authorName = '';
+  let rawThumb = '';
+  let rawVideo = '';
+
+  // Tier 1: Try VXInstagram API bridge
+  try {
+    const vxRes = await axios.get(`https://api.vxinstagram.com/p/${shortcode}`, { timeout: 7000 });
+    if (vxRes.data) {
+      const d = vxRes.data;
+      if (d.text || d.caption) caption = d.text || d.caption;
+      if (d.user_name || d.user_screen_name) authorName = d.user_name || d.user_screen_name;
+      if (d.media_urls && Array.isArray(d.media_urls) && d.media_urls.length > 0) {
+        rawThumb = d.media_urls[0];
+        if (d.media_urls.some((u: string) => u.includes('.mp4'))) {
+          rawVideo = d.media_urls.find((u: string) => u.includes('.mp4')) || '';
+        }
+      }
+    }
+  } catch (err: any) {
+    console.warn(`[Instagram Bridge] VXInstagram API query notice:`, err.message);
+  }
+
+  // Tier 2: Try Instagram Public Embed Captioned Frame Parsing
+  if (!rawThumb || !caption) {
+    try {
+      const embedRes = await axios.get(`https://www.instagram.com/p/${shortcode}/embed/captioned/`, {
+        timeout: 7000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      });
+      const html = typeof embedRes.data === 'string' ? embedRes.data : '';
+
+      // Extract image
+      const imgMatch = html.match(/class=["']EmbeddedMediaImage["'][^>]*src=["']([^"']+)["']/i) ||
+                       html.match(/<img[^>]+src=["'](https:\/\/[^"']+(?:fbcdn|cdninstagram)[^"']+)["']/i);
+      if (imgMatch && imgMatch[1]) {
+        rawThumb = imgMatch[1].replace(/&amp;/g, '&');
+      }
+
+      // Extract video
+      const vidMatch = html.match(/<video[^>]+src=["']([^"']+)["']/i);
+      if (vidMatch && vidMatch[1]) {
+        rawVideo = vidMatch[1].replace(/&amp;/g, '&');
+      }
+
+      // Extract author
+      const authorMatch = html.match(/class=["']UsernameText["'][^>]*>([^<]+)</i) ||
+                          html.match(/instagram\.com\/([a-zA-Z0-9_.]+)\/["']/i);
+      if (authorMatch && authorMatch[1]) {
+        authorName = authorMatch[1].trim();
+      }
+
+      // Extract caption
+      const captionMatch = html.match(/class=["']Caption["'][^>]*>(.*?)<\/div>/is);
+      if (captionMatch && captionMatch[1]) {
+        caption = captionMatch[1].replace(/<[^>]+>/g, '').trim();
+      }
+    } catch (err: any) {
+      console.warn(`[Instagram Bridge] Embed captioned frame parsing notice:`, err.message);
+    }
+  }
+
+  // Clean title from caption
+  if (caption) {
+    const firstLine = caption.split('\n')[0].replace(/#[\w\u0600-\u06FF]+/g, '').trim();
+    if (firstLine.length > 5) {
+      title = firstLine.length > 90 ? firstLine.substring(0, 87) + '...' : firstLine;
+    }
+  }
+  if (!title) {
+    title = authorName ? `پست اینستاگرام از @${authorName}` : 'پست اینستاگرام';
+  }
+
+  const cleanUser = authorName ? authorName.replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase() : 'general';
+  const cdnFolder = `instagram/${cleanUser}`;
+
+  let cdnThumb = '';
+  if (rawThumb) {
+    cdnThumb = await downloadAndCacheImage(rawThumb, `ig_bridge_cover_${shortcode}`, cdnFolder);
+  }
+
+  let cdnVideo = '';
+  if (rawVideo) {
+    cdnVideo = await downloadAndCacheVideo(rawVideo, `ig_bridge_vid_${shortcode}`, cdnFolder);
+  }
+
+  if (cdnThumb || cdnVideo || caption) {
+    console.log(`[Instagram Bridge SUCCESS] Successfully extracted post ${shortcode} (Thumb: ${!!cdnThumb}, Video: ${!!cdnVideo})`);
+    return {
+      success: true,
+      platform: 'instagram',
+      title,
+      description: caption || `محتوای به اشتراک گذاشته شده از اینستاگرام.`,
+      authorName: authorName ? `@${authorName}` : 'اینستاگرام',
+      author: authorName ? `@${authorName}` : 'اینستاگرام',
+      thumbnail: cdnThumb,
+      image: cdnThumb,
+      videoUrl: cdnVideo || undefined,
+      mediaType: cdnVideo ? 'video' : 'image',
+      embedUrl: `https://www.instagram.com/p/${shortcode}/embed`,
+      readingOrWatchTime: instagramUrl.includes('reel') ? 'ریلز اینستاگرام' : 'پست اینستاگرام',
+      tags: ['اینستاگرام', 'ویدیو', 'رسانه', cleanUser].filter(Boolean),
+      data: {
+        bridge: true,
+        shortcode,
+        videoUrl: cdnVideo
+      }
+    };
+  }
+
+  return null;
+}
+
   // 3. Instagram metadata extraction (Apify + multi-tier fallback)
   if (cleanUrl.includes('instagram.com')) {
     // Attempt Apify extraction first
     const apifyResult = await fetchInstagramViaApify(cleanUrl);
     if (apifyResult && apifyResult.success) {
       return apifyResult;
+    }
+
+    // Attempt Public Bridge extraction (VPS-friendly, no Apify token needed)
+    const bridgeResult = await fetchInstagramViaPublicBridges(cleanUrl);
+    if (bridgeResult && bridgeResult.success) {
+      return bridgeResult;
     }
 
     // Fallback extraction if Apify is not configured or failed
