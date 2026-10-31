@@ -536,6 +536,52 @@ function saveDatabase(db: DatabaseSchema) {
 
 // --- API Routes ---
 
+// Direct Google OAuth 2.0 Token Verification Endpoint (Firebase-Free)
+app.post('/api/auth/google-verify', rateLimit('google-verify', 30, 60_000), async (req: Request, res: Response) => {
+  const { accessToken, idToken } = req.body || {};
+
+  try {
+    let googleUser: any = null;
+
+    if (accessToken) {
+      const userInfoRes = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        timeout: 8000
+      });
+      googleUser = userInfoRes.data;
+    } else if (idToken) {
+      const tokenInfoRes = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`, {
+        timeout: 8000
+      });
+      googleUser = tokenInfoRes.data;
+    }
+
+    if (!googleUser || (!googleUser.email && !googleUser.sub)) {
+      return res.status(400).json({ success: false, error: 'احراز هویت گوگل ناموفق بود یا توکن معتبر نیست.' });
+    }
+
+    const email = (googleUser.email || '').toLowerCase();
+    const uid = googleUser.sub || `google-${Date.now()}`;
+    const rawPhoto = googleUser.picture || '';
+    const safePhoto = rawPhoto && (rawPhoto.includes('googleusercontent.com') || rawPhoto.includes('ggpht.com'))
+      ? `/api/proxy-image?url=${encodeURIComponent(rawPhoto)}`
+      : rawPhoto;
+
+    return res.json({
+      success: true,
+      user: {
+        uid,
+        displayName: googleUser.name || googleUser.given_name || 'کاربر گوگل',
+        email,
+        photoURL: safePhoto
+      }
+    });
+  } catch (err: any) {
+    console.error('Google OAuth direct verification error:', err?.message);
+    return res.status(400).json({ success: false, error: 'خطا در تایید هویت مستقیم با گوگل.' });
+  }
+});
+
 // 0. GET /api/proxy-image - Direct image proxy for blocked external images
 app.get('/api/proxy-image', rateLimit('proxy-image', 120, 60_000), async (req: Request, res: Response) => {
   const imageUrl = req.query.url as string;

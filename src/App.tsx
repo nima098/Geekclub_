@@ -25,6 +25,9 @@ import {
 import { 
   UsernameSetupModal 
 } from './components/UsernameSetupModal';
+import {
+  LoginModal
+} from './components/LoginModal';
 import { 
   DomainAuthHelpModal 
 } from './components/DomainAuthHelpModal';
@@ -75,7 +78,8 @@ import {
   DEFAULT_SITE_SETTINGS,
   INITIAL_REGISTERED_USERS
 } from './data/initialData';
-import { logoutGoogle, loginWithGooglePopup } from './lib/firebase';
+import { logoutGoogle } from './lib/firebase';
+import { loginWithDirectGoogleOAuth } from './lib/googleAuth';
 import { 
   Sparkles, 
   Compass, 
@@ -339,6 +343,7 @@ export default function App() {
 
   // Modals & Auth State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isLoggingInWithGoogle, setIsLoggingInWithGoogle] = useState(false);
   const [tempGoogleUser, setTempGoogleUser] = useState<{
     uid: string;
@@ -1075,7 +1080,7 @@ export default function App() {
   const handleDirectGoogleLogin = async () => {
     setIsLoggingInWithGoogle(true);
     try {
-      const verified = await loginWithGooglePopup();
+      const verified = await loginWithDirectGoogleOAuth();
 
       // Check if user already exists in usersList and has completed registration
       const existing = usersList.find(
@@ -1101,15 +1106,11 @@ export default function App() {
         setIsUsernameModalOpen(true);
       }
     } catch (err: any) {
-      console.error('Direct Google login error:', err);
-      if (err?.code === 'auth/unauthorized-domain') {
-        setIsDomainHelpModalOpen(true);
-      } else if (err?.code === 'auth/popup-blocked') {
-        addToast('error', 'پنجره ورود گوگل توسط مرورگر مسدود شد. لطفاً پاپ‌آپ را در مرورگر فعال نمایید.');
-      } else if (err?.code === 'auth/popup-closed-by-user') {
+      console.error('Direct Google OAuth login error:', err);
+      if (err?.message?.includes('popup_closed') || err?.code === 'auth/popup-closed-by-user') {
         addToast('info', 'فرآیند ورود لغو شد.');
       } else {
-        addToast('error', err?.message || 'خطا در ارتباط با سرورهای گوگل.');
+        addToast('error', err?.message || 'خطا در ارتباط با سرویس ورود مستقیم گوگل.');
       }
     } finally {
       setIsLoggingInWithGoogle(false);
@@ -1491,7 +1492,7 @@ export default function App() {
       <Navbar
         user={user}
         onOpenAddModal={() => setIsAddModalOpen(true)}
-        onStartGoogleLogin={handleDirectGoogleLogin}
+        onStartGoogleLogin={() => setIsLoginModalOpen(true)}
         isLoggingIn={isLoggingInWithGoogle}
         onOpenProfileModal={() => setIsProfileModalOpen(true)}
         onOpenFeedbackModal={() => setIsFeedbackModalOpen(true)}
@@ -1517,7 +1518,7 @@ export default function App() {
       {/* Guest Welcome Banner */}
       {!user && (
         <WelcomeBanner
-          onStartGoogleLogin={handleDirectGoogleLogin}
+          onStartGoogleLogin={() => setIsLoginModalOpen(true)}
           onOpenAddModal={() => setIsAddModalOpen(true)}
           isLoggingIn={isLoggingInWithGoogle}
         />
@@ -1787,6 +1788,15 @@ export default function App() {
             setActiveCommentsItem(item);
           }
         }}
+      />
+
+      {/* Direct Local Login / Signup Modal */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        existingUsers={usersList}
+        onLogin={handleLogin}
+        onStartGoogleLogin={handleDirectGoogleLogin}
       />
 
       {/* Username Setup Modal - Asked immediately after successful Google login */}
