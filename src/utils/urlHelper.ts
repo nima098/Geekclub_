@@ -120,11 +120,14 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
         const platform = data.platform || parsed.platform;
         const inferredCat = inferCategoryFromContent(data.title || '', data.description || '', data.tags || []);
         let rawThumbnail = data.thumbnail || '';
+        if (rawThumbnail && rawThumbnail.includes('upc.geekclub.ir/uploads/')) {
+          rawThumbnail = rawThumbnail.substring(rawThumbnail.indexOf('/uploads/'));
+        }
         if (rawThumbnail && !rawThumbnail.startsWith('http') && !rawThumbnail.startsWith('data:')) {
           if (rawThumbnail.startsWith('/')) {
-            rawThumbnail = typeof window !== 'undefined' ? `${window.location.origin}${rawThumbnail}` : `https://upc.geekclub.ir${rawThumbnail}`;
+            rawThumbnail = typeof window !== 'undefined' ? `${window.location.origin}${rawThumbnail}` : rawThumbnail;
           } else {
-            rawThumbnail = typeof window !== 'undefined' ? `${window.location.origin}/${rawThumbnail}` : `https://upc.geekclub.ir/${rawThumbnail}`;
+            rawThumbnail = typeof window !== 'undefined' ? `${window.location.origin}/${rawThumbnail}` : `/${rawThumbnail}`;
           }
         }
         return {

@@ -86,12 +86,20 @@ export const ImageCDNUpload: React.FC<ImageCDNUploadProps> = ({
   const formatFullCdnUrl = (raw: string): string => {
     if (!raw) return '';
     let u = raw.trim();
-    if (!u.startsWith('http://') && !u.startsWith('https://') && !u.startsWith('data:')) {
-      if (u.startsWith('/')) {
-        u = `https://upc.geekclub.ir${u}`;
-      } else {
-        u = `https://upc.geekclub.ir/${u}`;
-      }
+    if (u.includes('upc.geekclub.ir/uploads/')) {
+      return u.substring(u.indexOf('/uploads/'));
+    }
+    if (u.startsWith('http://') || u.startsWith('https://') || u.startsWith('data:')) {
+      return u;
+    }
+    if (u.startsWith('/uploads/') || u.startsWith('uploads/')) {
+      return u.startsWith('/') ? u : `/${u}`;
+    }
+    if (u.startsWith('/s1/')) {
+      return `https://upc.geekclub.ir${u}`;
+    }
+    if (u.startsWith('s1/')) {
+      return `https://upc.geekclub.ir/${u}`;
     }
     return u;
   };
@@ -114,7 +122,7 @@ export const ImageCDNUpload: React.FC<ImageCDNUploadProps> = ({
           name="cdnUrl"
           value={displayUrl}
           onChange={(e) => {
-            const val = formatFullCdnUrl(e.target.value);
+            const val = e.target.value.trim();
             onUrlChange(val);
             setSuccessInfo(null);
             setErrorMessage(null);

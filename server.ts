@@ -449,19 +449,30 @@ function loadDatabase(): DatabaseSchema {
     }
   }
 
-  // Purge any remaining Unsplash URLs and replace with CDN assets
+  // Purge any remaining Unsplash URLs and sanitize stale upc.geekclub.ir/uploads/ links
   if (dbData.contents && Array.isArray(dbData.contents)) {
     dbData.contents = dbData.contents.map((item: any) => {
-      if (item.thumbnail && item.thumbnail.includes('unsplash')) {
-        item.thumbnail = 'https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_da3d8448.jpg';
+      if (item && item.thumbnail) {
+        if (item.thumbnail.includes('unsplash')) {
+          item.thumbnail = 'https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_da3d8448.jpg';
+        } else if (item.thumbnail.includes('upc.geekclub.ir/uploads/')) {
+          item.thumbnail = item.thumbnail.substring(item.thumbnail.indexOf('/uploads/'));
+        }
       }
-      if (item.author && item.author.avatar && item.author.avatar.includes('unsplash')) {
+      if (item && item.author && item.author.avatar && item.author.avatar.includes('unsplash')) {
         item.author.avatar = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" rx="50" fill="%233b82f6"/><text x="50" y="63" font-family="Tahoma,sans-serif" font-size="42" font-weight="bold" fill="%23ffffff" text-anchor="middle" dominant-baseline="middle">گ</text></svg>`;
       }
-      if (item.slides && Array.isArray(item.slides)) {
+      if (item && item.slides && Array.isArray(item.slides)) {
         item.slides = item.slides.map((s: any) => {
-          if (s.url && s.url.includes('unsplash')) {
-            s.url = 'https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_da3d8448.jpg';
+          if (s && s.url) {
+            if (s.url.includes('unsplash')) {
+              s.url = 'https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_da3d8448.jpg';
+            } else if (s.url.includes('upc.geekclub.ir/uploads/')) {
+              s.url = s.url.substring(s.url.indexOf('/uploads/'));
+            }
+          }
+          if (s && s.thumbnail && s.thumbnail.includes('upc.geekclub.ir/uploads/')) {
+            s.thumbnail = s.thumbnail.substring(s.thumbnail.indexOf('/uploads/'));
           }
           return s;
         });
@@ -639,6 +650,12 @@ async function downloadAndCacheImage(
   sourceName: string = 'general'
 ): Promise<string> {
   if (!imageUrl) return imageUrl;
+  if (imageUrl.includes('upc.geekclub.ir/uploads/')) {
+    return imageUrl.substring(imageUrl.indexOf('/uploads/'));
+  }
+  if (imageUrl.startsWith('/uploads/')) {
+    return imageUrl;
+  }
   if (imageUrl.includes('upc.geekclub.ir') && !imageUrl.includes('/uploads/')) {
     return imageUrl;
   }
@@ -690,12 +707,12 @@ async function downloadAndCacheImage(
 
     const filename = `${filenamePrefix}.${ext}`;
     const localFilePath = path.join(targetFolderDisk, filename);
-    let localUrl = `https://upc.geekclub.ir/${targetFolderRelative}/${filename}`;
+    let localUrl = `/${targetFolderRelative}/${filename}`;
     try {
       fs.writeFileSync(localFilePath, buffer);
     } catch (fsErr: any) {
       console.warn(`[Storage Warning] Could not write image file to disk:`, fsErr.message);
-      localUrl = imageUrl;
+      localUrl = imageUrl.startsWith('http') ? `/api/proxy-image?url=${encodeURIComponent(imageUrl)}` : imageUrl;
     }
 
     // Upload to upc.geekclub.ir CDN (only if CDN_SECRET is configured)
@@ -731,7 +748,7 @@ async function downloadAndCacheImage(
     return localUrl;
   } catch (err: any) {
     console.warn(`Failed to download cover image from ${imageUrl}:`, err.message);
-    return imageUrl;
+    return imageUrl.startsWith('http') ? `/api/proxy-image?url=${encodeURIComponent(imageUrl)}` : imageUrl;
   }
 }
 
@@ -743,6 +760,12 @@ async function downloadAndCacheVideo(
   sourceName: string = 'general'
 ): Promise<string> {
   if (!videoUrl) return videoUrl;
+  if (videoUrl.includes('upc.geekclub.ir/uploads/')) {
+    return videoUrl.substring(videoUrl.indexOf('/uploads/'));
+  }
+  if (videoUrl.startsWith('/uploads/')) {
+    return videoUrl;
+  }
   if (videoUrl.includes('upc.geekclub.ir') && !videoUrl.includes('/uploads/')) {
     return videoUrl;
   }
@@ -772,7 +795,7 @@ async function downloadAndCacheVideo(
     const buffer = Buffer.from(response.data);
     const filename = `${filenamePrefix}.mp4`;
     const localFilePath = path.join(targetFolderDisk, filename);
-    let localUrl = `https://upc.geekclub.ir/${targetFolderRelative}/${filename}`;
+    let localUrl = `/${targetFolderRelative}/${filename}`;
     try {
       fs.writeFileSync(localFilePath, buffer);
       console.log(`[Video Pipeline] Video downloaded to local server storage: ${localUrl} (${Math.round(buffer.length / 1024)} KB)`);
@@ -1430,13 +1453,13 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
     }
 
     const imgMatches = [
-      html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i),
-      html.match(/<meta\s+content=["']([^"']+)["']\s+property=["']og:image["']/i),
-      html.match(/<meta\s+property=["']og:image:secure_url["']\s+content=["']([^"']+)["']/i),
-      html.match(/<meta\s+name=["']twitter:image["']\s+content=["']([^"']+)["']/i),
-      html.match(/<meta\s+name=["']twitter:image:src["']\s+content=["']([^"']+)["']/i),
-      html.match(/<meta\s+content=["']([^"']+)["']\s+name=["']twitter:image["']/i),
-      html.match(/<link\s+rel=["']image_src["']\s+href=["']([^"']+)["']/i),
+      html.match(/<meta\s+[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i),
+      html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i),
+      html.match(/<meta\s+[^>]*property=["']og:image:secure_url["'][^>]*content=["']([^"']+)["']/i),
+      html.match(/<meta\s+[^>]*name=["']twitter:image["'][^>]*content=["']([^"']+)["']/i),
+      html.match(/<meta\s+[^>]*name=["']twitter:image:src["'][^>]*content=["']([^"']+)["']/i),
+      html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*name=["']twitter:image["']/i),
+      html.match(/<link\s+[^>]*rel=["']image_src["'][^>]*href=["']([^"']+)["']/i),
       html.match(/"image"\s*:\s*["']([^"']+)["']/i),
       html.match(/"thumbnailUrl"\s*:\s*["']([^"']+)["']/i),
       html.match(/<img[^>]+class=["'][^"']*(?:wp-post-image|attachment-post-thumbnail|featured-image|entry-thumb|post-cover)[^"']*["'][^>]+src=["']([^"']+)["']/i),
