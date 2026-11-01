@@ -2600,27 +2600,95 @@ app.get('/api/database/export', requireAdminAuth, (req: Request, res: Response) 
   res.json({ success: true, ...exportData });
 });
 
-// 8.3. POST /api/database/import - Import/Restore site database snapshot (Admin Protected)
+// 8.2.1. GET /api/database/stats - Detailed database storage statistics (Admin Protected)
+app.get('/api/database/stats', requireAdminAuth, (_req: Request, res: Response) => {
+  const db = loadDatabase();
+  let fileSize = 0;
+  try {
+    if (fs.existsSync(DB_PATH)) {
+      const stats = fs.statSync(DB_PATH);
+      fileSize = stats.size;
+    }
+  } catch {}
+
+  let backupFilesCount = 0;
+  let latestBackupTime: string | null = null;
+  try {
+    if (fs.existsSync(BACKUP_DIR)) {
+      const files = fs.readdirSync(BACKUP_DIR).filter(f => f.endsWith('.json'));
+      backupFilesCount = files.length;
+      if (files.length > 0) {
+        files.sort().reverse();
+        const latestStat = fs.statSync(path.join(BACKUP_DIR, files[0]));
+        latestBackupTime = latestStat.mtime.toISOString();
+      }
+    }
+  } catch {}
+
+  res.json({
+    success: true,
+    data: {
+      fileSizeBytes: fileSize,
+      fileSizeFormatted: `${(fileSize / 1024).toFixed(1)} KB`,
+      contentsCount: db.contents?.length || 0,
+      profilesCount: Object.keys(db.profiles || {}).length,
+      commentsCount: Object.values(db.comments || {}).reduce((acc, curr) => acc + (Array.isArray(curr) ? curr.length : 0), 0),
+      deletedIdsCount: db.deletedIds?.length || 0,
+      backupFilesCount,
+      latestBackupTime,
+      postgresConnected: isPostgresConnected()
+    }
+  });
+});
+
+// 8.3. POST /api/database/import - Import/Restore site database snapshot with automatic pre-import rollback backup (Admin Protected)
 app.post('/api/database/import', requireAdminAuth, (req: Request, res: Response) => {
   const importedData = req.body;
   if (!importedData || typeof importedData !== 'object') {
-    return res.status(400).json({ success: false, error: 'Invalid backup JSON payload' });
+    return res.status(400).json({ success: false, error: 'محتوای فایل JSON پشتیبان معتبر نمی‌باشد.' });
+  }
+
+  // 1. Create emergency pre-import rollback backup snapshot
+  let rollbackFilename = '';
+  try {
+    const currentDb = loadDatabase();
+    if (!fs.existsSync(BACKUP_DIR)) {
+      fs.mkdirSync(BACKUP_DIR, { recursive: true });
+    }
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    rollbackFilename = `backup_pre_import_${timestamp}.json`;
+    const rollbackPath = path.join(BACKUP_DIR, rollbackFilename);
+    fs.writeFileSync(rollbackPath, JSON.stringify(currentDb, null, 2), 'utf-8');
+    console.log(`[Import Safeguard] Pre-import rollback snapshot created: ${rollbackFilename}`);
+  } catch (err: any) {
+    console.warn('[Import Safeguard Warning] Failed to create pre-import snapshot:', err.message);
   }
 
   const targetData = importedData.data || importedData;
 
+  // Validate payload basic structure
+  if (!targetData.contents && !targetData.profiles && !targetData.settings) {
+    return res.status(400).json({
+      success: false,
+      error: 'ساختار فایل JSON پشتیبان معتبر نیست (فاقد کلیدهای contents، profiles یا settings).'
+    });
+  }
+
+  const currentDb = loadDatabase();
+
   const newDb: DatabaseSchema = {
-    contents: Array.isArray(targetData.contents) ? targetData.contents : [],
-    comments: typeof targetData.comments === 'object' && targetData.comments ? targetData.comments : {},
-    deletedIds: Array.isArray(targetData.deletedIds) ? targetData.deletedIds : [],
-    settings: typeof targetData.settings === 'object' && targetData.settings ? targetData.settings : {},
-    profiles: typeof targetData.profiles === 'object' && targetData.profiles ? targetData.profiles : {}
+    contents: Array.isArray(targetData.contents) ? targetData.contents : (currentDb.contents || []),
+    comments: typeof targetData.comments === 'object' && targetData.comments ? targetData.comments : (currentDb.comments || {}),
+    deletedIds: Array.isArray(targetData.deletedIds) ? targetData.deletedIds : (currentDb.deletedIds || []),
+    settings: typeof targetData.settings === 'object' && targetData.settings ? { ...currentDb.settings, ...targetData.settings } : (currentDb.settings || {}),
+    profiles: typeof targetData.profiles === 'object' && targetData.profiles ? { ...currentDb.profiles, ...targetData.profiles } : (currentDb.profiles || {})
   };
 
   saveDatabase(newDb);
   res.json({
     success: true,
-    message: 'داده‌های سایت با موفقیت بازیابی و روی دیسک قرار گرفتند.',
+    message: 'داده‌های سایت با موفقیت بازیابی شدند. یک نسخه پشتیبان اضطراری قبل از بازگردانی نیز ذحیره شد.',
+    rollbackFilename,
     summary: {
       contents: newDb.contents.length,
       profiles: Object.keys(newDb.profiles || {}).length,

@@ -114,6 +114,16 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [importMessage, setImportMessage] = useState<{ success: boolean; text: string } | null>(null);
   const [isMergingSeeds, setIsMergingSeeds] = useState(false);
   const [mergeMessage, setMergeMessage] = useState<{ success: boolean; text: string } | null>(null);
+  const [dbStats, setDbStats] = useState<any>(null);
+
+  const fetchDbStats = async () => {
+    try {
+      const stats = await api.getDatabaseStats();
+      if (stats && stats.data) {
+        setDbStats(stats.data);
+      }
+    } catch {}
+  };
 
   // Database Diagnostic States
   const [diagnosticReport, setDiagnosticReport] = useState<any>(null);
@@ -124,6 +134,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     try {
       const res = await api.checkDatabaseDiagnostic();
       setDiagnosticReport(res);
+      fetchDbStats();
     } catch (err: any) {
       setDiagnosticReport({
         success: false,
@@ -189,8 +200,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     if (activeTab === 'diagnostic') {
       if (!diagnosticReport) handleRunDiagnostic();
       if (!apifyDiagnosticReport) handleRunApifyDiagnostic();
-    } else if (activeTab === 'database' && !diagnosticReport) {
-      handleRunDiagnostic();
+    } else if (activeTab === 'database') {
+      if (!diagnosticReport) handleRunDiagnostic();
+      fetchDbStats();
     }
   }, [activeTab]);
 
@@ -1376,25 +1388,29 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                   <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
-                    <span className="text-[11px] text-slate-400 block mb-1">کل پست‌های ثبت‌شده</span>
-                    <span className="text-xl font-mono font-bold text-slate-100">{contents.length}</span>
-                  </div>
-                  <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
-                    <span className="text-[11px] text-slate-400 block mb-1">پروفایل‌های فعال</span>
-                    <span className="text-xl font-mono font-bold text-slate-100">{usersList.length}</span>
-                  </div>
-                  <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
-                    <span className="text-[11px] text-slate-400 block mb-1">همگام‌سازی دیسک (/database.json)</span>
-                    <span className="text-xs font-bold text-emerald-400 flex items-center justify-center gap-1 mt-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      فعال و پایدار
+                    <span className="text-[11px] text-slate-400 block mb-1">حجم فایل دیتابیس</span>
+                    <span className="text-lg font-mono font-bold text-cyan-300">
+                      {dbStats?.fileSizeFormatted || 'محاسبه...'}
                     </span>
+                    <span className="text-[10px] text-slate-400 block mt-0.5">data/database.json</span>
                   </div>
                   <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
-                    <span className="text-[11px] text-slate-400 block mb-1">دیتابیس Firestore</span>
+                    <span className="text-[11px] text-slate-400 block mb-1">کل پست‌های ثبت‌شده</span>
+                    <span className="text-xl font-mono font-bold text-slate-100">{dbStats?.contentsCount ?? contents.length}</span>
+                    <span className="text-[10px] text-slate-400 block mt-0.5">{dbStats?.profilesCount ?? usersList.length} پروفایل کاربر</span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
+                    <span className="text-[11px] text-slate-400 block mb-1">فایل‌های پشتیبان محلی</span>
+                    <span className="text-xl font-mono font-bold text-indigo-300">
+                      {dbStats?.backupFilesCount ?? 0} نسخه
+                    </span>
+                    <span className="text-[10px] text-emerald-400 block mt-0.5">پشتیبان‌گیری ۱۲ ساعته</span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
+                    <span className="text-[11px] text-slate-400 block mb-1">حفاظت خودکار هنگام بازیابی</span>
                     <span className="text-xs font-bold text-emerald-400 flex items-center justify-center gap-1 mt-1">
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      متصل (ai-studio-mediahub)
+                      پیش‌پشتیبان اضطراری
                     </span>
                   </div>
                 </div>

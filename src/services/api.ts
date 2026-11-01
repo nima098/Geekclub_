@@ -471,6 +471,19 @@ export const api = {
     return null;
   },
 
+  // 10.1. Get Database Storage Statistics
+  async getDatabaseStats(): Promise<any> {
+    try {
+      const res = await fetch('/api/database/stats', {
+        headers: await getAdminHeaders()
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {}
+    return null;
+  },
+
   // 11. Database Import (Full Site Restoration)
   async importDatabase(jsonData: any): Promise<{ success: boolean; message?: string; summary?: any }> {
     try {
