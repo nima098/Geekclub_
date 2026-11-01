@@ -13,7 +13,7 @@ interface ImageCDNUploadProps {
 export const ImageCDNUpload: React.FC<ImageCDNUploadProps> = ({
   currentUrl = '',
   onUrlChange,
-  label = 'تصویر کاور محتوا (CDN اختصاصی)',
+  label = 'تصویر کاور محتوا ',
   placeholder = 'https://upc.geekclub.ir/s1/contents/2026/10/...',
   folder = 'contents'
 }) => {
@@ -104,9 +104,6 @@ export const ImageCDNUpload: React.FC<ImageCDNUploadProps> = ({
         <label className="block text-xs font-bold text-slate-200">
           {label}
         </label>
-        <span className="text-[10px] text-amber-400/90 font-mono dir-ltr bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
-          https://upc.geekclub.ir
-        </span>
       </div>
 
       {/* Manual URL Input / Current URL Display */}
@@ -199,12 +196,6 @@ export const ImageCDNUpload: React.FC<ImageCDNUploadProps> = ({
               <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
                 <Upload className="w-4 h-4" />
               </div>
-              <p className="text-xs text-slate-200 font-medium">
-                برای آپلود مستقیم تصویر روی <span className="text-amber-400 font-bold">upc.geekclub.ir</span> کلیک کنید یا عکس را بکشید و این‌جا رها کنید
-              </p>
-              <p className="text-[10px] text-slate-400">
-                فرمت‌ها: JPG, PNG, WebP (فشرده‌سازی خودکار و بهینه‌سازی فرمت WebP در کلاینت)
-              </p>
             </>
           )}
         </div>
