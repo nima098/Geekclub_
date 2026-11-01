@@ -167,6 +167,11 @@ export const resolveCoverImageUrl = (url?: string | null): string => {
   if (clean.includes('upc.geekclub.ir/uploads/')) {
     clean = clean.substring(clean.indexOf('/uploads/'));
   }
+  if (!clean.startsWith('http://') && !clean.startsWith('https://') && !clean.startsWith('data:')) {
+    if (clean.startsWith('uploads/')) {
+      clean = '/' + clean;
+    }
+  }
   return clean;
 };
 
@@ -202,18 +207,21 @@ export const handleImageError = (
     return;
   }
 
-  // 4. If failed on upc.geekclub.ir CDN (e.g. broken s1 link), fallback to safe SVG
-  if (currentSrc.includes('upc.geekclub.ir')) {
-    if (itemId && !currentSrc.includes('/uploads/')) {
-      target.src = `/uploads/cover_${itemId}.jpg`;
-      return;
-    }
+  // 4. If failed on local /uploads/ (already retried or direct local path), immediately fallback to offline SVG
+  if (currentSrc.includes('/uploads/')) {
     const safeSvg = fallbackUrl || getPlatformFallbackImage(platform);
     target.src = safeSvg;
     return;
   }
 
-  // 5. If failed on local /uploads/ or external URL, fallback directly to offline SVG Data URI
+  // 5. If failed on upc.geekclub.ir CDN (e.g. broken s1 link), fallback to safe SVG
+  if (currentSrc.includes('upc.geekclub.ir')) {
+    const safeSvg = fallbackUrl || getPlatformFallbackImage(platform);
+    target.src = safeSvg;
+    return;
+  }
+
+  // 6. If failed on external URL, fallback directly to offline SVG Data URI
   const safeSvg = (fallbackUrl && fallbackUrl.startsWith('data:')) 
     ? fallbackUrl 
     : getPlatformFallbackImage(platform);

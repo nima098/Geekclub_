@@ -13,7 +13,7 @@ interface ImageCDNUploadProps {
 export const ImageCDNUpload: React.FC<ImageCDNUploadProps> = ({
   currentUrl = '',
   onUrlChange,
-  label = 'تصویر کاور محتوا (CDN اختصاصی)',
+  label = 'تصویر کاور محتوا ',
   placeholder = 'https://upc.geekclub.ir/s1/contents/2026/10/...',
   folder = 'contents'
 }) => {
@@ -83,36 +83,61 @@ export const ImageCDNUpload: React.FC<ImageCDNUploadProps> = ({
     setTimeout(() => setIsCopied(false), 2000);
   };
 
+  const formatFullCdnUrl = (raw: string): string => {
+    if (!raw) return '';
+    let u = raw.trim();
+    if (u.includes('upc.geekclub.ir/uploads/')) {
+      return u.substring(u.indexOf('/uploads/'));
+    }
+    if (u.startsWith('http://') || u.startsWith('https://') || u.startsWith('data:')) {
+      return u;
+    }
+    if (u.startsWith('/uploads/') || u.startsWith('uploads/')) {
+      return u.startsWith('/') ? u : `/${u}`;
+    }
+    if (u.startsWith('/s1/')) {
+      return `https://upc.geekclub.ir${u}`;
+    }
+    if (u.startsWith('s1/')) {
+      return `https://upc.geekclub.ir/${u}`;
+    }
+    return u;
+  };
+
+  const displayUrl = formatFullCdnUrl(currentUrl);
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <label className="block text-xs font-bold text-slate-200">
           {label}
         </label>
-        <span className="text-[10px] text-amber-400/90 font-mono dir-ltr bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
-          https://upc.geekclub.ir
-        </span>
       </div>
 
       {/* Manual URL Input / Current URL Display */}
       <div className="relative flex items-center">
         <input
-          type="url"
+          type="text"
           id="cdnUrlInput"
           name="cdnUrl"
-          value={currentUrl}
+          value={displayUrl}
           onChange={(e) => {
-            onUrlChange(e.target.value);
+            const val = e.target.value.trim();
+            onUrlChange(val);
             setSuccessInfo(null);
             setErrorMessage(null);
           }}
           placeholder={placeholder}
           className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500/80 transition dir-ltr text-left pl-9"
         />
-        {currentUrl && (
+        {displayUrl && (
           <button
             type="button"
-            onClick={copyUrl}
+            onClick={() => {
+              navigator.clipboard.writeText(displayUrl);
+              setIsCopied(true);
+              setTimeout(() => setIsCopied(false), 2000);
+            }}
             title="کپی آدرس تصویر"
             className="absolute left-2 p-1 text-slate-400 hover:text-white transition cursor-pointer"
           >
@@ -122,21 +147,32 @@ export const ImageCDNUpload: React.FC<ImageCDNUploadProps> = ({
       </div>
 
       {/* Live Cover Preview Box */}
-      {currentUrl && (
+      {displayUrl && (
         <div className="relative aspect-video w-full max-h-48 rounded-xl overflow-hidden border border-slate-700/80 bg-slate-950 flex items-center justify-center shadow-lg">
           <img
-            src={currentUrl}
+            src={displayUrl}
             alt="پیش‌نمایش تصویر کاور"
             className="w-full h-full object-cover"
             onError={(e) => {
-              if (!currentUrl.includes('/api/proxy-image') && !currentUrl.startsWith('data:')) {
-                e.currentTarget.src = `/api/proxy-image?url=${encodeURIComponent(currentUrl)}`;
+              const current = e.currentTarget.src;
+              if (current.includes('upc.geekclub.ir/uploads/')) {
+                e.currentTarget.src = current.substring(current.indexOf('/uploads/'));
+                return;
+              }
+              if (current.includes('/uploads/')) {
+                e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450"><rect width="800" height="450" fill="%230f172a"/><text x="400" y="235" font-family="Tahoma,sans-serif" font-size="20" fill="%2394a3b8" text-anchor="middle">GeekClub Media</text></svg>';
+                return;
+              }
+              if (!current.includes('/api/proxy-image') && !current.startsWith('data:') && !current.includes('upc.geekclub.ir')) {
+                e.currentTarget.src = `/api/proxy-image?url=${encodeURIComponent(current)}`;
+              } else {
+                e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450"><rect width="800" height="450" fill="%230f172a"/><text x="400" y="235" font-family="Tahoma,sans-serif" font-size="20" fill="%2394a3b8" text-anchor="middle">GeekClub Media</text></svg>';
               }
             }}
           />
           <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/75 text-[10px] text-amber-300 font-mono flex items-center gap-1 backdrop-blur-sm border border-amber-500/30">
             <CheckCircle2 className="w-3 h-3 text-amber-400" />
-            <span>{currentUrl.includes('upc.geekclub.ir') ? 'هاست شده روی CDN' : 'پیش‌نمایش تصویر'}</span>
+            <span>{displayUrl.includes('upc.geekclub.ir') ? 'هاست شده روی CDN' : 'پیش‌نمایش تصویر'}</span>
           </div>
         </div>
       )}
@@ -179,12 +215,6 @@ export const ImageCDNUpload: React.FC<ImageCDNUploadProps> = ({
               <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
                 <Upload className="w-4 h-4" />
               </div>
-              <p className="text-xs text-slate-200 font-medium">
-                برای آپلود مستقیم تصویر روی <span className="text-amber-400 font-bold">upc.geekclub.ir</span> کلیک کنید یا عکس را بکشید و این‌جا رها کنید
-              </p>
-              <p className="text-[10px] text-slate-400">
-                فرمت‌ها: JPG, PNG, WebP (فشرده‌سازی خودکار و بهینه‌سازی فرمت WebP در کلاینت)
-              </p>
             </>
           )}
         </div>

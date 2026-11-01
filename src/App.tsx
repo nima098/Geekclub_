@@ -1383,14 +1383,14 @@ export default function App() {
   );
 
   const trashCount = useMemo(() => {
-    return contents.filter((c) => c.isDeleted).length;
+    return contents.filter((c) => c.isDeleted || c.isArchived).length;
   }, [contents]);
 
   // --- Filtered & Sorted Content List ---
   const filteredContents = useMemo(() => {
     // If Single Post Permalink Mode is active
     if (singlePostId) {
-      const match = contents.filter((item) => !item.isDeleted && (item.id === singlePostId || item.id.endsWith(singlePostId)));
+      const match = contents.filter((item) => !(item.isDeleted || item.isArchived) && (item.id === singlePostId || item.id.endsWith(singlePostId)));
       if (match.length > 0) {
         return match;
       }
@@ -1400,11 +1400,11 @@ export default function App() {
       .filter((item) => {
         // Trash filter for admin
         if (showTrashOnly) {
-          return Boolean(item.isDeleted);
+          return Boolean(item.isDeleted || item.isArchived);
         }
 
         // Soft-delete filter: Exclude items in trash from public feed
-        if (item.isDeleted) {
+        if (item.isDeleted || item.isArchived) {
           return false;
         }
 

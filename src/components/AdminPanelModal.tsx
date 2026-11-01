@@ -57,6 +57,11 @@ import {
   InboxMessage, 
   SiteAdminSettings 
 } from '../types/content';
+import { 
+  resolveCoverImageUrl, 
+  handleImageError, 
+  getPlatformFallbackImage 
+} from '../utils/imageHelper';
 import { api, getAdminHeaders } from '../services/api';
 import { 
   getCDNConfig, 
@@ -250,16 +255,51 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     setSystemLogsList([]);
   };
 
+  const [panelContents, setPanelContents] = useState<ContentItem[]>(() => contents || []);
+  const [isRefreshingContents, setIsRefreshingContents] = useState(false);
+
+  useEffect(() => {
+    if (Array.isArray(contents) && contents.length > 0) {
+      setPanelContents(contents);
+    }
+  }, [contents]);
+
+  const fetchPanelContents = async () => {
+    setIsRefreshingContents(true);
+    try {
+      const res = await fetch(`/api/contents?includeDeleted=true&includeArchived=true&_t=${Date.now()}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json.data)) {
+          setPanelContents(json.data);
+          onUpdateContents?.(json.data);
+        }
+      }
+    } catch {} finally {
+      setIsRefreshingContents(false);
+    }
+  };
+
+  const handleRestoreItem = (id: string) => {
+    onToggleSoftDelete(id, false);
+    setPanelContents((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, isDeleted: false, isArchived: false, deletedAt: undefined } : c))
+    );
+  };
+
+  const handlePermDeleteItem = (id: string) => {
+    onPermanentDelete(id);
+    setPanelContents((prev) => prev.filter((c) => c.id !== id));
+  };
+
   useEffect(() => {
     if (isOpen) {
-      api.getContents({ includeDeleted: true }).then((latest) => {
-        if (Array.isArray(latest) && onUpdateContents) {
-          onUpdateContents(latest);
-        }
-      }).catch(() => {});
+      fetchPanelContents();
     }
 
-    if (activeTab === 'diagnostic') {
+    if (activeTab === 'contents') {
+      fetchPanelContents();
+    } else if (activeTab === 'diagnostic') {
       if (!diagnosticReport) handleRunDiagnostic();
       if (!apifyDiagnosticReport) handleRunApifyDiagnostic();
       if (!fullDiagReport) handleRunFullSystemCheck();
@@ -686,17 +726,20 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
   if (!isOpen) return null;
 
+  // Current authoritative contents for the admin panel (panelContents prioritized)
+  const currentContents = panelContents.length > 0 ? panelContents : contents;
+
   // Counts
-  const activeCount = contents.filter((c) => !c.isDeleted && !c.isArchived && c.approvalStatus !== 'pending' && c.approvalStatus !== 'rejected').length;
-  const pendingCount = contents.filter((c) => !c.isDeleted && !c.isArchived && c.approvalStatus === 'pending').length;
-  const trashCount = contents.filter((c) => c.isDeleted || c.isArchived).length;
+  const activeCount = currentContents.filter((c) => !c.isDeleted && !c.isArchived && c.approvalStatus !== 'pending' && c.approvalStatus !== 'rejected').length;
+  const pendingCount = currentContents.filter((c) => !c.isDeleted && !c.isArchived && c.approvalStatus === 'pending').length;
+  const trashCount = currentContents.filter((c) => c.isDeleted || c.isArchived).length;
   const pendingFeedbackCount = feedbackList.filter((f) => f.status === 'pending').length;
 
   const autoApprovedUsersCount = usersList.filter((u) => u.autoApproveContent || u.isAdmin).length;
   const needApprovalUsersCount = usersList.filter((u) => !u.autoApproveContent && !u.isAdmin).length;
 
   // Filtered contents
-  const filteredContents = contents.filter((c) => {
+  const filteredContents = currentContents.filter((c) => {
     if (contentFilter === 'active' && ((c.isDeleted || c.isArchived) || c.approvalStatus === 'pending' || c.approvalStatus === 'rejected')) {
       return false;
     }
@@ -1082,7 +1125,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         : 'bg-slate-800 text-slate-300 hover:text-white'
                     }`}
                   >
-                    همه ({contents.length})
+                    همه ({currentContents.length})
                   </button>
                   <button
                     onClick={() => setContentFilter('active')}
@@ -1115,6 +1158,16 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   >
                     سطل بازیافت ({trashCount})
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={fetchPanelContents}
+                    disabled={isRefreshingContents}
+                    className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer shrink-0"
+                    title="تازه‌سازی فوری لیست محتواها و سطل زباله از سرور"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingContents ? 'animate-spin text-indigo-400' : ''}`} />
+                  </button>
                 </div>
 
                 <div className="relative w-full sm:w-64">
@@ -1131,11 +1184,38 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 </div>
               </div>
 
+              {/* Trash Quick Restore Banner */}
+              {contentFilter === 'trash' && trashCount > 0 && (
+                <div className="p-3.5 rounded-2xl bg-rose-950/40 border border-rose-800/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-md">
+                  <div className="flex items-center gap-2.5 text-rose-200">
+                    <Trash2 className="w-4 h-4 text-rose-400 shrink-0" />
+                    <span>تعداد <strong className="text-white font-mono">{trashCount}</strong> محتوا در سطل بازیافت قرار دارد.</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      panelContents.forEach((c) => {
+                        if (c.isDeleted || c.isArchived) {
+                          onToggleSoftDelete(c.id, false);
+                        }
+                      });
+                      setPanelContents((prev) =>
+                        prev.map((c) => ({ ...c, isDeleted: false, isArchived: false, deletedAt: undefined }))
+                      );
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-sm active:scale-95 shrink-0"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    بازگردانی تمامی محتواها به فید
+                  </button>
+                </div>
+              )}
+
               {/* Contents Table / List */}
               <div className="space-y-3">
                 {filteredContents.length === 0 ? (
                   <div className="text-center py-12 text-slate-300 bg-slate-800/80 rounded-2xl border border-slate-700/80 shadow-md text-xs font-medium">
-                    محتوایی در این بخش یافت نشد.
+                    {contentFilter === 'trash' ? 'سطل بازیافت خالی است (هیچ محتوای حذف‌شده‌ای یافت نشد).' : 'محتوایی در این بخش یافت نشد.'}
                   </div>
                 ) : (
                   filteredContents.map((item) => (
@@ -1151,9 +1231,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     >
                       <div className="flex items-start sm:items-center gap-3">
                         <img
-                          src={item.thumbnail}
+                          src={resolveCoverImageUrl(item.thumbnail)}
                           alt={item.title}
                           className="w-16 h-16 rounded-xl object-cover shrink-0 ring-1 ring-slate-700"
+                          onError={(e) => handleImageError(e, getPlatformFallbackImage(item.platform), item.platform, item.id)}
                         />
                         <div className="space-y-1.5">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -1215,16 +1296,16 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         {(item.isDeleted || item.isArchived) && (
                           <>
                             <button
-                              onClick={() => onToggleSoftDelete(item.id, false)}
-                              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
+                              onClick={() => handleRestoreItem(item.id)}
+                              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer active:scale-95"
                               title="بازگردانی به فید عمومی سایت"
                             >
                               <RotateCcw className="w-3.5 h-3.5" />
                               بازگردانی به فید
                             </button>
                             <button
-                              onClick={() => onPermanentDelete(item.id)}
-                              className="p-2 rounded-xl bg-slate-800 hover:bg-rose-600/30 text-rose-400 hover:text-rose-200 transition cursor-pointer"
+                              onClick={() => handlePermDeleteItem(item.id)}
+                              className="p-2 rounded-xl bg-slate-800 hover:bg-rose-600/30 text-rose-400 hover:text-rose-200 transition cursor-pointer active:scale-95"
                               title="حذف کامل از دیتابیس"
                             >
                               <Trash2 className="w-4 h-4" />

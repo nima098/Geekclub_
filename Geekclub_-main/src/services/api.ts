@@ -1,15 +1,4 @@
-import { 
-  collection, 
-  doc, 
-  getDocs, 
-  getDoc, 
-  setDoc, 
-  updateDoc, 
-  deleteDoc, 
-  query,
-  where
-} from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
+import { auth } from '../lib/firebase';
 import { ContentItem, CommentItem, Platform, Category, SortOption } from '../types/content';
 import { FALLBACK_IMAGES, getAuthorAvatar } from '../utils/imageHelper';
 import { INITIAL_CONTENT, INITIAL_COMMENTS } from '../data/initialData';
@@ -55,11 +44,26 @@ async function getAuthToken(): Promise<string> {
 
 export async function getAdminHeaders(): Promise<Record<string, string>> {
   const token = await getAuthToken();
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const headers: Record<string, string> = { 
+    'Content-Type': 'application/json'
+  };
+
   if (token) {
     headers['X-Admin-Key'] = token;
     headers['Authorization'] = `Bearer ${token}`;
   }
+
+  try {
+    const rawUser = localStorage.getItem('mediahub_user_v1');
+    if (rawUser) {
+      const u = JSON.parse(rawUser);
+      if (u.email && u.isAdmin) {
+        headers['X-Admin-Email'] = u.email;
+        headers['X-Admin-Role'] = 'admin';
+      }
+    }
+  } catch {}
+
   return headers;
 }
 
@@ -70,7 +74,23 @@ async function getReadHeaders(): Promise<Record<string, string>> {
     'Cache-Control': 'no-cache, no-store, must-revalidate',
     'Pragma': 'no-cache'
   };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+    headers['X-Admin-Key'] = token;
+  }
+
+  try {
+    const rawUser = localStorage.getItem('mediahub_user_v1');
+    if (rawUser) {
+      const u = JSON.parse(rawUser);
+      if (u.email && u.isAdmin) {
+        headers['X-Admin-Email'] = u.email;
+        headers['X-Admin-Role'] = 'admin';
+      }
+    }
+  } catch {}
+
   return headers;
 }
 
@@ -89,29 +109,29 @@ export async function verifyAdminKey(key: string): Promise<boolean> {
 
 function getDeletedIds(): string[] {
   try {
-    // Clear legacy localStorage blacklist to ensure soft-deleted items show in Trash Bin
-    localStorage.removeItem(DELETED_IDS_KEY);
-  } catch {}
-  return [];
+    const raw = localStorage.getItem(DELETED_IDS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
 }
 
 function addDeletedId(id: string) {
   try {
     const current = getDeletedIds();
-    if (!current.includes(id)) {
-      const updated = [...current, id];
-      localStorage.setItem(DELETED_IDS_KEY, JSON.stringify(updated));
-    }
+    const cleanId = id.replace(/^(post|content)-/, '');
+    const toAdd = [id, cleanId, `post-${cleanId}`, `content-${cleanId}`];
+    const updated = Array.from(new Set([...current, ...toAdd]));
+    localStorage.setItem(DELETED_IDS_KEY, JSON.stringify(updated));
   } catch {}
 }
 
 function removeDeletedId(id: string) {
   try {
     const current = getDeletedIds();
-    if (current.includes(id)) {
-      const updated = current.filter((item) => item !== id);
-      localStorage.setItem(DELETED_IDS_KEY, JSON.stringify(updated));
-    }
+    const cleanId = id.replace(/^(post|content)-/, '');
+    const updated = current.filter((item) => item !== id && item !== cleanId && item !== `post-${cleanId}` && item !== `content-${cleanId}`);
+    localStorage.setItem(DELETED_IDS_KEY, JSON.stringify(updated));
   } catch {}
 }
 
@@ -132,6 +152,7 @@ export const api = {
       if (filters?.search) params.append('search', filters.search);
       if (filters?.sort) params.append('sort', filters.sort);
       params.append('includeDeleted', 'true');
+      params.append('includeArchived', 'true');
       params.append('_t', Date.now().toString());
 
       const res = await fetch(`/api/contents?${params.toString()}`, {
@@ -162,7 +183,7 @@ export const api = {
     const fetchLatest = async () => {
       if (!isSubscribed) return;
       const readHeaders = await getReadHeaders();
-      fetch(`/api/contents?includeDeleted=true&_t=${Date.now()}`, {
+      fetch(`/api/contents?includeDeleted=true&includeArchived=true&_t=${Date.now()}`, {
         cache: 'no-store',
         headers: readHeaders
       })
@@ -234,11 +255,6 @@ export const api = {
       });
     } catch {}
 
-    // Secondary: Cloud Firestore (silent error catch for 403 networks)
-    try {
-      await setDoc(doc(db, CONTENTS_COLLECTION, newId), newItem);
-    } catch {}
-
     return newItem;
   },
 
@@ -263,12 +279,6 @@ export const api = {
         });
       } catch {}
     }
-
-    // Secondary: Cloud Firestore
-    try {
-      const docRef = doc(db, CONTENTS_COLLECTION, id);
-      await setDoc(docRef, updates, { merge: true });
-    } catch {}
   },
 
   // Returns true only if the SERVER accepted the change (so the UI can react when it was refused)
@@ -297,11 +307,7 @@ export const api = {
       } catch {}
     }
 
-    // Secondary: Cloud Firestore
-    try {
-      const docRef = doc(db, CONTENTS_COLLECTION, id);
-      await setDoc(docRef, { isDeleted: true, deletedAt: timeStr }, { merge: true });
-    } catch {}
+    removeDeletedId(id);
     return ok;
   },
 
@@ -328,10 +334,7 @@ export const api = {
       } catch {}
     }
 
-    try {
-      const docRef = doc(db, CONTENTS_COLLECTION, id);
-      await setDoc(docRef, { isDeleted: false }, { merge: true });
-    } catch {}
+    removeDeletedId(id);
     return ok;
   },
 
@@ -356,10 +359,7 @@ export const api = {
       } catch {}
     }
 
-    try {
-      const docRef = doc(db, CONTENTS_COLLECTION, id);
-      await deleteDoc(docRef);
-    } catch {}
+    addDeletedId(id);
     return ok;
   },
 
@@ -378,51 +378,6 @@ export const api = {
       }
     } catch {}
 
-    // Secondary: Cloud Firestore
-    try {
-      const docRef = doc(db, CONTENTS_COLLECTION, id);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const content = docSnap.data() as ContentItem;
-        const prevReaction = content.userReaction;
-        let newLikes = content.likesCount || 0;
-        let newDislikes = content.dislikesCount || 0;
-        let newReaction: 'like' | 'dislike' | null = reaction;
-
-        if (reaction === 'like') {
-          if (prevReaction === 'like') {
-            newLikes = Math.max(0, newLikes - 1);
-            newReaction = null;
-          } else if (prevReaction === 'dislike') {
-            newLikes = newLikes + 1;
-            newDislikes = Math.max(0, newDislikes - 1);
-          } else {
-            newLikes = newLikes + 1;
-          }
-        } else if (reaction === 'dislike') {
-          if (prevReaction === 'dislike') {
-            newDislikes = Math.max(0, newDislikes - 1);
-            newReaction = null;
-          } else if (prevReaction === 'like') {
-            newDislikes = newDislikes + 1;
-            newLikes = Math.max(0, newLikes - 1);
-          } else {
-            newDislikes = newDislikes + 1;
-          }
-        }
-
-        const updatedData = {
-          likesCount: newLikes,
-          dislikesCount: newDislikes,
-          userReaction: newReaction
-        };
-
-        await updateDoc(docRef, updatedData);
-        return { ...content, ...updatedData };
-      }
-    } catch {}
-
     return null;
   },
 
@@ -434,16 +389,6 @@ export const api = {
         const json = await res.json();
         if (Array.isArray(json.data)) return json.data;
       }
-    } catch {}
-
-    try {
-      const q = query(collection(db, COMMENTS_COLLECTION), where('contentId', '==', contentId));
-      const snapshot = await getDocs(q);
-      const comments = snapshot.docs.map(docSnap => ({
-        id: docSnap.id,
-        ...docSnap.data()
-      } as CommentItem));
-      if (comments.length > 0) return comments;
     } catch {}
 
     return INITIAL_COMMENTS[contentId] || [];
@@ -474,10 +419,6 @@ export const api = {
       });
     } catch {}
 
-    try {
-      await setDoc(doc(db, COMMENTS_COLLECTION, newCommentId), newComment);
-    } catch {}
-
     return newComment;
   },
 
@@ -492,7 +433,7 @@ export const api = {
     return null;
   },
 
-  // 8. Save user profile to REST API and Cloud Firestore
+  // 8. Save user profile to REST API
   async saveProfile(profile: any): Promise<void> {
     if (!profile) return;
     try {
@@ -502,16 +443,9 @@ export const api = {
         body: JSON.stringify(profile)
       });
     } catch {}
-
-    try {
-      if (profile.uid) {
-        const docRef = doc(db, 'profiles', profile.uid);
-        await setDoc(docRef, profile, { merge: true });
-      }
-    } catch {}
   },
 
-  // 9. Fetch profiles from REST API or Firestore
+  // 9. Fetch profiles from REST API
   async getProfiles(): Promise<Record<string, any>> {
     try {
       const res = await fetch('/api/profiles');
@@ -519,15 +453,6 @@ export const api = {
         const json = await res.json();
         if (json.data && typeof json.data === 'object') return json.data;
       }
-    } catch {}
-
-    try {
-      const snapshot = await getDocs(collection(db, 'profiles'));
-      const profilesMap: Record<string, any> = {};
-      snapshot.docs.forEach((docSnap) => {
-        profilesMap[docSnap.id] = docSnap.data();
-      });
-      return profilesMap;
     } catch {}
 
     return {};
@@ -542,6 +467,19 @@ export const api = {
       if (res.ok) {
         const json = await res.json();
         return json.data || json;
+      }
+    } catch {}
+    return null;
+  },
+
+  // 10.1. Get Database Storage Statistics
+  async getDatabaseStats(): Promise<any> {
+    try {
+      const res = await fetch('/api/database/stats', {
+        headers: await getAdminHeaders()
+      });
+      if (res.ok) {
+        return await res.json();
       }
     } catch {}
     return null;
@@ -684,6 +622,133 @@ export const api = {
     } catch (err: any) {
       return { success: false, message: err.message || 'خطا در ارتباط با سرور' };
     }
+  },
+
+  // 21. Migrate existing JSON database to PostgreSQL
+  async migrateToPostgres(): Promise<{ success: boolean; message?: string; details?: any }> {
+    try {
+      const res = await fetch('/api/database/migrate-to-postgres', {
+        method: 'POST',
+        headers: await getAdminHeaders()
+      });
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, message: err.message || 'خطا در مهاجرت به دیتابیس PostgreSQL' };
+    }
+  },
+
+  // 22. Check Apify diagnostic and token status
+  async checkApifyDiagnostic(): Promise<any> {
+    try {
+      const res = await fetch('/api/debug/apify', {
+        headers: await getAdminHeaders()
+      });
+      if (res.ok) return await res.json();
+      return { success: false, message: 'HTTP error ' + res.status };
+    } catch (err: any) {
+      return { success: false, message: err.message };
+    }
+  },
+
+  // 23. Test Apify Instagram extraction for a given URL
+  async testApifyExtraction(url?: string): Promise<any> {
+    try {
+      const res = await fetch('/api/debug/apify-test', {
+        method: 'POST',
+        headers: await getAdminHeaders(),
+        body: JSON.stringify({ url })
+      });
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, error: err.message, message: 'خطا در ارتباط با سرور تست' };
+    }
+  },
+
+  // 24. Abort all stuck/hanging Apify runs to release 5 concurrent limit
+  async abortAllApifyRuns(): Promise<any> {
+    try {
+      const res = await fetch('/api/debug/apify-abort-all', {
+        method: 'POST',
+        headers: await getAdminHeaders()
+      });
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, message: err.message };
+    }
+  },
+
+  // 25. Run full automated system checkup
+  async runFullSystemCheck(): Promise<any> {
+    try {
+      const res = await fetch(`/api/diagnostics/run?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: await getReadHeaders()
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+      return { success: false, message: `HTTP status ${res.status}` };
+    } catch (err: any) {
+      return { success: false, message: err.message || 'خطا در برقراری ارتباط با سرور' };
+    }
+  },
+
+  // 26. Fetch system diagnostic error logs
+  async getSystemDiagnosticLogs(filters?: { level?: string; limit?: number }): Promise<any[]> {
+    try {
+      const params = new URLSearchParams();
+      if (filters?.level) params.append('level', filters.level);
+      if (filters?.limit) params.append('limit', filters.limit.toString());
+      const res = await fetch(`/api/diagnostics/logs?${params.toString()}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json.data)) return json.data;
+      }
+    } catch {}
+    return [];
+  },
+
+  // 27. Post automated diagnostic error/warning log
+  async reportDiagnosticLog(logData: {
+    level: 'error' | 'warn' | 'info';
+    category?: string;
+    message: string;
+    details?: any;
+  }): Promise<boolean> {
+    try {
+      const res = await fetch('/api/diagnostics/logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(logData)
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
+  // 28. Clear system error logs
+  async clearSystemDiagnosticLogs(): Promise<boolean> {
+    try {
+      const res = await fetch('/api/diagnostics/logs', { method: 'DELETE' });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
+  // 29. Auto repair soft-deleted trash items tombstones
+  async fixTrashTombstones(): Promise<{ success: boolean; message?: string; fixedCount?: number }> {
+    try {
+      const res = await fetch('/api/diagnostics/fix-tombstones', {
+        method: 'POST',
+        headers: await getAdminHeaders()
+      });
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, message: err.message || 'خطا در اصلاح سطل زباله' };
+    }
   }
 };
+
 

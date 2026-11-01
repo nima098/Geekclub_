@@ -257,9 +257,12 @@ export const transferExternalUrlToCDN = async (
   folder = 'contents',
   filenamePrefix = 'migrated'
 ): Promise<string> => {
-  if (!imageUrl || imageUrl.includes('upc.geekclub.ir') || imageUrl.startsWith('data:') || imageUrl.startsWith('/uploads/')) {
+  if (!imageUrl || imageUrl.includes('upc.geekclub.ir') || imageUrl.startsWith('data:') || imageUrl.startsWith('/uploads/') || imageUrl.startsWith('uploads/')) {
     if (imageUrl.includes('upc.geekclub.ir/uploads/')) {
       return imageUrl.substring(imageUrl.indexOf('/uploads/'));
+    }
+    if (imageUrl.startsWith('uploads/')) {
+      return `/${imageUrl}`;
     }
     return imageUrl; // Already on CDN, local storage or Data URI
   }

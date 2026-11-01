@@ -354,7 +354,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               {isLoggingIn ? (
                 <>
                   <div className="w-4 h-4 border-2 border-slate-900/30 border-t-slate-900 rounded-full animate-spin shrink-0" />
-                  <span>در حال اتصال...</span>
+                  <span>در حال اتصال به گوگل...</span>
                 </>
               ) : (
                 <>

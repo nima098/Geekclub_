@@ -19,7 +19,7 @@ import {
   Check
 } from 'lucide-react';
 import { ContentItem, MediaSlide } from '../types/content';
-import { handleImageError, getPlatformFallbackImage } from '../utils/imageHelper';
+import { handleImageError, getPlatformFallbackImage, resolveCoverImageUrl } from '../utils/imageHelper';
 
 interface ArticleReaderModalProps {
   item: ContentItem | null;
@@ -168,17 +168,23 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
                   </div>
                 ) : (
                   <div
-                    className="relative w-full h-full min-h-[320px] sm:min-h-[460px] cursor-pointer"
+                    className="relative w-full h-full min-h-[320px] sm:min-h-[460px] cursor-pointer overflow-hidden flex items-center justify-center bg-slate-950"
                     onClick={() => setIsPlayingIgVideo(true)}
                   >
                     <img
                       src={activeSlide.thumbnail || item.thumbnail}
+                      alt=""
+                      aria-hidden="true"
+                      className="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-60 select-none pointer-events-none"
+                    />
+                    <div className="absolute inset-0 bg-black/30 pointer-events-none z-10" />
+                    <img
+                      src={activeSlide.thumbnail || item.thumbnail}
                       alt={item.title}
-                      className="w-full max-h-[550px] object-cover opacity-90 hover:opacity-100 transition"
+                      className="w-full max-h-[550px] object-contain relative z-10 opacity-95 hover:opacity-100 transition drop-shadow-md"
                       onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-black/30" />
-                    <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="absolute inset-0 flex items-center justify-center z-20">
                       <div style={{ backgroundColor: "oklch(0.592 0.249 0.584)" }} className="w-16 h-16 rounded-2xl text-white flex items-center justify-center shadow-2xl shadow-[oklch(0.592_0.249_0.584)]/50 hover:scale-110 transition-all duration-300 backdrop-blur-md">
                         <Play className="w-8 h-8 fill-white ml-1" />
                       </div>
@@ -186,11 +192,18 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
                   </div>
                 )
               ) : (
-                <div className="relative w-full h-full min-h-[320px] sm:min-h-[460px] flex items-center justify-center bg-slate-950">
+                <div className="relative w-full h-full min-h-[320px] sm:min-h-[460px] flex items-center justify-center bg-slate-950 overflow-hidden">
+                  <img
+                    src={activeSlide.url}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-60 select-none pointer-events-none"
+                  />
+                  <div className="absolute inset-0 bg-black/30 pointer-events-none z-10" />
                   <img
                     src={activeSlide.url}
                     alt={`${item.title} - اسلاید ${activeSlideIndex + 1}`}
-                    className="w-full max-h-[550px] object-contain"
+                    className="w-full max-h-[550px] object-contain relative z-10 drop-shadow-md"
                     onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
                   />
                 </div>
@@ -256,7 +269,7 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
           {item.platform === 'article' && item.thumbnail && (
             <div className="rounded-2xl overflow-hidden aspect-video max-h-72 w-full border border-slate-800 shadow-xl">
               <img
-                src={item.thumbnail}
+                src={resolveCoverImageUrl(item.thumbnail)}
                 alt={item.title}
                 className="w-full h-full object-cover"
                 onError={(e) => handleImageError(e, getPlatformFallbackImage('article', item.url), 'article', item.id)}

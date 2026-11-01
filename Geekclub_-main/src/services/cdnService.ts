@@ -97,12 +97,13 @@ export const testCDNConnection = async (): Promise<CDNHealthReport> => {
 
 /**
  * Compresses an image file in the browser and converts it to WebP format.
+ * Optimized for content card cover standards (max width 800px, max height 600px).
  */
 export const compressAndConvertToWebP = (
   file: File,
-  quality = 0.82,
-  maxWidth = 1920,
-  maxHeight = 1080
+  quality = 0.80,
+  maxWidth = 800,
+  maxHeight = 600
 ): Promise<{ file: File; originalSize: number; compressedSize: number; previewUrl: string }> => {
   return new Promise((resolve, reject) => {
     // If SVG, skip canvas processing
@@ -187,8 +188,8 @@ export const uploadImageToCDN = async (
 ): Promise<{ url: string; filename: string; size: number }> => {
   const config = getCDNConfig();
 
-  // Compress first
-  const { file: compressedFile, originalSize, compressedSize } = await compressAndConvertToWebP(file);
+  // Compress and resize for card cover dimensions (max 800x600, WebP 80%)
+  const { file: compressedFile, originalSize, compressedSize } = await compressAndConvertToWebP(file, 0.80, 800, 600);
 
   const formData = new FormData();
   formData.append('file', compressedFile);
@@ -256,8 +257,14 @@ export const transferExternalUrlToCDN = async (
   folder = 'contents',
   filenamePrefix = 'migrated'
 ): Promise<string> => {
-  if (!imageUrl || imageUrl.includes('upc.geekclub.ir') || imageUrl.startsWith('data:')) {
-    return imageUrl; // Already on CDN or Data URI
+  if (!imageUrl || imageUrl.includes('upc.geekclub.ir') || imageUrl.startsWith('data:') || imageUrl.startsWith('/uploads/') || imageUrl.startsWith('uploads/')) {
+    if (imageUrl.includes('upc.geekclub.ir/uploads/')) {
+      return imageUrl.substring(imageUrl.indexOf('/uploads/'));
+    }
+    if (imageUrl.startsWith('uploads/')) {
+      return `/${imageUrl}`;
+    }
+    return imageUrl; // Already on CDN, local storage or Data URI
   }
 
   // 1. First attempt: Call server proxy endpoint (bypasses browser CORS restrictions completely)
@@ -270,7 +277,11 @@ export const transferExternalUrlToCDN = async (
     if (apiRes.ok) {
       const data = await apiRes.json();
       if (data.success && data.url) {
-        return data.url;
+        let returnUrl = data.url;
+        if (returnUrl.includes('upc.geekclub.ir/uploads/')) {
+          returnUrl = returnUrl.substring(returnUrl.indexOf('/uploads/'));
+        }
+        return returnUrl;
       }
     }
   } catch (err) {

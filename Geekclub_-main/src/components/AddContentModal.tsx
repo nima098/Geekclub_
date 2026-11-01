@@ -160,6 +160,14 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
     const parsed = parseContentUrl(url.trim());
     setDetectedPlatform(parsed.platform);
     setEmbedUrl(parsed.embedUrl);
+    if (parsed.platform === 'instagram') {
+      setDescription('');
+      if (!thumbnail.trim()) setThumbnail(FALLBACK_IMAGES.instagram);
+      if (!title.trim()) setTitle('پست اینستاگرام');
+      if (!authorName.trim()) setAuthorName('پیج اینستاگرام');
+      if (!readingOrWatchTime.trim()) setReadingOrWatchTime(url.includes('reel') ? 'ریلز اینستاگرام' : 'پست اینستاگرام');
+      if (!tagsInput.trim()) setTagsInput('اینستاگرام, رسانه');
+    }
 
     let active = true;
     setIsLoadingMeta(true);
@@ -171,13 +179,27 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
           setFetchedMeta(meta);
           setDetectedPlatform(meta.platform);
           setEmbedUrl(meta.embedUrl);
+          if (meta.title) setTitle(meta.title);
+          if (meta.platform === 'instagram') {
+            setDescription('');
+          } else if (meta.description) {
+            setDescription(meta.description);
+          }
+          if (meta.thumbnail) {
+            setThumbnail(meta.thumbnail);
+          } else if (meta.platform === 'instagram' && !thumbnail.trim()) {
+            setThumbnail(FALLBACK_IMAGES.instagram);
+          }
+          if (meta.authorName) setAuthorName(meta.authorName);
+          if (meta.readingOrWatchTime) setReadingOrWatchTime(meta.readingOrWatchTime);
+          if (meta.tags && meta.tags.length > 0) setTagsInput(meta.tags.join(', '));
         }
       } catch (err) {
         console.error('Error fetching metadata:', err);
       } finally {
         if (active) setIsLoadingMeta(false);
       }
-    }, 150);
+    }, 200);
 
     return () => {
       active = false;
@@ -187,24 +209,16 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
 
   useEffect(() => {
     if (fetchedMeta) {
-      if (!title && fetchedMeta.title) {
-        setTitle(fetchedMeta.title);
-      }
-      if (!description && fetchedMeta.description) {
+      if (fetchedMeta.title) setTitle(fetchedMeta.title);
+      if (fetchedMeta.platform === 'instagram') {
+        setDescription('');
+      } else if (fetchedMeta.description) {
         setDescription(fetchedMeta.description);
       }
-      if (!thumbnail && fetchedMeta.thumbnail) {
-        setThumbnail(fetchedMeta.thumbnail);
-      }
-      if (!authorName && fetchedMeta.authorName) {
-        setAuthorName(fetchedMeta.authorName);
-      }
-      if (!readingOrWatchTime && fetchedMeta.readingOrWatchTime) {
-        setReadingOrWatchTime(fetchedMeta.readingOrWatchTime);
-      }
-      if (!tagsInput && fetchedMeta.tags && fetchedMeta.tags.length > 0) {
-        setTagsInput(fetchedMeta.tags.join(', '));
-      }
+      if (fetchedMeta.thumbnail) setThumbnail(fetchedMeta.thumbnail);
+      if (fetchedMeta.authorName) setAuthorName(fetchedMeta.authorName);
+      if (fetchedMeta.readingOrWatchTime) setReadingOrWatchTime(fetchedMeta.readingOrWatchTime);
+      if (fetchedMeta.tags && fetchedMeta.tags.length > 0) setTagsInput(fetchedMeta.tags.join(', '));
     }
   }, [fetchedMeta]);
 
@@ -251,7 +265,11 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
   const handleApplyFetchedMetadata = () => {
     if (!fetchedMeta) return;
     setTitle(fetchedMeta.title);
-    setDescription(fetchedMeta.description);
+    if (fetchedMeta.platform === 'instagram') {
+      setDescription('');
+    } else {
+      setDescription(fetchedMeta.description);
+    }
     setAuthorName(fetchedMeta.authorName);
     setThumbnail(fetchedMeta.thumbnail);
     setTagsInput(fetchedMeta.tags.join(', '));
@@ -319,16 +337,16 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
           : `مقاله در ${parsed.sourceDomain}`
       );
 
-      // Description fallback
-      const finalDescription = description.trim() || fetchedMeta?.description || (
-        finalPlatform === 'youtube'
-          ? 'ویدیوی به اشتراک گذاشته شده از یوتیوب.'
-          : finalPlatform === 'instagram'
-          ? 'پست یا ریلز به اشتراک گذاشته شده از اینستاگرام.'
-          : finalPlatform === 'aparat'
-          ? 'ویدیوی به اشتراک گذاشته شده از آپارات.'
-          : `مقاله تخصصی در ${parsed.sourceDomain}.`
-      );
+      // Description fallback (Instagram videos leave description empty by default unless user enters text)
+      const finalDescription = finalPlatform === 'instagram'
+        ? description.trim()
+        : (description.trim() || fetchedMeta?.description || (
+            finalPlatform === 'youtube'
+              ? 'ویدیوی به اشتراک گذاشته شده از یوتیوب.'
+              : finalPlatform === 'aparat'
+              ? 'ویدیوی به اشتراک گذاشته شده از آپارات.'
+              : `مقاله تخصصی در ${parsed.sourceDomain}.`
+          ));
 
       const finalAuthorName = authorName.trim() || fetchedMeta?.authorName || user?.displayName || 'کاربر گیک کلاب';
       let rawThumbnail = thumbnail.trim() || fetchedMeta?.thumbnail || (
@@ -346,9 +364,15 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
 
       // Auto transfer cover photo (YouTube, Aparat, Instagram, Article) to personal CDN on upc.geekclub.ir/s1/
       let finalThumbnail = rawThumbnail;
-      if (!isQuickSubmit && rawThumbnail && !rawThumbnail.includes('upc.geekclub.ir')) {
+      if (finalThumbnail && finalThumbnail.includes('upc.geekclub.ir/uploads/')) {
+        finalThumbnail = finalThumbnail.substring(finalThumbnail.indexOf('/uploads/'));
+      }
+      if (!isQuickSubmit && finalThumbnail && !finalThumbnail.startsWith('/uploads/') && !finalThumbnail.includes('upc.geekclub.ir') && !finalThumbnail.startsWith('data:')) {
         try {
-          finalThumbnail = await transferExternalUrlToCDN(rawThumbnail, 'contents', `cover_${finalPlatform}`);
+          const cdnRes = await transferExternalUrlToCDN(finalThumbnail, 'contents', `cover_${finalPlatform}`);
+          if (cdnRes && !cdnRes.includes('upc.geekclub.ir/uploads/')) {
+            finalThumbnail = cdnRes;
+          }
         } catch (err) {
           console.warn('Auto CDN transfer fallback to original URL:', err);
         }
@@ -499,47 +523,8 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
           </button>
         </div>
 
-        {/* Quick Sample Buttons */}
-        <div className="px-5 py-2 bg-slate-800/40 border-b border-slate-800/80 flex items-center justify-between text-xs text-slate-400 flex-wrap gap-2">
-          <span>تست سریع با لینک‌های نمونه:</span>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <button
-              type="button"
-              onClick={() => handleAutoFillSample('yt')}
-              className="px-2.5 py-1 rounded-lg bg-red-600/20 text-red-300 border border-red-500/30 hover:bg-red-600/30 transition text-[11px] font-semibold flex items-center gap-1"
-            >
-              <Youtube className="w-3 h-3 text-red-400" />
-              یوتیوب
-            </button>
-            <button
-              type="button"
-              onClick={() => handleAutoFillSample('aparat')}
-              className="px-2.5 py-1 rounded-lg bg-rose-600/20 text-rose-300 border border-rose-500/30 hover:bg-rose-600/30 transition text-[11px] font-semibold flex items-center gap-1"
-            >
-              <Video className="w-3 h-3 text-rose-400" />
-              آپارات
-            </button>
-            <button
-              type="button"
-              onClick={() => handleAutoFillSample('ig')}
-              className="px-2.5 py-1 rounded-lg bg-pink-600/20 text-pink-300 border border-pink-500/30 hover:bg-pink-600/30 transition text-[11px] font-semibold flex items-center gap-1"
-            >
-              <Instagram className="w-3 h-3 text-pink-400" />
-              اینستاگرام
-            </button>
-            <button
-              type="button"
-              onClick={() => handleAutoFillSample('art')}
-              className="px-2.5 py-1 rounded-lg bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-600/30 transition text-[11px] font-semibold flex items-center gap-1"
-            >
-              <Newspaper className="w-3 h-3 text-emerald-400" />
-              مقاله وب
-            </button>
-          </div>
-        </div>
-
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
           {/* URL Input */}
           <div className="space-y-1.5">
             <label className="block text-xs font-bold text-slate-200 flex items-center justify-between">
@@ -643,51 +628,10 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
               )}
             </div>
 
-            {/* Auto-extracted metadata banner */}
-          {fetchedMeta && (
-            <div className="p-3.5 rounded-2xl bg-indigo-950/40 border border-indigo-800/50 space-y-2 animate-in fade-in duration-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  <span className="text-xs font-bold text-indigo-200 flex items-center gap-1">
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    اطلاعات پیش‌فرض از پلتفرم استخراج شد
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleApplyFetchedMetadata}
-                  className="text-[11px] font-bold text-indigo-300 hover:text-white bg-indigo-600/30 hover:bg-indigo-600/50 px-2.5 py-1 rounded-lg border border-indigo-500/30 flex items-center gap-1 transition"
-                >
-                  <Wand2 className="w-3 h-3 text-indigo-400" />
-                  درج در فیلدهای زیر جهت ویرایش
-                </button>
-              </div>
-              <div className="text-xs text-slate-300 line-clamp-1">
-                <strong>عنوان پیش‌فرض:</strong> {fetchedMeta.title}
-              </div>
-              <div className="text-xs text-slate-400 line-clamp-1">
-                <strong>{detectedPlatform === 'article' ? 'وبسایت :' : 'نویسنده / کانال:'}</strong> {fetchedMeta.authorName} | <strong>مدت:</strong> {fetchedMeta.readingOrWatchTime}
-              </div>
-              <p className="text-[11px] text-slate-400 pt-0.5">
-                * فیلدهای زیر در حالت پیش‌فرض با اطلاعات بالا ذخیره می‌شوند مگر اینکه مقدار دلخواه خود را بنویسید.
-              </p>
-            </div>
-          )}
-
           {/* Title Input */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
               <span className="text-indigo-300 font-bold">عنوان محتوا (قابلیت ویرایش و اصلاح دستی)</span>
-              {fetchedMeta?.title && (
-                <button
-                  type="button"
-                  onClick={() => setTitle(fetchedMeta.title)}
-                  className="text-[11px] text-indigo-400 hover:text-indigo-300 underline cursor-pointer"
-                >
-                  استفاده از عنوان پلتفرم
-                </button>
-              )}
             </label>
             <input
               type="text"
@@ -702,15 +646,6 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
               <span className="text-indigo-300 font-bold">خلاصه یا توضیحات (برگرفته از توضیحات متا)</span>
-              {fetchedMeta?.description && (
-                <button
-                  type="button"
-                  onClick={() => setDescription(fetchedMeta.description)}
-                  className="text-[11px] text-indigo-400 hover:text-indigo-300 underline cursor-pointer"
-                >
-                  استفاده از توضیحات متا
-                </button>
-              )}
             </label>
             <textarea
               rows={2}
@@ -725,8 +660,18 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
           <ImageCDNUpload
             currentUrl={thumbnail}
             onUrlChange={(newUrl) => setThumbnail(newUrl)}
-            label="تصویر کاور محتوا (آپلود مستقیم به CDN اختصاصی upc.geekclub.ir در پوشه s1)"
-            folder="contents"
+            label="تصویر کاور محتوا "
+            folder={
+              detectedPlatform === 'article'
+                ? `article/${parseContentUrl(url).sourceDomain.replace(/\.[a-z]+$/, '') || 'web'}`
+                : detectedPlatform === 'instagram'
+                ? `instagram/${authorName ? authorName.replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase() : 'page'}`
+                : detectedPlatform === 'youtube'
+                ? `youtube/${parseContentUrl(url).sourceDomain.replace(/\.[a-z]+$/, '') || 'youtube'}`
+                : detectedPlatform === 'aparat'
+                ? `aparat/${parseContentUrl(url).sourceDomain.replace(/\.[a-z]+$/, '') || 'aparat'}`
+                : 'contents'
+            }
           />
 
           {/* Category with Auto-detect and Suggestion / Autocomplete */}

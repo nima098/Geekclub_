@@ -45,9 +45,6 @@ import {
   RSSModal 
 } from './components/RSSModal';
 import { 
-  WelcomeBanner 
-} from './components/WelcomeBanner';
-import { 
   Toast, 
   ToastMessage 
 } from './components/Toast';
@@ -67,7 +64,6 @@ import {
 import { 
   INITIAL_CONTENT, 
   INITIAL_COMMENTS, 
-  DEFAULT_USER,
   SUPER_ADMIN_USER,
   SUPER_ADMIN_EMAIL,
   INITIAL_INBOX,
@@ -76,7 +72,8 @@ import {
   DEFAULT_SITE_SETTINGS,
   INITIAL_REGISTERED_USERS
 } from './data/initialData';
-import { logoutGoogle, loginWithGooglePopup } from './lib/firebase';
+import { logoutGoogle } from './lib/firebase';
+import { loginWithDirectGoogleOAuth } from './lib/googleAuth';
 import { 
   Sparkles, 
   Compass, 
@@ -150,14 +147,68 @@ export default function App() {
   };
 
   // --- Server-Authoritative Contents State ---
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(() => {
+    if (typeof window !== 'undefined' && Array.isArray((window as any).__INITIAL_DATA__)) return false;
+    try {
+      const cached = localStorage.getItem('mediahub_content_v2');
+      if (cached && JSON.parse(cached).length > 0) return false;
+    } catch {}
+    return true;
+  });
+
   const [contents, setContents] = useState<ContentItem[]>(() => {
     try {
-      // Clear legacy localStorage content cache and soft-delete blacklists to ensure 100% server authority
-      localStorage.removeItem('mediahub_content_v1');
-      localStorage.removeItem('mediahub_soft_deleted_v2');
-      localStorage.removeItem('mediahub_deleted_ids_v1');
+      // 0. Primary: Server-injected authoritative initial data (zero latency, zero flicker)
+      if (typeof window !== 'undefined' && Array.isArray((window as any).__INITIAL_DATA__)) {
+        const raw = (window as any).__INITIAL_DATA__;
+        const serverDel: string[] = Array.isArray((window as any).__DELETED_IDS__) ? (window as any).__DELETED_IDS__ : [];
+        const delSet = new Set(serverDel.map((s) => String(s)));
+        return raw.filter((c: ContentItem) => {
+          if (!c) return false;
+          // Keep soft-deleted items so Trash can show them!
+          if (c.isDeleted) return true;
+          const strId = String(c.id);
+          const clean = strId.replace(/^(post|content)-/, '');
+          return !delSet.has(strId) && !delSet.has(clean) && !delSet.has(`post-${clean}`) && !delSet.has(`content-${clean}`);
+        });
+      }
 
-      const itemsToProcess = INITIAL_CONTENT;
+      const serverDelIds: string[] = typeof window !== 'undefined' && Array.isArray((window as any).__DELETED_IDS__)
+        ? (window as any).__DELETED_IDS__
+        : [];
+      const serverDelSet = new Set(serverDelIds.map((s) => String(s)));
+
+      // Clean stale tombstone IDs from local storage so previous soft-deletes don't block restored items
+      try {
+        localStorage.removeItem('mediahub_deleted_ids_v1');
+      } catch {}
+
+      // 1. Prefer real server contents cached from previous visits
+      let itemsToProcess: ContentItem[] = [];
+      const cached = localStorage.getItem('mediahub_content_v2');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            itemsToProcess = parsed;
+          }
+        } catch {}
+      }
+
+      // 2. Only fallback to INITIAL_CONTENT if no local cache exists
+      if (itemsToProcess.length === 0) {
+        itemsToProcess = INITIAL_CONTENT;
+      }
+
+      itemsToProcess = itemsToProcess.filter((item) => {
+        if (!item || !item.id) return false;
+        if (item.seedStatus === 'pending_approval') return false;
+        // Keep soft-deleted items so Trash can show them!
+        if (item.isDeleted) return true;
+        const strId = String(item.id);
+        const clean = strId.replace(/^(post|content)-/, '');
+        return !serverDelSet.has(strId) && !serverDelSet.has(clean) && !serverDelSet.has(`post-${clean}`) && !serverDelSet.has(`content-${clean}`);
+      });
 
       // Verified CDN covers on upc.geekclub.ir
       const VERIFIED_CDN_COVERS: Record<string, string> = {
@@ -232,9 +283,9 @@ export default function App() {
         }
         return parsed;
       }
-      return DEFAULT_USER;
+      return null;
     } catch {
-      return DEFAULT_USER;
+      return null;
     }
   });
 
@@ -251,12 +302,19 @@ export default function App() {
   useEffect(() => {
     try {
       localStorage.setItem('geekclub_theme_v1', theme);
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]');
       if (theme === 'light') {
         document.documentElement.classList.add('light');
         document.documentElement.classList.remove('dark');
+        document.documentElement.style.backgroundColor = '#efefef';
+        document.documentElement.style.color = '#0f172a';
+        if (metaThemeColor) metaThemeColor.setAttribute('content', '#efefef');
       } else {
         document.documentElement.classList.add('dark');
         document.documentElement.classList.remove('light');
+        document.documentElement.style.backgroundColor = '#090d16';
+        document.documentElement.style.color = '#f8fafc';
+        if (metaThemeColor) metaThemeColor.setAttribute('content', '#090d16');
       }
     } catch {
       // ignore
@@ -434,9 +492,6 @@ export default function App() {
   useEffect(() => {
     try {
       localStorage.setItem('geekclub_users_list_v1', JSON.stringify(usersList));
-      usersList.forEach((u) => {
-        api.saveProfile(u).catch(() => {});
-      });
     } catch (e) {
       console.warn('LocalStorage save error:', e);
     }
@@ -498,12 +553,45 @@ export default function App() {
     }
   }, [profileComments]);
 
-  // Synchronize with centralized server database in real-time
   useEffect(() => {
+    // Ensure soft-deleted or active items that exist in the database are NOT mistakenly tombstoned locally
+    const cleanupDeletedIdsCache = (items: ContentItem[]) => {
+      try {
+        const raw = localStorage.getItem('mediahub_deleted_ids_v1');
+        if (raw) {
+          const existing: string[] = JSON.parse(raw);
+          const activeOrTrashIds = new Set<string>();
+          for (const item of items) {
+            if (item && item.id) {
+              const strId = String(item.id);
+              activeOrTrashIds.add(strId);
+              const clean = strId.replace(/^(post|content)-/, '');
+              activeOrTrashIds.add(clean);
+              activeOrTrashIds.add(`post-${clean}`);
+              activeOrTrashIds.add(`content-${clean}`);
+            }
+          }
+          const cleaned = existing.filter((id) => !activeOrTrashIds.has(id));
+          localStorage.setItem('mediahub_deleted_ids_v1', JSON.stringify(cleaned));
+        }
+      } catch {}
+    };
+
     async function syncBackendData() {
-      const serverContents = await api.getContents({ includeDeleted: true });
-      if (Array.isArray(serverContents)) {
-        setContents(applyPendingOverrides(serverContents));
+      try {
+        const serverContents = await api.getContents({ includeDeleted: true });
+        if (Array.isArray(serverContents)) {
+          const fresh = applyPendingOverrides(serverContents);
+          setContents(fresh);
+          cleanupDeletedIdsCache(fresh);
+          try {
+            localStorage.setItem('mediahub_content_v2', JSON.stringify(fresh));
+          } catch {}
+        }
+      } catch (err) {
+        console.warn('Initial server sync warning:', err);
+      } finally {
+        setIsInitialLoading(false);
       }
     }
     syncBackendData();
@@ -512,7 +600,13 @@ export default function App() {
     const unsubscribe = api.subscribeContents((items) => {
       // BUGFIX: an EMPTY list is valid (e.g. the last item was deleted) and must not be ignored.
       if (Array.isArray(items)) {
-        setContents(applyPendingOverrides(items));
+        const fresh = applyPendingOverrides(items);
+        setContents(fresh);
+        cleanupDeletedIdsCache(fresh);
+        setIsInitialLoading(false);
+        try {
+          localStorage.setItem('mediahub_content_v2', JSON.stringify(fresh));
+        } catch {}
       }
     });
 
@@ -809,7 +903,7 @@ export default function App() {
       newItem.title.startsWith('ویدیوی آموزشی');
 
     const needsThumb = !newItem.thumbnail || 
-      !newItem.thumbnail.includes('upc.geekclub.ir') || 
+      (!newItem.thumbnail.includes('upc.geekclub.ir') && !newItem.thumbnail.startsWith('/uploads/')) || 
       newItem.thumbnail.startsWith('data:') ||
       newItem.thumbnail.includes('unsplash');
 
@@ -872,12 +966,15 @@ export default function App() {
           }
 
           if (enriched && (enriched.title || enriched.thumbnail)) {
-            // Ensure thumbnail is stored on personal CDN
+            // Ensure thumbnail is stored on personal CDN or local storage
             let finalCover = enriched.thumbnail || enriched.image;
-            if (finalCover && !finalCover.includes('upc.geekclub.ir') && !finalCover.startsWith('data:')) {
+            if (finalCover && finalCover.includes('upc.geekclub.ir/uploads/')) {
+              finalCover = finalCover.substring(finalCover.indexOf('/uploads/'));
+            }
+            if (finalCover && !finalCover.includes('upc.geekclub.ir') && !finalCover.startsWith('/uploads/') && !finalCover.startsWith('data:')) {
               try {
                 const cdnUrl = await transferExternalUrlToCDN(finalCover, 'contents', `cover_${newItem.platform}`);
-                if (cdnUrl && cdnUrl.includes('upc.geekclub.ir')) {
+                if (cdnUrl && cdnUrl.includes('upc.geekclub.ir') && !cdnUrl.includes('upc.geekclub.ir/uploads/')) {
                   finalCover = cdnUrl;
                 }
               } catch {}
@@ -956,6 +1053,7 @@ export default function App() {
     };
 
     setUser(resolvedUser);
+    api.saveProfile(resolvedUser).catch(() => {});
     setUsersList((prev) => {
       const idx = prev.findIndex(
         (u) => u.uid === resolvedUser.uid || (u.email && resolvedUser.email && u.email.toLowerCase() === resolvedUser.email.toLowerCase())
@@ -982,7 +1080,7 @@ export default function App() {
   const handleDirectGoogleLogin = async () => {
     setIsLoggingInWithGoogle(true);
     try {
-      const verified = await loginWithGooglePopup();
+      const verified = await loginWithDirectGoogleOAuth();
 
       // Check if user already exists in usersList and has completed registration
       const existing = usersList.find(
@@ -1008,15 +1106,11 @@ export default function App() {
         setIsUsernameModalOpen(true);
       }
     } catch (err: any) {
-      console.error('Direct Google login error:', err);
-      if (err?.code === 'auth/unauthorized-domain') {
-        setIsDomainHelpModalOpen(true);
-      } else if (err?.code === 'auth/popup-blocked') {
-        addToast('error', 'پنجره ورود گوگل توسط مرورگر مسدود شد. لطفاً پاپ‌آپ را در مرورگر فعال نمایید.');
-      } else if (err?.code === 'auth/popup-closed-by-user') {
+      console.error('Direct Google OAuth login error:', err);
+      if (err?.message?.includes('popup_closed') || err?.code === 'auth/popup-closed-by-user') {
         addToast('info', 'فرآیند ورود لغو شد.');
       } else {
-        addToast('error', err?.message || 'خطا در ارتباط با سرورهای گوگل.');
+        addToast('error', err?.message || 'خطا در ارتباط با سرویس ورود مستقیم گوگل.');
       }
     } finally {
       setIsLoggingInWithGoogle(false);
@@ -1057,6 +1151,7 @@ export default function App() {
   // --- Profile, Inbox & Guestbook Handlers ---
   const handleUpdateUser = (updatedUser: UserProfile) => {
     setUser(updatedUser);
+    api.saveProfile(updatedUser).catch(() => {});
     setUsersList((prev) =>
       prev.map((u) => (u.uid === updatedUser.uid ? { ...u, ...updatedUser } : u))
     );
@@ -1147,8 +1242,8 @@ export default function App() {
       deletedAt: deletedAtStr
     });
 
-    setContents((prev) =>
-      prev.map((c) => {
+    setContents((prev) => {
+      const updated = prev.map((c) => {
         if (c.id === contentId || stripContentPrefix(c.id) === cleanId) {
           return {
             ...c,
@@ -1157,8 +1252,12 @@ export default function App() {
           };
         }
         return c;
-      })
-    );
+      });
+      try {
+        localStorage.setItem('mediahub_content_v2', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
 
     const ok = shouldDelete
       ? await api.softDeleteContent(contentId, deletedAtStr)
@@ -1172,6 +1271,16 @@ export default function App() {
       return;
     }
 
+    // Always ensure soft-deleted or restored items are NOT in the permanent-deletion tombstone list
+    try {
+      const raw = localStorage.getItem('mediahub_deleted_ids_v1');
+      if (raw) {
+        const curr = JSON.parse(raw);
+        const filtered = curr.filter((id: string) => id !== contentId && id !== cleanId && id !== `post-${cleanId}` && id !== `content-${cleanId}`);
+        localStorage.setItem('mediahub_deleted_ids_v1', JSON.stringify(filtered));
+      }
+    } catch {}
+
     if (shouldDelete) {
       addToast('info', 'محتوا به سطل بازیافت منتقل شد و از فید پنهان گردید (قابل بازگردانی از پنل ادمین).');
     } else {
@@ -1184,9 +1293,20 @@ export default function App() {
 
     pendingOverridesRef.current.set(contentId, { kind: 'perm', at: Date.now() });
 
-    setContents((prev) =>
-      prev.filter((c) => c.id !== contentId && stripContentPrefix(c.id) !== cleanId)
-    );
+    try {
+      const raw = localStorage.getItem('mediahub_deleted_ids_v1');
+      const curr = raw ? JSON.parse(raw) : [];
+      const toAdd = [contentId, cleanId, `post-${cleanId}`, `content-${cleanId}`];
+      localStorage.setItem('mediahub_deleted_ids_v1', JSON.stringify(Array.from(new Set([...curr, ...toAdd]))));
+    } catch {}
+
+    setContents((prev) => {
+      const updated = prev.filter((c) => c.id !== contentId && stripContentPrefix(c.id) !== cleanId);
+      try {
+        localStorage.setItem('mediahub_content_v2', JSON.stringify(updated.filter((c) => !c.isDeleted)));
+      } catch {}
+      return updated;
+    });
 
     const ok = await api.deleteContent(contentId);
     if (!ok) {
@@ -1263,14 +1383,14 @@ export default function App() {
   );
 
   const trashCount = useMemo(() => {
-    return contents.filter((c) => c.isDeleted).length;
+    return contents.filter((c) => c.isDeleted || c.isArchived).length;
   }, [contents]);
 
   // --- Filtered & Sorted Content List ---
   const filteredContents = useMemo(() => {
     // If Single Post Permalink Mode is active
     if (singlePostId) {
-      const match = contents.filter((item) => !item.isDeleted && (item.id === singlePostId || item.id.endsWith(singlePostId)));
+      const match = contents.filter((item) => !(item.isDeleted || item.isArchived) && (item.id === singlePostId || item.id.endsWith(singlePostId)));
       if (match.length > 0) {
         return match;
       }
@@ -1280,11 +1400,11 @@ export default function App() {
       .filter((item) => {
         // Trash filter for admin
         if (showTrashOnly) {
-          return Boolean(item.isDeleted);
+          return Boolean(item.isDeleted || item.isArchived);
         }
 
         // Soft-delete filter: Exclude items in trash from public feed
-        if (item.isDeleted) {
+        if (item.isDeleted || item.isArchived) {
           return false;
         }
 
@@ -1359,7 +1479,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#090d16] light:bg-[#efefef] text-slate-100 light:text-slate-900 transition-colors duration-300 flex flex-col font-sans selection:bg-indigo-600 selection:text-white w-full max-w-full overflow-x-hidden">
+    <div className="min-h-screen bg-[#090d16] light:bg-[#efefef] text-slate-100 light:text-slate-900 flex flex-col font-sans selection:bg-indigo-600 selection:text-white w-full">
       {/* Top Navigation */}
       <Navbar
         user={user}
@@ -1386,15 +1506,6 @@ export default function App() {
         onToggleTheme={handleToggleTheme}
         onGoHome={handleGoHome}
       />
-
-      {/* Guest Welcome Banner */}
-      {!user && (
-        <WelcomeBanner
-          onStartGoogleLogin={handleDirectGoogleLogin}
-          onOpenAddModal={() => setIsAddModalOpen(true)}
-          isLoggingIn={isLoggingInWithGoogle}
-        />
-      )}
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-6">
         {/* Single Post Permalink Banner */}
@@ -1483,7 +1594,23 @@ export default function App() {
         )}
 
         {/* Content Grid */}
-        {filteredContents.length > 0 ? (
+        {isInitialLoading && filteredContents.length === 0 ? (
+          <div className={getGridClasses()}>
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <div key={n} className="rounded-3xl border border-slate-800/80 bg-slate-900/60 p-4 space-y-4 animate-pulse">
+                <div className="w-full h-48 bg-slate-800/80 rounded-2xl" />
+                <div className="space-y-2">
+                  <div className="h-4 bg-slate-800 rounded-lg w-3/4" />
+                  <div className="h-3 bg-slate-800/60 rounded-lg w-1/2" />
+                </div>
+                <div className="flex items-center gap-3 pt-2">
+                  <div className="w-8 h-8 rounded-full bg-slate-800" />
+                  <div className="h-3 bg-slate-800 rounded w-24" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredContents.length > 0 ? (
           <div className={getGridClasses()}>
             {filteredContents.map((item) => (
               <ContentCard

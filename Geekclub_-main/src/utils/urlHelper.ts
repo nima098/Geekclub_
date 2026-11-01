@@ -46,7 +46,7 @@ export function parseContentUrl(inputUrl: string): ParsedUrlResult {
 
   // Check Instagram
   const instagramMatch = url.match(
-    /(?:instagram\.com\/(?:p|reel|tv)\/([a-zA-Z0-9_-]+))/i
+    /(?:instagram\.com\/(?:p|reel|reels|tv)\/([a-zA-Z0-9_-]+))/i
   );
   if (instagramMatch && instagramMatch[1]) {
     const postCode = instagramMatch[1];
@@ -105,22 +105,33 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
   const cleanUrl = rawUrl.trim();
   const parsed = parseContentUrl(cleanUrl);
 
-  // 1. PRIMARY STEP: Use Server-side Proxy (/api/extract-metadata)
-  // This bypasses client-side censorship/filtering in Iran, CORS restrictions,
-  // and automatically downloads the real YouTube/Aparat cover image and uploads it to upc.geekclub.ir CDN!
+  // 1. PRIMARY STEP: Use Server-side Proxy (/api/extract-metadata) with strict 3s timeout
   try {
-    const res = await fetch(`/api/extract-metadata?url=${encodeURIComponent(cleanUrl)}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const res = await fetch(`/api/extract-metadata?url=${encodeURIComponent(cleanUrl)}`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
     if (res.ok) {
       const data = await res.json();
       if (data.success && (data.title || data.thumbnail)) {
         const platform = data.platform || parsed.platform;
         const inferredCat = inferCategoryFromContent(data.title || '', data.description || '', data.tags || []);
+        let rawThumbnail = data.thumbnail || '';
+        if (rawThumbnail && rawThumbnail.includes('upc.geekclub.ir/uploads/')) {
+          rawThumbnail = rawThumbnail.substring(rawThumbnail.indexOf('/uploads/'));
+        }
+        if (rawThumbnail && !rawThumbnail.startsWith('http') && !rawThumbnail.startsWith('data:')) {
+          rawThumbnail = rawThumbnail.startsWith('/') ? rawThumbnail : `/${rawThumbnail}`;
+        }
         return {
           platform,
           title: data.title || '',
           description: data.description || '',
           authorName: data.authorName || '',
-          thumbnail: data.thumbnail || '',
+          thumbnail: rawThumbnail,
           embedUrl: data.embedUrl || parsed.embedUrl,
           tags: Array.isArray(data.tags) && data.tags.length > 0 ? data.tags : ['محتوا', 'فناوری'],
           category: data.category || inferredCat,
@@ -130,7 +141,7 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
       }
     }
   } catch (err) {
-    console.warn('Server metadata extract request error, falling back to local heuristic extraction:', err);
+    console.warn('Server metadata extract timeout or error, executing instant local fallback:', err);
   }
 
   // Default fallback values

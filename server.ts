@@ -75,6 +75,8 @@ try {
 }
 app.use('/uploads', express.static(UPLOADS_DIR, {
   setHeaders: (res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     // Anything served from /uploads must never be able to run script (e.g. a malicious SVG)
     res.setHeader('Content-Security-Policy', "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; sandbox");
@@ -1773,20 +1775,20 @@ app.get('/api/contents', async (req: Request, res: Response) => {
   if (db.deletedIds && Array.isArray(db.deletedIds) && db.deletedIds.length > 0) {
     const delSet = new Set(db.deletedIds);
     results = results.filter((c) => {
-      // Do NOT filter out items that exist with isDeleted: true - those belong in Trash!
-      if (c && c.isDeleted) return true;
+      // Do NOT filter out items that exist with isDeleted: true or isArchived: true - those belong in Trash!
+      if (c && (c.isDeleted || c.isArchived)) return true;
       return !delSet.has(c.id);
     });
   }
 
-  // Filter out soft-deleted items unless explicitly requested (includeDeleted === 'true')
+  // Filter out soft-deleted / archived items unless explicitly requested (includeDeleted === 'true')
   if (includeDeleted !== 'true') {
-    results = results.filter((c) => !c.isDeleted);
+    results = results.filter((c) => !c.isDeleted && !c.isArchived);
   }
 
-  // Filter out archived items by default unless explicitly requested (never block soft-deleted items if includeDeleted is requested)
-  if (includeArchived !== 'true') {
-    results = results.filter((c) => !c.isArchived || (includeDeleted === 'true' && c.isDeleted));
+  // Filter out archived items by default unless explicitly requested
+  if (includeArchived !== 'true' && includeDeleted !== 'true') {
+    results = results.filter((c) => !c.isArchived);
   }
 
   // Filter out pending seeds waiting for Super Admin approval by default

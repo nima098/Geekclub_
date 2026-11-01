@@ -57,6 +57,11 @@ import {
   InboxMessage, 
   SiteAdminSettings 
 } from '../types/content';
+import { 
+  resolveCoverImageUrl, 
+  handleImageError, 
+  getPlatformFallbackImage 
+} from '../utils/imageHelper';
 import { api, getAdminHeaders } from '../services/api';
 import { 
   getCDNConfig, 
@@ -114,6 +119,16 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [importMessage, setImportMessage] = useState<{ success: boolean; text: string } | null>(null);
   const [isMergingSeeds, setIsMergingSeeds] = useState(false);
   const [mergeMessage, setMergeMessage] = useState<{ success: boolean; text: string } | null>(null);
+  const [dbStats, setDbStats] = useState<any>(null);
+
+  const fetchDbStats = async () => {
+    try {
+      const stats = await api.getDatabaseStats();
+      if (stats && stats.data) {
+        setDbStats(stats.data);
+      }
+    } catch {}
+  };
 
   // Database Diagnostic States
   const [diagnosticReport, setDiagnosticReport] = useState<any>(null);
@@ -124,6 +139,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     try {
       const res = await api.checkDatabaseDiagnostic();
       setDiagnosticReport(res);
+      fetchDbStats();
     } catch (err: any) {
       setDiagnosticReport({
         success: false,
@@ -135,11 +151,190 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     }
   };
 
-  useEffect(() => {
-    if (activeTab === 'diagnostic' && !diagnosticReport) {
-      handleRunDiagnostic();
+  // Apify Diagnostic States
+  const [apifyDiagnosticReport, setApifyDiagnosticReport] = useState<any>(null);
+  const [isCheckingApifyDiag, setIsCheckingApifyDiag] = useState(false);
+  const [testInstagramUrl, setTestInstagramUrl] = useState('https://www.instagram.com/reel/C8_sample/');
+  const [apifyTestRunResult, setApifyTestRunResult] = useState<any>(null);
+  const [isRunningApifyTest, setIsRunningApifyTest] = useState(false);
+
+  const handleRunApifyDiagnostic = async () => {
+    setIsCheckingApifyDiag(true);
+    try {
+      const res = await api.checkApifyDiagnostic();
+      setApifyDiagnosticReport(res);
+    } catch (err: any) {
+      setApifyDiagnosticReport({ success: false, message: err.message });
+    } finally {
+      setIsCheckingApifyDiag(false);
     }
-  }, [activeTab]);
+  };
+
+  const [isAbortingRuns, setIsAbortingRuns] = useState(false);
+  const [abortResultMsg, setAbortResultMsg] = useState<string | null>(null);
+
+  const handleAbortAllApifyRuns = async () => {
+    setIsAbortingRuns(true);
+    setAbortResultMsg(null);
+    try {
+      const res = await api.abortAllApifyRuns();
+      setAbortResultMsg(res.message || 'عملیات آزادسازی صف پردازش‌ها با موفقیت انجام شد.');
+      handleRunApifyDiagnostic();
+    } catch (err: any) {
+      setAbortResultMsg('خطا: ' + err.message);
+    } finally {
+      setIsAbortingRuns(false);
+    }
+  };
+
+  const handleRunApifyLiveTest = async () => {
+    setIsRunningApifyTest(true);
+    setApifyTestRunResult(null);
+    try {
+      const res = await api.testApifyExtraction(testInstagramUrl);
+      setApifyTestRunResult(res);
+      handleRunApifyDiagnostic();
+    } catch (err: any) {
+      setApifyTestRunResult({ success: false, error: err.message, message: 'خطا در ارتباط با سرور تست' });
+    } finally {
+      setIsRunningApifyTest(false);
+    }
+  };
+
+  // Automated System Diagnostics & Error Logs State
+  const [fullDiagReport, setFullDiagReport] = useState<any>(null);
+  const [systemLogsList, setSystemLogsList] = useState<any[]>([]);
+  const [logFilterLevel, setLogFilterLevel] = useState<string>('all');
+  const [logSearchTerm, setLogSearchTerm] = useState<string>('');
+  const [isFixingTrash, setIsFixingTrash] = useState(false);
+  const [fixTrashMsg, setFixTrashMsg] = useState<string | null>(null);
+
+  const fetchLogs = async () => {
+    try {
+      const logs = await api.getSystemDiagnosticLogs({ level: logFilterLevel });
+      setSystemLogsList(logs);
+    } catch {}
+  };
+
+  const handleRunFullSystemCheck = async () => {
+    setIsCheckingDiagnostic(true);
+    try {
+      const res = await api.runFullSystemCheck();
+      setFullDiagReport(res.data || res);
+      const dbRes = await api.checkDatabaseDiagnostic();
+      setDiagnosticReport(dbRes);
+      fetchDbStats();
+      fetchLogs();
+    } catch (err: any) {
+      setFullDiagReport({
+        status: 'error',
+        healthScore: 0,
+        errors: [err.message || 'خطا در برقراری ارتباط با سرور']
+      });
+    } finally {
+      setIsCheckingDiagnostic(false);
+    }
+  };
+
+  const handleFixTrashTombstones = async () => {
+    setIsFixingTrash(true);
+    setFixTrashMsg(null);
+    try {
+      const res = await api.fixTrashTombstones();
+      setFixTrashMsg(res.message || 'اصلاح با موفقیت انجام شد.');
+      handleRunFullSystemCheck();
+    } catch (err: any) {
+      setFixTrashMsg('خطا: ' + err.message);
+    } finally {
+      setIsFixingTrash(false);
+    }
+  };
+
+  const handleClearLogs = async () => {
+    await api.clearSystemDiagnosticLogs();
+    setSystemLogsList([]);
+  };
+
+  const [panelContents, setPanelContents] = useState<ContentItem[]>(() => contents || []);
+  const [isRefreshingContents, setIsRefreshingContents] = useState(false);
+
+  useEffect(() => {
+    if (Array.isArray(contents) && contents.length > 0) {
+      setPanelContents(contents);
+    }
+  }, [contents]);
+
+  const fetchPanelContents = async () => {
+    setIsRefreshingContents(true);
+    try {
+      const res = await fetch(`/api/contents?includeDeleted=true&includeArchived=true&_t=${Date.now()}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json.data)) {
+          setPanelContents(json.data);
+          onUpdateContents?.(json.data);
+        }
+      }
+    } catch {} finally {
+      setIsRefreshingContents(false);
+    }
+  };
+
+  const handleRestoreItem = (id: string) => {
+    onToggleSoftDelete(id, false);
+    setPanelContents((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, isDeleted: false, isArchived: false, deletedAt: undefined } : c))
+    );
+  };
+
+  const handlePermDeleteItem = (id: string) => {
+    onPermanentDelete(id);
+    setPanelContents((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchPanelContents();
+    }
+
+    if (activeTab === 'contents') {
+      fetchPanelContents();
+    } else if (activeTab === 'diagnostic') {
+      if (!diagnosticReport) handleRunDiagnostic();
+      if (!apifyDiagnosticReport) handleRunApifyDiagnostic();
+      if (!fullDiagReport) handleRunFullSystemCheck();
+      fetchLogs();
+    } else if (activeTab === 'database') {
+      if (!diagnosticReport) handleRunDiagnostic();
+      fetchDbStats();
+    }
+  }, [isOpen, activeTab, logFilterLevel]);
+
+
+
+  // PostgreSQL Migration State
+  const [isMigratingPostgres, setIsMigratingPostgres] = useState(false);
+  const [postgresMigrationMessage, setPostgresMigrationMessage] = useState<{ success: boolean; text: string } | null>(null);
+
+  const handleMigrateToPostgres = async () => {
+    setIsMigratingPostgres(true);
+    setPostgresMigrationMessage(null);
+    try {
+      const res = await api.migrateToPostgres();
+      setPostgresMigrationMessage({
+        success: res.success,
+        text: res.message || (res.success ? 'اطلاعات با موفقیت به پایگاه داده PostgreSQL منتقل گردید.' : 'خطا در مهاجرت به PostgreSQL')
+      });
+      handleRunDiagnostic();
+    } catch (err: any) {
+      setPostgresMigrationMessage({
+        success: false,
+        text: err.message || 'خطا در برقراری ارتباط با سرور'
+      });
+    } finally {
+      setIsMigratingPostgres(false);
+    }
+  };
 
   // Google Drive 12-Hour Automated Sync States
   const [driveUser, setDriveUser] = useState<{ email: string; displayName: string } | null>(null);
@@ -201,6 +396,15 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           text: `پشتیبان دیتابیس با موفقیت به گوگل درایو متصل شده ارسال شد (${res.fileName})`,
           link: res.webViewLink
         });
+        // Record backup in server and postgres backup history
+        try {
+          const adminHeaders = await getAdminHeaders();
+          await fetch('/api/database/backup-drive', {
+            method: 'POST',
+            headers: adminHeaders,
+            body: JSON.stringify({ fileId: res.fileId, fileName: res.fileName })
+          });
+        } catch {}
       } else {
         setDriveSyncMessage({
           success: false,
@@ -522,17 +726,20 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
   if (!isOpen) return null;
 
+  // Current authoritative contents for the admin panel (panelContents prioritized)
+  const currentContents = panelContents.length > 0 ? panelContents : contents;
+
   // Counts
-  const activeCount = contents.filter((c) => !c.isDeleted && !c.isArchived && c.approvalStatus !== 'pending' && c.approvalStatus !== 'rejected').length;
-  const pendingCount = contents.filter((c) => !c.isDeleted && !c.isArchived && c.approvalStatus === 'pending').length;
-  const trashCount = contents.filter((c) => c.isDeleted || c.isArchived).length;
+  const activeCount = currentContents.filter((c) => !c.isDeleted && !c.isArchived && c.approvalStatus !== 'pending' && c.approvalStatus !== 'rejected').length;
+  const pendingCount = currentContents.filter((c) => !c.isDeleted && !c.isArchived && c.approvalStatus === 'pending').length;
+  const trashCount = currentContents.filter((c) => c.isDeleted || c.isArchived).length;
   const pendingFeedbackCount = feedbackList.filter((f) => f.status === 'pending').length;
 
   const autoApprovedUsersCount = usersList.filter((u) => u.autoApproveContent || u.isAdmin).length;
   const needApprovalUsersCount = usersList.filter((u) => !u.autoApproveContent && !u.isAdmin).length;
 
   // Filtered contents
-  const filteredContents = contents.filter((c) => {
+  const filteredContents = currentContents.filter((c) => {
     if (contentFilter === 'active' && ((c.isDeleted || c.isArchived) || c.approvalStatus === 'pending' || c.approvalStatus === 'rejected')) {
       return false;
     }
@@ -918,7 +1125,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         : 'bg-slate-800 text-slate-300 hover:text-white'
                     }`}
                   >
-                    همه ({contents.length})
+                    همه ({currentContents.length})
                   </button>
                   <button
                     onClick={() => setContentFilter('active')}
@@ -951,6 +1158,16 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   >
                     سطل بازیافت ({trashCount})
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={fetchPanelContents}
+                    disabled={isRefreshingContents}
+                    className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer shrink-0"
+                    title="تازه‌سازی فوری لیست محتواها و سطل زباله از سرور"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingContents ? 'animate-spin text-indigo-400' : ''}`} />
+                  </button>
                 </div>
 
                 <div className="relative w-full sm:w-64">
@@ -967,11 +1184,38 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 </div>
               </div>
 
+              {/* Trash Quick Restore Banner */}
+              {contentFilter === 'trash' && trashCount > 0 && (
+                <div className="p-3.5 rounded-2xl bg-rose-950/40 border border-rose-800/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-md">
+                  <div className="flex items-center gap-2.5 text-rose-200">
+                    <Trash2 className="w-4 h-4 text-rose-400 shrink-0" />
+                    <span>تعداد <strong className="text-white font-mono">{trashCount}</strong> محتوا در سطل بازیافت قرار دارد.</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      panelContents.forEach((c) => {
+                        if (c.isDeleted || c.isArchived) {
+                          onToggleSoftDelete(c.id, false);
+                        }
+                      });
+                      setPanelContents((prev) =>
+                        prev.map((c) => ({ ...c, isDeleted: false, isArchived: false, deletedAt: undefined }))
+                      );
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-sm active:scale-95 shrink-0"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    بازگردانی تمامی محتواها به فید
+                  </button>
+                </div>
+              )}
+
               {/* Contents Table / List */}
               <div className="space-y-3">
                 {filteredContents.length === 0 ? (
                   <div className="text-center py-12 text-slate-300 bg-slate-800/80 rounded-2xl border border-slate-700/80 shadow-md text-xs font-medium">
-                    محتوایی در این بخش یافت نشد.
+                    {contentFilter === 'trash' ? 'سطل بازیافت خالی است (هیچ محتوای حذف‌شده‌ای یافت نشد).' : 'محتوایی در این بخش یافت نشد.'}
                   </div>
                 ) : (
                   filteredContents.map((item) => (
@@ -987,9 +1231,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     >
                       <div className="flex items-start sm:items-center gap-3">
                         <img
-                          src={item.thumbnail}
+                          src={resolveCoverImageUrl(item.thumbnail)}
                           alt={item.title}
                           className="w-16 h-16 rounded-xl object-cover shrink-0 ring-1 ring-slate-700"
+                          onError={(e) => handleImageError(e, getPlatformFallbackImage(item.platform), item.platform, item.id)}
                         />
                         <div className="space-y-1.5">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -1051,16 +1296,16 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         {(item.isDeleted || item.isArchived) && (
                           <>
                             <button
-                              onClick={() => onToggleSoftDelete(item.id, false)}
-                              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
+                              onClick={() => handleRestoreItem(item.id)}
+                              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer active:scale-95"
                               title="بازگردانی به فید عمومی سایت"
                             >
                               <RotateCcw className="w-3.5 h-3.5" />
                               بازگردانی به فید
                             </button>
                             <button
-                              onClick={() => onPermanentDelete(item.id)}
-                              className="p-2 rounded-xl bg-slate-800 hover:bg-rose-600/30 text-rose-400 hover:text-rose-200 transition cursor-pointer"
+                              onClick={() => handlePermDeleteItem(item.id)}
+                              className="p-2 rounded-xl bg-slate-800 hover:bg-rose-600/30 text-rose-400 hover:text-rose-200 transition cursor-pointer active:scale-95"
                               title="حذف کامل از دیتابیس"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -1290,27 +1535,117 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                   <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
+                    <span className="text-[11px] text-slate-400 block mb-1">حجم فایل دیتابیس</span>
+                    <span className="text-lg font-mono font-bold text-cyan-300">
+                      {dbStats?.fileSizeFormatted || 'محاسبه...'}
+                    </span>
+                    <span className="text-[10px] text-slate-400 block mt-0.5">data/database.json</span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
                     <span className="text-[11px] text-slate-400 block mb-1">کل پست‌های ثبت‌شده</span>
-                    <span className="text-xl font-mono font-bold text-slate-100">{contents.length}</span>
+                    <span className="text-xl font-mono font-bold text-slate-100">{dbStats?.contentsCount ?? contents.length}</span>
+                    <span className="text-[10px] text-slate-400 block mt-0.5">{dbStats?.profilesCount ?? usersList.length} پروفایل کاربر</span>
                   </div>
                   <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
-                    <span className="text-[11px] text-slate-400 block mb-1">پروفایل‌های فعال</span>
-                    <span className="text-xl font-mono font-bold text-slate-100">{usersList.length}</span>
+                    <span className="text-[11px] text-slate-400 block mb-1">فایل‌های پشتیبان محلی</span>
+                    <span className="text-xl font-mono font-bold text-indigo-300">
+                      {dbStats?.backupFilesCount ?? 0} نسخه
+                    </span>
+                    <span className="text-[10px] text-emerald-400 block mt-0.5">پشتیبان‌گیری ۱۲ ساعته</span>
                   </div>
                   <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
-                    <span className="text-[11px] text-slate-400 block mb-1">همگام‌سازی دیسک (/database.json)</span>
+                    <span className="text-[11px] text-slate-400 block mb-1">حفاظت خودکار هنگام بازیابی</span>
                     <span className="text-xs font-bold text-emerald-400 flex items-center justify-center gap-1 mt-1">
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      فعال و پایدار
+                      پیش‌پشتیبان اضطراری
                     </span>
                   </div>
-                  <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
-                    <span className="text-[11px] text-slate-400 block mb-1">دیتابیس Firestore</span>
-                    <span className="text-xs font-bold text-emerald-400 flex items-center justify-center gap-1 mt-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      متصل (ai-studio-mediahub)
-                    </span>
+                </div>
+              </div>
+
+              {/* PostgreSQL Relational Database Section */}
+              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-700 pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-sky-500/20 text-sky-400">
+                      <Database className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
+                        پایگاه داده رابطه‌ای PostgreSQL (موتور اختصاصی سرور مجازی)
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                          diagnosticReport?.postgres?.connected
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                            : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                        }`}>
+                          {diagnosticReport?.postgres?.connected ? 'PostgreSQL متصل و فعال' : 'در حال اجرا با JSON Store'}
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-300">
+                        معماری دوگانه: پایداری بر روی دیسک با پشتیبانی کامل از PostgreSQL جهت جستجوهای سریع، روابط ساختاری و ارتقای ده‌هزار محتوایی
+                      </p>
+                    </div>
                   </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-750 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-200">وضعیت اتصال پایگاه داده:</span>
+                      {diagnosticReport?.postgres?.connected ? (
+                        <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                          <CheckCircle2 className="w-4 h-4" />
+                          متصل به PostgreSQL ({diagnosticReport.postgres.tableCounts?.contents || contents.length} محتوا ثبت‌شده)
+                        </span>
+                      ) : (
+                        <span className="text-xs font-bold text-amber-300 flex items-center gap-1">
+                          <AlertTriangle className="w-4 h-4 text-amber-400" />
+                          آماده فعال‌سازی با تنظیم متغیر DATABASE_URL در سرور مجازی
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                      {diagnosticReport?.postgres?.connected
+                        ? `پایگاه داده فعال: ${diagnosticReport.postgres.engine} (پینگ سرور: ${diagnosticReport.postgres.pingMs} میلی‌ثانیه)`
+                        : 'تمامی کوئری‌ها در حال حاضر از حافظه سریع دیسک و همگام‌سازی ابری تامین می‌شوند.'}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={handleMigrateToPostgres}
+                      disabled={isMigratingPostgres}
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-md shadow-sky-600/20 cursor-pointer disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${isMigratingPostgres ? 'animate-spin' : ''}`} />
+                      {isMigratingPostgres ? 'در حال مهاجرت داده‌ها...' : 'همگام‌سازی و مهاجرت به PostgreSQL'}
+                    </button>
+                  </div>
+                </div>
+
+                {postgresMigrationMessage && (
+                  <div
+                    className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${
+                      postgresMigrationMessage.success
+                        ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                        : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+                    }`}
+                  >
+                    {postgresMigrationMessage.success ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <AlertTriangle className="w-4 h-4 text-rose-400" />}
+                    <span>{postgresMigrationMessage.text}</span>
+                  </div>
+                )}
+
+                {/* CloudPanel Quick Setup Instructions */}
+                <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 text-[11px] text-slate-300 space-y-1.5">
+                  <span className="font-bold text-sky-400 block">راهنمای راه‌اندازی PostgreSQL در CloudPanel سرور مجازی (OVH):</span>
+                  <ol className="list-decimal list-inside space-y-1 text-slate-400 pr-1">
+                    <li>در پنل مدیریت <span className="text-slate-200 font-mono">CloudPanel</span> وارد منوی <span className="text-slate-200">Databases</span> شوید.</li>
+                    <li>یک دیتابیس با نوع <span className="text-sky-300 font-mono">PostgreSQL</span>، نام <span className="text-sky-300 font-mono">geekclub_db</span> و کاربر بسازید.</li>
+                    <li>در فایل <span className="text-amber-300 font-mono">.env</span> سرور، متغیر اتصال را وارد کنید: <span className="text-emerald-400 font-mono text-[10px]">DATABASE_URL="postgresql://user:password@127.0.0.1:5432/geekclub_db"</span></li>
+                    <li>سرویس نود را در CloudPanel ریستارت کنید؛ تمامی جداول و ایندکس‌ها خودکار ساخته و با اطلاعات فعلی همگام می‌شوند.</li>
+                  </ol>
                 </div>
               </div>
 
@@ -1543,141 +1878,152 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           {/* 3.3. Database & Sync Diagnostic Tab */}
           {activeTab === 'diagnostic' && (
             <div className="space-y-6 max-w-4xl mx-auto">
+              {/* Top Card: Full Automated System Checkup & Health Score */}
               <div className="p-6 rounded-2xl bg-slate-800/90 border border-slate-700/80 shadow-xl space-y-6">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-700 pb-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-400 ring-2 ring-emerald-500/30">
-                      <ShieldAlert className="w-7 h-7" />
+                    <div className="p-3 rounded-2xl bg-indigo-500/20 text-indigo-400 ring-2 ring-indigo-500/30">
+                      <ShieldCheck className="w-7 h-7" />
                     </div>
                     <div>
                       <h4 className="text-base sm:text-lg font-black text-slate-100 flex items-center gap-2">
-                        تست جامع سلامت، ارتباط و همگام‌سازی دیتابیس سرور
-                        <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
-                          Live Diagnostics
+                        موتور هوشمند عیب‌یابی و پایش خودکار سیستم
+                        <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2.5 py-0.5 rounded-full border border-indigo-500/30">
+                          System Diagnostic Engine
                         </span>
                       </h4>
                       <p className="text-xs text-slate-300">
-                        بررسی کامل وضعیت اتصال سرور، تأخیر پاسخ (Ping Latency)، تست عملیات خواندن/نوشتن دیسک و وضعیت همگام‌سازی بین مرورگرها
+                        بررسی خودکار سلامت دیتابیس، آپلود و CDN، ناهمخوانی سطل زباله، و گزارش لاگ‌های خطای زنده
                       </p>
                     </div>
                   </div>
 
                   <button
                     type="button"
-                    onClick={handleRunDiagnostic}
+                    onClick={handleRunFullSystemCheck}
                     disabled={isCheckingDiagnostic}
-                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 transition active:scale-95 shadow-lg shadow-emerald-600/30 cursor-pointer disabled:opacity-50"
+                    className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-2 transition active:scale-95 shadow-lg shadow-indigo-600/30 cursor-pointer disabled:opacity-50"
                   >
                     <RefreshCw className={`w-4 h-4 ${isCheckingDiagnostic ? 'animate-spin' : ''}`} />
-                    {isCheckingDiagnostic ? 'در حال تست ارتباط...' : 'اجرای مجدد تست ارتباط'}
+                    {isCheckingDiagnostic ? 'در حال پایش و چک‌آپ...' : 'اجرای چک‌آپ کامل سیستم'}
                   </button>
                 </div>
 
-                {diagnosticReport ? (
+                {fullDiagReport ? (
                   <div className="space-y-4">
-                    {/* Status Badge */}
-                    <div className={`p-4 rounded-xl border flex items-center justify-between gap-3 ${
-                      diagnosticReport.success
+                    {/* Overall Health Score & Status Badge */}
+                    <div className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+                      fullDiagReport.status === 'ok'
                         ? 'bg-emerald-500/15 text-emerald-200 border-emerald-500/40'
+                        : fullDiagReport.status === 'warn'
+                        ? 'bg-amber-500/15 text-amber-200 border-amber-500/40'
                         : 'bg-rose-500/15 text-rose-200 border-rose-500/40'
                     }`}>
                       <div className="flex items-center gap-3">
-                        {diagnosticReport.success ? (
-                          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0">
-                            <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-                          </div>
-                        ) : (
-                          <div className="w-10 h-10 rounded-xl bg-rose-500/20 flex items-center justify-center shrink-0">
-                            <AlertTriangle className="w-6 h-6 text-rose-400" />
-                          </div>
-                        )}
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 font-mono font-black text-lg ${
+                          fullDiagReport.healthScore >= 90
+                            ? 'bg-emerald-500/20 text-emerald-400'
+                            : fullDiagReport.healthScore >= 70
+                            ? 'bg-amber-500/20 text-amber-400'
+                            : 'bg-rose-500/20 text-rose-400'
+                        }`}>
+                          {fullDiagReport.healthScore ?? 100}%
+                        </div>
                         <div>
-                          <h5 className="text-sm font-bold">
-                            {diagnosticReport.success ? 'ارتباط با دیتابیس کاملاً برقرار و پایدار است' : 'خطا در ارتباط با پایگاه داده'}
+                          <h5 className="text-sm font-bold flex items-center gap-2">
+                            {fullDiagReport.status === 'ok'
+                              ? 'سیستم کاملاً سالم، پایدار و بدون خطاست'
+                              : fullDiagReport.status === 'warn'
+                              ? 'سیستم فعال است (نیاز به توجه جزئی دارد)'
+                              : 'هشدار خطای بحرانی در سیستم'}
                           </h5>
                           <p className="text-xs opacity-90 mt-0.5">
-                            {diagnosticReport.message || diagnosticReport.error}
+                            تست‌ها در زمان {fullDiagReport.latencyMs ?? 0} میلی‌ثانیه با موفقیت اجرا شدند.
                           </p>
                         </div>
                       </div>
 
-                      {diagnosticReport.latencyMs !== undefined && (
-                        <div className="text-left shrink-0 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-slate-700 font-mono text-xs">
-                          <span className="text-slate-400 block text-[10px]">تأخیر (Ping):</span>
-                          <span className="text-emerald-400 font-bold">{diagnosticReport.latencyMs} ms</span>
+                      {fullDiagReport.system && (
+                        <div className="flex items-center gap-2 font-mono text-[11px] dir-ltr text-slate-300 bg-slate-900/60 p-2 rounded-lg border border-slate-800">
+                          <span>Node: {fullDiagReport.system.nodeVersion}</span>
+                          <span>|</span>
+                          <span>Uptime: {fullDiagReport.system.uptimeSeconds}s</span>
+                          <span>|</span>
+                          <span>RAM: {fullDiagReport.system.memoryMb?.heapUsed}MB</span>
                         </div>
                       )}
                     </div>
 
-                    {/* Metric Cards Grid */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-center space-y-1">
-                        <span className="text-[11px] text-slate-400 block">پست‌های فعال فید</span>
-                        <span className="text-2xl font-mono font-black text-indigo-400">
-                          {diagnosticReport.metrics?.activeContents ?? contents.length}
-                        </span>
-                      </div>
-                      <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-center space-y-1">
-                        <span className="text-[11px] text-slate-400 block">پست‌های سطل زباله</span>
-                        <span className="text-2xl font-mono font-black text-rose-400">
-                          {diagnosticReport.metrics?.trashContents ?? trashCount}
-                        </span>
-                      </div>
-                      <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-center space-y-1">
-                        <span className="text-[11px] text-slate-400 block">پروفایل‌های کاربران</span>
-                        <span className="text-2xl font-mono font-black text-emerald-400">
-                          {diagnosticReport.metrics?.profilesCount ?? usersList.length}
-                        </span>
-                      </div>
-                      <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-center space-y-1">
-                        <span className="text-[11px] text-slate-400 block">حجم فایل دیسک</span>
-                        <span className="text-2xl font-mono font-black text-cyan-400">
-                          {diagnosticReport.fileSizeKb ? `${diagnosticReport.fileSizeKb} KB` : '42 KB'}
-                        </span>
-                      </div>
-                    </div>
+                    {/* Recommendations Box if any */}
+                    {fullDiagReport.recommendations && fullDiagReport.recommendations.length > 0 && (
+                      <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 space-y-2 text-xs">
+                        <h6 className="font-bold flex items-center gap-2 text-amber-300">
+                          <AlertTriangle className="w-4 h-4 text-amber-400" />
+                          پیشنهادات هوشمند جهت رفع باگ‌ها و بهینه‌سازی:
+                        </h6>
+                        <ul className="list-disc list-inside space-y-1 text-[11px] opacity-95">
+                          {fullDiagReport.recommendations.map((rec: string, idx: number) => (
+                            <li key={idx}>{rec}</li>
+                          ))}
+                        </ul>
 
-                    {/* Detailed Tests Breakdown */}
-                    <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
-                      <h5 className="text-xs font-bold text-slate-200 flex items-center gap-2 border-b border-slate-800 pb-2">
-                        <Database className="w-4 h-4 text-cyan-400" />
-                        گزارش تست‌های ساختاری و پروتکل‌های همگام‌سازی
-                      </h5>
+                        {fullDiagReport.checks?.some((c: any) => c.inconsistentItemsCount > 0) && (
+                          <div className="pt-2">
+                            <button
+                              type="button"
+                              onClick={handleFixTrashTombstones}
+                              disabled={isFixingTrash}
+                              className="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                            >
+                              <RotateCcw className={`w-3.5 h-3.5 ${isFixingTrash ? 'animate-spin' : ''}`} />
+                              {isFixingTrash ? 'در حال اصلاح سطل زباله...' : 'اصلاح خودکار ناهمخوانی سطل زباله'}
+                            </button>
+                            {fixTrashMsg && <p className="text-[11px] text-emerald-400 mt-1 font-bold">{fixTrashMsg}</p>}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                        <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-750 flex items-center justify-between">
-                          <span className="text-slate-300">تست خواندن دیتابیس (Read Check)</span>
-                          <span className="text-emerald-400 font-bold flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> موفق
-                          </span>
-                        </div>
-                        <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-750 flex items-center justify-between">
-                          <span className="text-slate-300">تست نوشتن اتمیک روی دیسک (Write Check)</span>
-                          <span className="text-emerald-400 font-bold flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> موفق و ایمن
-                          </span>
-                        </div>
-                        <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-750 flex items-center justify-between">
-                          <span className="text-slate-300">همگام‌سازی زنده چند مرورگر (Live Multi-Tab)</span>
-                          <span className="text-emerald-400 font-bold flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> فعال (هر ۴ ثانیه)
-                          </span>
-                        </div>
-                        <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-750 flex items-center justify-between">
-                          <span className="text-slate-300">زمان آپتایم سرور نود (Server Uptime)</span>
-                          <span className="text-cyan-400 font-mono font-bold">
-                            {diagnosticReport.serverUptimeSeconds ? `${diagnosticReport.serverUptimeSeconds} ثانیه` : 'آنلاین'}
-                          </span>
+                    {/* Structural Check Breakdown Grid */}
+                    {fullDiagReport.checks && Array.isArray(fullDiagReport.checks) && (
+                      <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
+                        <h5 className="text-xs font-bold text-slate-200 flex items-center gap-2 border-b border-slate-800 pb-2">
+                          <Database className="w-4 h-4 text-indigo-400" />
+                          نتایج چک‌آپ ماژول‌های حیاتی وبسایت
+                        </h5>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                          {fullDiagReport.checks.map((check: any, idx: number) => (
+                            <div key={idx} className="p-3 rounded-xl bg-slate-800/60 border border-slate-750 space-y-1">
+                              <div className="flex items-center justify-between font-bold">
+                                <span className="text-slate-200">{check.name}</span>
+                                <span className={`flex items-center gap-1 text-[11px] ${
+                                  check.status === 'pass'
+                                    ? 'text-emerald-400'
+                                    : check.status === 'warn'
+                                    ? 'text-amber-400'
+                                    : check.status === 'info'
+                                    ? 'text-cyan-400'
+                                    : 'text-rose-400'
+                                }`}>
+                                  {check.status === 'pass' && <CheckCircle2 className="w-3.5 h-3.5" />}
+                                  {check.status === 'warn' && <AlertTriangle className="w-3.5 h-3.5" />}
+                                  {check.status === 'pass' ? 'موفق' : check.status === 'warn' ? 'هشدار' : check.status === 'info' ? 'اطلاعیه' : 'خطا'}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-400 leading-relaxed">{check.details}</p>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    </div>
+                    )}
 
-                    {/* Quick Action: Force Refresh across all tabs */}
+                    {/* Action Bar */}
                     <div className="p-4 rounded-xl bg-indigo-600/10 border border-indigo-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
                       <div>
-                        <h6 className="text-xs font-bold text-indigo-300">تازه‌سازی اجباری و همگام‌سازی فید در تمامی تب‌ها</h6>
+                        <h6 className="text-xs font-bold text-indigo-300">همگام‌سازی فوری و بازنشانی کش مرورگر</h6>
                         <p className="text-[11px] text-slate-300 mt-0.5">
-                          اگر حس می‌کنید تغییرات در مرورگر دوم دیر اعمال می‌شود، با این دکمه می‌توانید کش حافظه را پاک کرده و آخرین داده‌های سرور را فوراً بارگذاری کنید.
+                          تخلیه کش localStorage و دریافت آخرین وضعیت فید و سطل زباله از سرور
                         </p>
                       </div>
 
@@ -1688,19 +2034,339 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                           if (Array.isArray(latest)) {
                             onUpdateContents?.(latest);
                           }
+                          handleRunFullSystemCheck();
                         }}
                         className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-600/30 transition cursor-pointer shrink-0 active:scale-95"
                       >
-                        همگام‌سازی فوری و رفرش فید
+                        همگام‌سازی و بروزرسانی فید
                       </button>
                     </div>
                   </div>
                 ) : (
                   <div className="text-center py-12 text-slate-400 space-y-3">
                     <RefreshCw className="w-8 h-8 animate-spin mx-auto text-indigo-400" />
-                    <p className="text-xs">در حال برقراری ارتباط با سرور و اجرای تست‌های سلامت دیتابیس...</p>
+                    <p className="text-xs">در حال پایش خودکار دیتابیس، فایل‌ها و خطاهای سیستم...</p>
                   </div>
                 )}
+              </div>
+
+              {/* Automated Error Logs Viewer Card */}
+              <div className="p-6 rounded-2xl bg-slate-800/90 border border-slate-700/80 shadow-xl space-y-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-700 pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-rose-500/20 text-rose-400">
+                      <Inbox className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
+                        گزارش لاگ‌های زنده خطا و استثناها (System Error Logs)
+                        <span className="text-[10px] bg-rose-500/20 text-rose-300 px-2.5 py-0.5 rounded-full border border-rose-500/30">
+                          {systemLogsList.length} لاگ ثبت‌شده
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-300">
+                        مشاهده خطاهای ثبت شده از فرانت‌اند مرورگر، APIهای سرور و فرایندهای پس‌زمینه
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const blob = new Blob([JSON.stringify(systemLogsList, null, 2)], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `system_diagnostic_logs_${Date.now()}.json`;
+                        a.click();
+                      }}
+                      disabled={systemLogsList.length === 0}
+                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-750 text-slate-200 border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                    >
+                      <Download className="w-3.5 h-3.5 text-cyan-400" />
+                      دانلود گزارش JSON
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleClearLogs}
+                      disabled={systemLogsList.length === 0}
+                      className="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      پاکسازی لاگ‌ها
+                    </button>
+                  </div>
+                </div>
+
+                {/* Filter and Search controls */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={() => setLogFilterLevel('all')}
+                      className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
+                        logFilterLevel === 'all' ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      همه ({systemLogsList.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLogFilterLevel('error')}
+                      className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
+                        logFilterLevel === 'error' ? 'bg-rose-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      خطاها
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLogFilterLevel('warn')}
+                      className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
+                        logFilterLevel === 'warn' ? 'bg-amber-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      هشدارها
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLogFilterLevel('info')}
+                      className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
+                        logFilterLevel === 'info' ? 'bg-cyan-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      اطلاعیه‌ها
+                    </button>
+                  </div>
+
+                  <div className="relative w-full sm:w-64">
+                    <Search className="w-3.5 h-3.5 absolute right-3 top-2.5 text-slate-500" />
+                    <input
+                      type="text"
+                      placeholder="جستجو در متن لاگ..."
+                      value={logSearchTerm}
+                      onChange={(e) => setLogSearchTerm(e.target.value)}
+                      className="w-full pr-8 pl-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Logs List Container */}
+                <div className="max-h-72 overflow-y-auto space-y-2 p-1 font-mono text-[11px]">
+                  {systemLogsList
+                    .filter((log) => {
+                      if (!logSearchTerm) return true;
+                      const term = logSearchTerm.toLowerCase();
+                      return (
+                        log.message?.toLowerCase().includes(term) ||
+                        log.category?.toLowerCase().includes(term) ||
+                        JSON.stringify(log.details || {}).toLowerCase().includes(term)
+                      );
+                    })
+                    .length === 0 ? (
+                    <div className="text-center py-8 text-slate-500 font-sans text-xs">
+                      هیچ خطایی ثبت نشده است یا لاگی تطابق ندارد.
+                    </div>
+                  ) : (
+                    systemLogsList
+                      .filter((log) => {
+                        if (!logSearchTerm) return true;
+                        const term = logSearchTerm.toLowerCase();
+                        return (
+                          log.message?.toLowerCase().includes(term) ||
+                          log.category?.toLowerCase().includes(term) ||
+                          JSON.stringify(log.details || {}).toLowerCase().includes(term)
+                        );
+                      })
+                      .map((log) => (
+                        <div
+                          key={log.id}
+                          className={`p-3 rounded-xl border space-y-1 ${
+                            log.level === 'error'
+                              ? 'bg-rose-950/20 border-rose-500/30 text-rose-200'
+                              : log.level === 'warn'
+                              ? 'bg-amber-950/20 border-amber-500/30 text-amber-200'
+                              : 'bg-slate-900 border-slate-800 text-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between font-bold dir-ltr text-left">
+                            <span className="flex items-center gap-2">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-sans ${
+                                log.level === 'error' ? 'bg-rose-500/30 text-rose-300' : log.level === 'warn' ? 'bg-amber-500/30 text-amber-300' : 'bg-slate-800 text-slate-400'
+                              }`}>
+                                [{log.category || 'system'}] {log.level.toUpperCase()}
+                              </span>
+                              <span className="truncate max-w-md font-sans">{log.message}</span>
+                            </span>
+                            <span className="text-[10px] opacity-60 text-slate-400">
+                              {new Date(log.timestamp).toLocaleTimeString('fa-IR')}
+                            </span>
+                          </div>
+
+                          {log.details && (
+                            <div className="dir-ltr text-left text-[10px] bg-slate-950 p-2 rounded-lg border border-slate-800/80 overflow-x-auto text-slate-400">
+                              {typeof log.details === 'string' ? log.details : JSON.stringify(log.details)}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                  )}
+                </div>
+              </div>
+
+
+              {/* Apify Instagram Extraction Diagnostic Card */}
+              <div className="p-6 rounded-2xl bg-slate-800/90 border border-slate-700/80 shadow-xl space-y-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-700 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 rounded-2xl bg-pink-500/20 text-pink-400 ring-2 ring-pink-500/30">
+                      <Instagram className="w-7 h-7" />
+                    </div>
+                    <div>
+                      <h4 className="text-base sm:text-lg font-black text-slate-100 flex items-center gap-2">
+                        عیب‌یابی اتصال و استخراج محتوا از Apify (اینستاگرام)
+                        <span className="text-[10px] bg-pink-500/20 text-pink-300 px-2.5 py-0.5 rounded-full border border-pink-500/30">
+                          Apify Inspector
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-300">
+                        بررسی وضعیت توکن API، تست اتصال به سرور Apify و شبیه‌سازی استخراج پست نمونه اینستاگرام
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleAbortAllApifyRuns}
+                      disabled={isAbortingRuns}
+                      className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-2 transition active:scale-95 shadow-lg shadow-rose-600/30 cursor-pointer disabled:opacity-50"
+                      title="در صورت بروز خطای 5 concurrent Actor runs، با این دکمه کانتینرهای معلق متوقف می‌شوند"
+                    >
+                      <Trash2 className={`w-4 h-4 ${isAbortingRuns ? 'animate-spin' : ''}`} />
+                      {isAbortingRuns ? 'در حال آزادسازی...' : 'آزادسازی صف کانتینرهای Apify'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRunApifyDiagnostic}
+                      disabled={isCheckingApifyDiag}
+                      className="px-5 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs flex items-center gap-2 transition active:scale-95 shadow-lg shadow-pink-600/30 cursor-pointer disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${isCheckingApifyDiag ? 'animate-spin' : ''}`} />
+                      {isCheckingApifyDiag ? 'در حال بررسی...' : 'بررسی توکن و اتصال Apify'}
+                    </button>
+                  </div>
+                </div>
+
+                {abortResultMsg && (
+                  <div className="p-3 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-xs text-indigo-300 font-bold flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <span>{abortResultMsg}</span>
+                  </div>
+                )}
+
+                {apifyDiagnosticReport && (
+                  <div className={`p-4 rounded-xl border flex items-center justify-between gap-3 ${
+                    apifyDiagnosticReport.apiReachable
+                      ? 'bg-emerald-500/15 text-emerald-200 border-emerald-500/40'
+                      : 'bg-amber-500/15 text-amber-200 border-amber-500/40'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      {apifyDiagnosticReport.apiReachable ? (
+                        <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0" />
+                      ) : (
+                        <AlertTriangle className="w-6 h-6 text-amber-400 shrink-0" />
+                      )}
+                      <div>
+                        <h5 className="text-sm font-bold flex items-center gap-2">
+                          {apifyDiagnosticReport.apiReachable ? 'اتصال به Apify API موفق و توکن معتبر است' : 'هشدار در اتصال به Apify'}
+                          {apifyDiagnosticReport.activeRunsCount !== undefined && (
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
+                              apifyDiagnosticReport.activeRunsCount >= 5 
+                                ? 'bg-rose-500/30 text-rose-300 border border-rose-500/50 animate-pulse'
+                                : 'bg-slate-800 text-slate-300'
+                            }`}>
+                              اجراهای هم‌زمان: {apifyDiagnosticReport.activeRunsCount} از ۵
+                            </span>
+                          )}
+                        </h5>
+                        <p className="text-xs opacity-90 mt-0.5">
+                          {apifyDiagnosticReport.message} {apifyDiagnosticReport.tokenMasked ? `(توکن: ${apifyDiagnosticReport.tokenMasked}, منبع: ${apifyDiagnosticReport.tokenSource})` : ''}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Live Extraction Test Box */}
+                <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
+                  <h5 className="text-xs font-bold text-slate-200 flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Search className="w-4 h-4 text-pink-400" />
+                      تست زنده استخراج لینک نمونه اینستاگرام
+                    </span>
+                    <span className="text-[10px] text-amber-400 font-normal">
+                      نکته: فقط لینک مستقیم پست یا ریلز (/p/ یا /reel/) پشتیبانی می‌شود
+                    </span>
+                  </h5>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      id="testInstagramUrlInput"
+                      name="testInstagramUrl"
+                      value={testInstagramUrl}
+                      onChange={(e) => setTestInstagramUrl(e.target.value)}
+                      placeholder="لینک پست یا ریلز اینستاگرام را وارد کنید..."
+                      className="flex-1 px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-pink-500 dir-ltr font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRunApifyLiveTest}
+                      disabled={isRunningApifyTest || !testInstagramUrl.trim()}
+                      className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-md shadow-indigo-600/20 cursor-pointer disabled:opacity-50 shrink-0"
+                    >
+                      <Sparkles className={`w-4 h-4 ${isRunningApifyTest ? 'animate-spin' : ''}`} />
+                      {isRunningApifyTest ? 'در حال استخراج...' : 'اجرای تست استخراج'}
+                    </button>
+                  </div>
+
+                  {apifyTestRunResult && (
+                    <div className={`p-4 rounded-xl border text-xs space-y-2 ${
+                      apifyTestRunResult.success
+                        ? 'bg-emerald-500/10 text-emerald-200 border-emerald-500/30'
+                        : 'bg-rose-500/10 text-rose-200 border-rose-500/30'
+                    }`}>
+                      <div className="flex items-center justify-between font-bold">
+                        <span className="flex items-center gap-1.5">
+                          {apifyTestRunResult.success ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <AlertTriangle className="w-4 h-4 text-rose-400" />}
+                          {apifyTestRunResult.message}
+                        </span>
+                        {apifyTestRunResult.durationMs && (
+                          <span className="font-mono text-[10px] text-slate-400">زمان اجرا: {apifyTestRunResult.durationMs}ms</span>
+                        )}
+                      </div>
+
+                      {/* Logs trace */}
+                      {apifyTestRunResult.logs && Array.isArray(apifyTestRunResult.logs) && (
+                        <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 font-mono text-[10px] text-slate-300 space-y-1 max-h-36 overflow-y-auto dir-ltr text-left">
+                          {apifyTestRunResult.logs.map((log: string, idx: number) => (
+                            <div key={idx} className={log.includes('ERROR') ? 'text-rose-400 font-bold' : log.includes('SUCCESS') ? 'text-emerald-400 font-bold' : 'text-slate-300'}>
+                              {log}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {apifyTestRunResult.error && (
+                        <div className="p-2 rounded bg-rose-950/40 text-rose-300 font-mono text-[11px]">
+                          خطا: {apifyTestRunResult.error}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
