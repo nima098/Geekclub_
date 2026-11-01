@@ -111,11 +111,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             }}
             title="صفحه اصلی گیک کلاب"
           >
-            <div className="w-8.5 h-8.5 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-[#7c5cff] text-white flex items-center justify-center shadow-lg shadow-[#7c5cff]/30 group-hover:scale-105 transition-transform duration-200 shrink-0">
+            <div className="w-8.5 h-8.5 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-[#0077d9] text-white flex items-center justify-center shadow-lg shadow-[#0077d9]/30 group-hover:scale-105 transition-transform duration-200 shrink-0">
               <Share2 className="w-5 h-5 text-white" />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm sm:text-xl font-black text-slate-100 tracking-tight whitespace-nowrap hover:text-[#7c5cff] transition-colors">
+              <span className="text-sm sm:text-xl font-black text-slate-100 tracking-tight whitespace-nowrap hover:text-[#0077d9] transition-colors">
                 گیک کلاب
               </span>
             </div>
@@ -146,7 +146,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-sky-300 border border-slate-700/60 font-medium text-xs flex items-center gap-1.5 transition cursor-pointer shrink-0"
               title="ثبت انتقادات و پیشنهادات"
             >
-              <MessageSquarePlus className="w-4 h-4 text-[#7c5cff]" />
+              <MessageSquarePlus className="w-4 h-4 text-[#0077d9]" />
               <span className="hidden lg:inline">انتقادات و پیشنهادات</span>
             </button>
           )}
@@ -169,7 +169,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Primary Material Add Content Button */}
           <button
             onClick={onOpenAddModal}
-            className="px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#7c5cff] hover:bg-[#6a4bf0] active:scale-95 text-white font-bold text-xs sm:text-sm flex items-center gap-1 sm:gap-1.5 shadow-lg shadow-[#7c5cff]/30 transition-all cursor-pointer shrink-0"
+            className="px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#0077d9] hover:bg-[#0066bd] active:scale-95 text-white font-bold text-xs sm:text-sm flex items-center gap-1 sm:gap-1.5 shadow-lg shadow-[#0077d9]/30 transition-all cursor-pointer shrink-0"
           >
             <PlusCircle className="w-4 h-4 text-white fill-none" />
             <span className="whitespace-nowrap text-white">اشتراک محتوا</span>

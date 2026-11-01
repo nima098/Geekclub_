@@ -27,8 +27,10 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-2">
-      <div className="relative overflow-hidden rounded-3xl bg-slate-900 border border-slate-800 p-6 sm:p-8 text-right">
-        <div className="absolute -top-32 -right-32 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950/80 to-slate-900 border border-indigo-500/30 p-6 sm:p-8 shadow-2xl shadow-indigo-950/50 text-right">
+        {/* Ambient Glow Elements */}
+        <div className="absolute -top-24 -right-24 w-72 h-72 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-sky-500/15 rounded-full blur-3xl pointer-events-none" />
 
         {/* Close / Dismiss Button */}
         <button
@@ -49,7 +51,7 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
             </div>
 
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight leading-snug">
-              به <span className="text-indigo-300">گیک‌کلاب</span> خوش آمدید!
+              به <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-indigo-300 to-amber-300">گیک‌کلاب</span> خوش آمدید! 👋
             </h1>
 
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
