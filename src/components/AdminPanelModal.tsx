@@ -196,15 +196,72 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     }
   };
 
+  // Automated System Diagnostics & Error Logs State
+  const [fullDiagReport, setFullDiagReport] = useState<any>(null);
+  const [systemLogsList, setSystemLogsList] = useState<any[]>([]);
+  const [logFilterLevel, setLogFilterLevel] = useState<string>('all');
+  const [logSearchTerm, setLogSearchTerm] = useState<string>('');
+  const [isFixingTrash, setIsFixingTrash] = useState(false);
+  const [fixTrashMsg, setFixTrashMsg] = useState<string | null>(null);
+
+  const fetchLogs = async () => {
+    try {
+      const logs = await api.getSystemDiagnosticLogs({ level: logFilterLevel });
+      setSystemLogsList(logs);
+    } catch {}
+  };
+
+  const handleRunFullSystemCheck = async () => {
+    setIsCheckingDiagnostic(true);
+    try {
+      const res = await api.runFullSystemCheck();
+      setFullDiagReport(res.data || res);
+      const dbRes = await api.checkDatabaseDiagnostic();
+      setDiagnosticReport(dbRes);
+      fetchDbStats();
+      fetchLogs();
+    } catch (err: any) {
+      setFullDiagReport({
+        status: 'error',
+        healthScore: 0,
+        errors: [err.message || 'خطا در برقراری ارتباط با سرور']
+      });
+    } finally {
+      setIsCheckingDiagnostic(false);
+    }
+  };
+
+  const handleFixTrashTombstones = async () => {
+    setIsFixingTrash(true);
+    setFixTrashMsg(null);
+    try {
+      const res = await api.fixTrashTombstones();
+      setFixTrashMsg(res.message || 'اصلاح با موفقیت انجام شد.');
+      handleRunFullSystemCheck();
+    } catch (err: any) {
+      setFixTrashMsg('خطا: ' + err.message);
+    } finally {
+      setIsFixingTrash(false);
+    }
+  };
+
+  const handleClearLogs = async () => {
+    await api.clearSystemDiagnosticLogs();
+    setSystemLogsList([]);
+  };
+
   useEffect(() => {
     if (activeTab === 'diagnostic') {
       if (!diagnosticReport) handleRunDiagnostic();
       if (!apifyDiagnosticReport) handleRunApifyDiagnostic();
+      if (!fullDiagReport) handleRunFullSystemCheck();
+      fetchLogs();
     } else if (activeTab === 'database') {
       if (!diagnosticReport) handleRunDiagnostic();
       fetchDbStats();
     }
-  }, [activeTab]);
+  }, [activeTab, logFilterLevel]);
+
 
   // PostgreSQL Migration State
   const [isMigratingPostgres, setIsMigratingPostgres] = useState(false);
@@ -1731,141 +1788,152 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           {/* 3.3. Database & Sync Diagnostic Tab */}
           {activeTab === 'diagnostic' && (
             <div className="space-y-6 max-w-4xl mx-auto">
+              {/* Top Card: Full Automated System Checkup & Health Score */}
               <div className="p-6 rounded-2xl bg-slate-800/90 border border-slate-700/80 shadow-xl space-y-6">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-700 pb-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-400 ring-2 ring-emerald-500/30">
-                      <ShieldAlert className="w-7 h-7" />
+                    <div className="p-3 rounded-2xl bg-indigo-500/20 text-indigo-400 ring-2 ring-indigo-500/30">
+                      <ShieldCheck className="w-7 h-7" />
                     </div>
                     <div>
                       <h4 className="text-base sm:text-lg font-black text-slate-100 flex items-center gap-2">
-                        تست جامع سلامت، ارتباط و همگام‌سازی دیتابیس سرور
-                        <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
-                          Live Diagnostics
+                        موتور هوشمند عیب‌یابی و پایش خودکار سیستم
+                        <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2.5 py-0.5 rounded-full border border-indigo-500/30">
+                          System Diagnostic Engine
                         </span>
                       </h4>
                       <p className="text-xs text-slate-300">
-                        بررسی کامل وضعیت اتصال سرور، تأخیر پاسخ (Ping Latency)، تست عملیات خواندن/نوشتن دیسک و وضعیت همگام‌سازی بین مرورگرها
+                        بررسی خودکار سلامت دیتابیس، آپلود و CDN، ناهمخوانی سطل زباله، و گزارش لاگ‌های خطای زنده
                       </p>
                     </div>
                   </div>
 
                   <button
                     type="button"
-                    onClick={handleRunDiagnostic}
+                    onClick={handleRunFullSystemCheck}
                     disabled={isCheckingDiagnostic}
-                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 transition active:scale-95 shadow-lg shadow-emerald-600/30 cursor-pointer disabled:opacity-50"
+                    className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-2 transition active:scale-95 shadow-lg shadow-indigo-600/30 cursor-pointer disabled:opacity-50"
                   >
                     <RefreshCw className={`w-4 h-4 ${isCheckingDiagnostic ? 'animate-spin' : ''}`} />
-                    {isCheckingDiagnostic ? 'در حال تست ارتباط...' : 'اجرای مجدد تست ارتباط'}
+                    {isCheckingDiagnostic ? 'در حال پایش و چک‌آپ...' : 'اجرای چک‌آپ کامل سیستم'}
                   </button>
                 </div>
 
-                {diagnosticReport ? (
+                {fullDiagReport ? (
                   <div className="space-y-4">
-                    {/* Status Badge */}
-                    <div className={`p-4 rounded-xl border flex items-center justify-between gap-3 ${
-                      diagnosticReport.success
+                    {/* Overall Health Score & Status Badge */}
+                    <div className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+                      fullDiagReport.status === 'ok'
                         ? 'bg-emerald-500/15 text-emerald-200 border-emerald-500/40'
+                        : fullDiagReport.status === 'warn'
+                        ? 'bg-amber-500/15 text-amber-200 border-amber-500/40'
                         : 'bg-rose-500/15 text-rose-200 border-rose-500/40'
                     }`}>
                       <div className="flex items-center gap-3">
-                        {diagnosticReport.success ? (
-                          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0">
-                            <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-                          </div>
-                        ) : (
-                          <div className="w-10 h-10 rounded-xl bg-rose-500/20 flex items-center justify-center shrink-0">
-                            <AlertTriangle className="w-6 h-6 text-rose-400" />
-                          </div>
-                        )}
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 font-mono font-black text-lg ${
+                          fullDiagReport.healthScore >= 90
+                            ? 'bg-emerald-500/20 text-emerald-400'
+                            : fullDiagReport.healthScore >= 70
+                            ? 'bg-amber-500/20 text-amber-400'
+                            : 'bg-rose-500/20 text-rose-400'
+                        }`}>
+                          {fullDiagReport.healthScore ?? 100}%
+                        </div>
                         <div>
-                          <h5 className="text-sm font-bold">
-                            {diagnosticReport.success ? 'ارتباط با دیتابیس کاملاً برقرار و پایدار است' : 'خطا در ارتباط با پایگاه داده'}
+                          <h5 className="text-sm font-bold flex items-center gap-2">
+                            {fullDiagReport.status === 'ok'
+                              ? 'سیستم کاملاً سالم، پایدار و بدون خطاست'
+                              : fullDiagReport.status === 'warn'
+                              ? 'سیستم فعال است (نیاز به توجه جزئی دارد)'
+                              : 'هشدار خطای بحرانی در سیستم'}
                           </h5>
                           <p className="text-xs opacity-90 mt-0.5">
-                            {diagnosticReport.message || diagnosticReport.error}
+                            تست‌ها در زمان {fullDiagReport.latencyMs ?? 0} میلی‌ثانیه با موفقیت اجرا شدند.
                           </p>
                         </div>
                       </div>
 
-                      {diagnosticReport.latencyMs !== undefined && (
-                        <div className="text-left shrink-0 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-slate-700 font-mono text-xs">
-                          <span className="text-slate-400 block text-[10px]">تأخیر (Ping):</span>
-                          <span className="text-emerald-400 font-bold">{diagnosticReport.latencyMs} ms</span>
+                      {fullDiagReport.system && (
+                        <div className="flex items-center gap-2 font-mono text-[11px] dir-ltr text-slate-300 bg-slate-900/60 p-2 rounded-lg border border-slate-800">
+                          <span>Node: {fullDiagReport.system.nodeVersion}</span>
+                          <span>|</span>
+                          <span>Uptime: {fullDiagReport.system.uptimeSeconds}s</span>
+                          <span>|</span>
+                          <span>RAM: {fullDiagReport.system.memoryMb?.heapUsed}MB</span>
                         </div>
                       )}
                     </div>
 
-                    {/* Metric Cards Grid */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-center space-y-1">
-                        <span className="text-[11px] text-slate-400 block">پست‌های فعال فید</span>
-                        <span className="text-2xl font-mono font-black text-indigo-400">
-                          {diagnosticReport.metrics?.activeContents ?? contents.length}
-                        </span>
-                      </div>
-                      <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-center space-y-1">
-                        <span className="text-[11px] text-slate-400 block">پست‌های سطل زباله</span>
-                        <span className="text-2xl font-mono font-black text-rose-400">
-                          {diagnosticReport.metrics?.trashContents ?? trashCount}
-                        </span>
-                      </div>
-                      <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-center space-y-1">
-                        <span className="text-[11px] text-slate-400 block">پروفایل‌های کاربران</span>
-                        <span className="text-2xl font-mono font-black text-emerald-400">
-                          {diagnosticReport.metrics?.profilesCount ?? usersList.length}
-                        </span>
-                      </div>
-                      <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-center space-y-1">
-                        <span className="text-[11px] text-slate-400 block">حجم فایل دیسک</span>
-                        <span className="text-2xl font-mono font-black text-cyan-400">
-                          {diagnosticReport.fileSizeKb ? `${diagnosticReport.fileSizeKb} KB` : '42 KB'}
-                        </span>
-                      </div>
-                    </div>
+                    {/* Recommendations Box if any */}
+                    {fullDiagReport.recommendations && fullDiagReport.recommendations.length > 0 && (
+                      <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 space-y-2 text-xs">
+                        <h6 className="font-bold flex items-center gap-2 text-amber-300">
+                          <AlertTriangle className="w-4 h-4 text-amber-400" />
+                          پیشنهادات هوشمند جهت رفع باگ‌ها و بهینه‌سازی:
+                        </h6>
+                        <ul className="list-disc list-inside space-y-1 text-[11px] opacity-95">
+                          {fullDiagReport.recommendations.map((rec: string, idx: number) => (
+                            <li key={idx}>{rec}</li>
+                          ))}
+                        </ul>
 
-                    {/* Detailed Tests Breakdown */}
-                    <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
-                      <h5 className="text-xs font-bold text-slate-200 flex items-center gap-2 border-b border-slate-800 pb-2">
-                        <Database className="w-4 h-4 text-cyan-400" />
-                        گزارش تست‌های ساختاری و پروتکل‌های همگام‌سازی
-                      </h5>
+                        {fullDiagReport.checks?.some((c: any) => c.inconsistentItemsCount > 0) && (
+                          <div className="pt-2">
+                            <button
+                              type="button"
+                              onClick={handleFixTrashTombstones}
+                              disabled={isFixingTrash}
+                              className="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                            >
+                              <RotateCcw className={`w-3.5 h-3.5 ${isFixingTrash ? 'animate-spin' : ''}`} />
+                              {isFixingTrash ? 'در حال اصلاح سطل زباله...' : 'اصلاح خودکار ناهمخوانی سطل زباله'}
+                            </button>
+                            {fixTrashMsg && <p className="text-[11px] text-emerald-400 mt-1 font-bold">{fixTrashMsg}</p>}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                        <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-750 flex items-center justify-between">
-                          <span className="text-slate-300">تست خواندن دیتابیس (Read Check)</span>
-                          <span className="text-emerald-400 font-bold flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> موفق
-                          </span>
-                        </div>
-                        <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-750 flex items-center justify-between">
-                          <span className="text-slate-300">تست نوشتن اتمیک روی دیسک (Write Check)</span>
-                          <span className="text-emerald-400 font-bold flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> موفق و ایمن
-                          </span>
-                        </div>
-                        <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-750 flex items-center justify-between">
-                          <span className="text-slate-300">همگام‌سازی زنده چند مرورگر (Live Multi-Tab)</span>
-                          <span className="text-emerald-400 font-bold flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> فعال (هر ۴ ثانیه)
-                          </span>
-                        </div>
-                        <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-750 flex items-center justify-between">
-                          <span className="text-slate-300">زمان آپتایم سرور نود (Server Uptime)</span>
-                          <span className="text-cyan-400 font-mono font-bold">
-                            {diagnosticReport.serverUptimeSeconds ? `${diagnosticReport.serverUptimeSeconds} ثانیه` : 'آنلاین'}
-                          </span>
+                    {/* Structural Check Breakdown Grid */}
+                    {fullDiagReport.checks && Array.isArray(fullDiagReport.checks) && (
+                      <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
+                        <h5 className="text-xs font-bold text-slate-200 flex items-center gap-2 border-b border-slate-800 pb-2">
+                          <Database className="w-4 h-4 text-indigo-400" />
+                          نتایج چک‌آپ ماژول‌های حیاتی وبسایت
+                        </h5>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                          {fullDiagReport.checks.map((check: any, idx: number) => (
+                            <div key={idx} className="p-3 rounded-xl bg-slate-800/60 border border-slate-750 space-y-1">
+                              <div className="flex items-center justify-between font-bold">
+                                <span className="text-slate-200">{check.name}</span>
+                                <span className={`flex items-center gap-1 text-[11px] ${
+                                  check.status === 'pass'
+                                    ? 'text-emerald-400'
+                                    : check.status === 'warn'
+                                    ? 'text-amber-400'
+                                    : check.status === 'info'
+                                    ? 'text-cyan-400'
+                                    : 'text-rose-400'
+                                }`}>
+                                  {check.status === 'pass' && <CheckCircle2 className="w-3.5 h-3.5" />}
+                                  {check.status === 'warn' && <AlertTriangle className="w-3.5 h-3.5" />}
+                                  {check.status === 'pass' ? 'موفق' : check.status === 'warn' ? 'هشدار' : check.status === 'info' ? 'اطلاعیه' : 'خطا'}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-400 leading-relaxed">{check.details}</p>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    </div>
+                    )}
 
-                    {/* Quick Action: Force Refresh across all tabs */}
+                    {/* Action Bar */}
                     <div className="p-4 rounded-xl bg-indigo-600/10 border border-indigo-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
                       <div>
-                        <h6 className="text-xs font-bold text-indigo-300">تازه‌سازی اجباری و همگام‌سازی فید در تمامی تب‌ها</h6>
+                        <h6 className="text-xs font-bold text-indigo-300">همگام‌سازی فوری و بازنشانی کش مرورگر</h6>
                         <p className="text-[11px] text-slate-300 mt-0.5">
-                          اگر حس می‌کنید تغییرات در مرورگر دوم دیر اعمال می‌شود، با این دکمه می‌توانید کش حافظه را پاک کرده و آخرین داده‌های سرور را فوراً بارگذاری کنید.
+                          تخلیه کش localStorage و دریافت آخرین وضعیت فید و سطل زباله از سرور
                         </p>
                       </div>
 
@@ -1876,20 +1944,188 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                           if (Array.isArray(latest)) {
                             onUpdateContents?.(latest);
                           }
+                          handleRunFullSystemCheck();
                         }}
                         className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-600/30 transition cursor-pointer shrink-0 active:scale-95"
                       >
-                        همگام‌سازی فوری و رفرش فید
+                        همگام‌سازی و بروزرسانی فید
                       </button>
                     </div>
                   </div>
                 ) : (
                   <div className="text-center py-12 text-slate-400 space-y-3">
                     <RefreshCw className="w-8 h-8 animate-spin mx-auto text-indigo-400" />
-                    <p className="text-xs">در حال برقراری ارتباط با سرور و اجرای تست‌های سلامت دیتابیس...</p>
+                    <p className="text-xs">در حال پایش خودکار دیتابیس، فایل‌ها و خطاهای سیستم...</p>
                   </div>
                 )}
               </div>
+
+              {/* Automated Error Logs Viewer Card */}
+              <div className="p-6 rounded-2xl bg-slate-800/90 border border-slate-700/80 shadow-xl space-y-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-700 pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-rose-500/20 text-rose-400">
+                      <Inbox className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
+                        گزارش لاگ‌های زنده خطا و استثناها (System Error Logs)
+                        <span className="text-[10px] bg-rose-500/20 text-rose-300 px-2.5 py-0.5 rounded-full border border-rose-500/30">
+                          {systemLogsList.length} لاگ ثبت‌شده
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-300">
+                        مشاهده خطاهای ثبت شده از فرانت‌اند مرورگر، APIهای سرور و فرایندهای پس‌زمینه
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const blob = new Blob([JSON.stringify(systemLogsList, null, 2)], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `system_diagnostic_logs_${Date.now()}.json`;
+                        a.click();
+                      }}
+                      disabled={systemLogsList.length === 0}
+                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-750 text-slate-200 border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                    >
+                      <Download className="w-3.5 h-3.5 text-cyan-400" />
+                      دانلود گزارش JSON
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleClearLogs}
+                      disabled={systemLogsList.length === 0}
+                      className="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      پاکسازی لاگ‌ها
+                    </button>
+                  </div>
+                </div>
+
+                {/* Filter and Search controls */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={() => setLogFilterLevel('all')}
+                      className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
+                        logFilterLevel === 'all' ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      همه ({systemLogsList.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLogFilterLevel('error')}
+                      className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
+                        logFilterLevel === 'error' ? 'bg-rose-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      خطاها
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLogFilterLevel('warn')}
+                      className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
+                        logFilterLevel === 'warn' ? 'bg-amber-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      هشدارها
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLogFilterLevel('info')}
+                      className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
+                        logFilterLevel === 'info' ? 'bg-cyan-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      اطلاعیه‌ها
+                    </button>
+                  </div>
+
+                  <div className="relative w-full sm:w-64">
+                    <Search className="w-3.5 h-3.5 absolute right-3 top-2.5 text-slate-500" />
+                    <input
+                      type="text"
+                      placeholder="جستجو در متن لاگ..."
+                      value={logSearchTerm}
+                      onChange={(e) => setLogSearchTerm(e.target.value)}
+                      className="w-full pr-8 pl-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Logs List Container */}
+                <div className="max-h-72 overflow-y-auto space-y-2 p-1 font-mono text-[11px]">
+                  {systemLogsList
+                    .filter((log) => {
+                      if (!logSearchTerm) return true;
+                      const term = logSearchTerm.toLowerCase();
+                      return (
+                        log.message?.toLowerCase().includes(term) ||
+                        log.category?.toLowerCase().includes(term) ||
+                        JSON.stringify(log.details || {}).toLowerCase().includes(term)
+                      );
+                    })
+                    .length === 0 ? (
+                    <div className="text-center py-8 text-slate-500 font-sans text-xs">
+                      هیچ خطایی ثبت نشده است یا لاگی تطابق ندارد.
+                    </div>
+                  ) : (
+                    systemLogsList
+                      .filter((log) => {
+                        if (!logSearchTerm) return true;
+                        const term = logSearchTerm.toLowerCase();
+                        return (
+                          log.message?.toLowerCase().includes(term) ||
+                          log.category?.toLowerCase().includes(term) ||
+                          JSON.stringify(log.details || {}).toLowerCase().includes(term)
+                        );
+                      })
+                      .map((log) => (
+                        <div
+                          key={log.id}
+                          className={`p-3 rounded-xl border space-y-1 ${
+                            log.level === 'error'
+                              ? 'bg-rose-950/20 border-rose-500/30 text-rose-200'
+                              : log.level === 'warn'
+                              ? 'bg-amber-950/20 border-amber-500/30 text-amber-200'
+                              : 'bg-slate-900 border-slate-800 text-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between font-bold dir-ltr text-left">
+                            <span className="flex items-center gap-2">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-sans ${
+                                log.level === 'error' ? 'bg-rose-500/30 text-rose-300' : log.level === 'warn' ? 'bg-amber-500/30 text-amber-300' : 'bg-slate-800 text-slate-400'
+                              }`}>
+                                [{log.category || 'system'}] {log.level.toUpperCase()}
+                              </span>
+                              <span className="truncate max-w-md font-sans">{log.message}</span>
+                            </span>
+                            <span className="text-[10px] opacity-60 text-slate-400">
+                              {new Date(log.timestamp).toLocaleTimeString('fa-IR')}
+                            </span>
+                          </div>
+
+                          {log.details && (
+                            <div className="dir-ltr text-left text-[10px] bg-slate-950 p-2 rounded-lg border border-slate-800/80 overflow-x-auto text-slate-400">
+                              {typeof log.details === 'string' ? log.details : JSON.stringify(log.details)}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                  )}
+                </div>
+              </div>
+
 
               {/* Apify Instagram Extraction Diagnostic Card */}
               <div className="p-6 rounded-2xl bg-slate-800/90 border border-slate-700/80 shadow-xl space-y-6">

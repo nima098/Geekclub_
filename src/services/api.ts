@@ -675,6 +675,80 @@ export const api = {
     } catch (err: any) {
       return { success: false, message: err.message };
     }
+  },
+
+  // 25. Run full automated system checkup
+  async runFullSystemCheck(): Promise<any> {
+    try {
+      const res = await fetch(`/api/diagnostics/run?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: await getReadHeaders()
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+      return { success: false, message: `HTTP status ${res.status}` };
+    } catch (err: any) {
+      return { success: false, message: err.message || 'خطا در برقراری ارتباط با سرور' };
+    }
+  },
+
+  // 26. Fetch system diagnostic error logs
+  async getSystemDiagnosticLogs(filters?: { level?: string; limit?: number }): Promise<any[]> {
+    try {
+      const params = new URLSearchParams();
+      if (filters?.level) params.append('level', filters.level);
+      if (filters?.limit) params.append('limit', filters.limit.toString());
+      const res = await fetch(`/api/diagnostics/logs?${params.toString()}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json.data)) return json.data;
+      }
+    } catch {}
+    return [];
+  },
+
+  // 27. Post automated diagnostic error/warning log
+  async reportDiagnosticLog(logData: {
+    level: 'error' | 'warn' | 'info';
+    category?: string;
+    message: string;
+    details?: any;
+  }): Promise<boolean> {
+    try {
+      const res = await fetch('/api/diagnostics/logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(logData)
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
+  // 28. Clear system error logs
+  async clearSystemDiagnosticLogs(): Promise<boolean> {
+    try {
+      const res = await fetch('/api/diagnostics/logs', { method: 'DELETE' });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
+  // 29. Auto repair soft-deleted trash items tombstones
+  async fixTrashTombstones(): Promise<{ success: boolean; message?: string; fixedCount?: number }> {
+    try {
+      const res = await fetch('/api/diagnostics/fix-tombstones', {
+        method: 'POST',
+        headers: await getAdminHeaders()
+      });
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, message: err.message || 'خطا در اصلاح سطل زباله' };
+    }
   }
 };
+
 

@@ -176,14 +176,12 @@ export default function App() {
       const serverDelIds: string[] = typeof window !== 'undefined' && Array.isArray((window as any).__DELETED_IDS__)
         ? (window as any).__DELETED_IDS__
         : [];
+      const serverDelSet = new Set(serverDelIds.map((s) => String(s)));
 
-      const localDeletedIds: string[] = (function() {
-        try {
-          const raw = localStorage.getItem('mediahub_deleted_ids_v1');
-          return raw ? JSON.parse(raw) : [];
-        } catch { return []; }
-      })();
-      const localDelSet = new Set([...serverDelIds, ...localDeletedIds]);
+      // Clean stale tombstone IDs from local storage so previous soft-deletes don't block restored items
+      try {
+        localStorage.removeItem('mediahub_deleted_ids_v1');
+      } catch {}
 
       // 1. Prefer real server contents cached from previous visits
       let itemsToProcess: ContentItem[] = [];
@@ -209,7 +207,7 @@ export default function App() {
         if (item.isDeleted) return true;
         const strId = String(item.id);
         const clean = strId.replace(/^(post|content)-/, '');
-        return !localDelSet.has(strId) && !localDelSet.has(clean) && !localDelSet.has(`post-${clean}`) && !localDelSet.has(`content-${clean}`);
+        return !serverDelSet.has(strId) && !serverDelSet.has(clean) && !serverDelSet.has(`post-${clean}`) && !serverDelSet.has(`content-${clean}`);
       });
 
       // Verified CDN covers on upc.geekclub.ir

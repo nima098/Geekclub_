@@ -2957,6 +2957,261 @@ app.post('/api/database/backup-now', requireAdminAuth, (req: Request, res: Respo
   });
 });
 
+// --- System Diagnostics & Error Logging Engine ---
+interface SystemLogEntry {
+  id: string;
+  timestamp: string;
+  level: 'error' | 'warn' | 'info';
+  category: 'api' | 'database' | 'cdn' | 'client' | 'trash' | 'apify' | 'auth';
+  message: string;
+  details?: any;
+  userAgent?: string;
+  ip?: string;
+}
+
+const LOGS_FILE_PATH = IS_VERCEL
+  ? path.resolve('/tmp', 'system_logs.json')
+  : path.resolve(__dirname, 'data', 'system_logs.json');
+
+function loadSystemLogs(): SystemLogEntry[] {
+  try {
+    if (fs.existsSync(LOGS_FILE_PATH)) {
+      const raw = fs.readFileSync(LOGS_FILE_PATH, 'utf-8');
+      return JSON.parse(raw);
+    }
+  } catch {}
+  return [];
+}
+
+function saveSystemLogs(logs: SystemLogEntry[]) {
+  try {
+    const trimmed = logs.slice(0, 1000);
+    const dataDir = path.dirname(LOGS_FILE_PATH);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    fs.writeFileSync(LOGS_FILE_PATH, JSON.stringify(trimmed, null, 2), 'utf-8');
+  } catch (err: any) {
+    console.warn('[SystemLogs Warning] Failed to save system logs:', err.message);
+  }
+}
+
+function addSystemLog(log: Omit<SystemLogEntry, 'id' | 'timestamp'>): SystemLogEntry {
+  const logs = loadSystemLogs();
+  const entry: SystemLogEntry = {
+    id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    timestamp: new Date().toISOString(),
+    ...log
+  };
+  logs.unshift(entry);
+  saveSystemLogs(logs);
+  return entry;
+}
+
+// 8.15. GET /api/diagnostics/run - Full Automated System Checkup & Diagnostics
+app.get('/api/diagnostics/run', async (req: Request, res: Response) => {
+  const startTime = Date.now();
+  const report: any = {
+    timestamp: new Date().toISOString(),
+    status: 'ok',
+    healthScore: 100,
+    checks: [],
+    recommendations: [],
+    system: {
+      nodeVersion: process.version,
+      platform: process.platform,
+      isVercel: IS_VERCEL,
+      uptimeSeconds: Math.round(process.uptime()),
+      memoryMb: {
+        rss: Math.round(process.memoryUsage().rss / 1024 / 1024),
+        heapTotal: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+        heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024)
+      }
+    }
+  };
+
+  const warnings: string[] = [];
+  const errors: string[] = [];
+
+  // 1. Database & Persistence Diagnostics
+  try {
+    const db = loadDatabase();
+    const contents = db.contents || [];
+    const activeContents = contents.filter((c: any) => !c.isDeleted);
+    const softDeletedContents = contents.filter((c: any) => c.isDeleted);
+    const deletedIds = db.deletedIds || [];
+
+    // Check soft-delete vs permanent tombstone consistency
+    const inconsistentSoftDeleted = softDeletedContents.filter((c: any) => deletedIds.includes(c.id));
+    const hasTombstoneIssue = inconsistentSoftDeleted.length > 0;
+
+    report.checks.push({
+      name: 'پایگاه داده و کلیدهای محتوا (Database & Storage)',
+      status: hasTombstoneIssue ? 'warn' : 'pass',
+      details: `تعداد کل محتواها: ${contents.length} | فعال: ${activeContents.length} | در سطل زباله: ${softDeletedContents.length} | تامب‌استون دائمی: ${deletedIds.length}`,
+      inconsistentItemsCount: inconsistentSoftDeleted.length
+    });
+
+    if (hasTombstoneIssue) {
+      warnings.push(`تعداد ${inconsistentSoftDeleted.length} پست در سطل زباله به اشتباه در لیست تامب‌استون‌های حذف دائمی ثبت شده بودند.`);
+      report.recommendations.push('اجرای اصلاح خودکار تامب‌استون‌ها در تب عیب‌یابی پنل مدیریت.');
+      report.healthScore -= 10;
+    }
+
+    // PostgreSQL connection test
+    const pgConnected = isPostgresConnected();
+    report.checks.push({
+      name: 'پایگاه داده PostgreSQL (اختیاری)',
+      status: pgConnected ? 'pass' : 'info',
+      details: pgConnected ? 'اتصال برقرار است.' : 'دیتابیس در حالت ذخیره‌سازی محلی JSON کار می‌کند.'
+    });
+  } catch (err: any) {
+    errors.push(`خطا در بررسی پایگاه داده: ${err.message}`);
+    report.checks.push({
+      name: 'پایگاه داده',
+      status: 'error',
+      details: err.message
+    });
+    report.healthScore -= 30;
+  }
+
+  // 2. CDN & Local Upload Directory Health
+  try {
+    const isUploadsWritable = fs.existsSync(UPLOADS_DIR);
+    let sharpAvailable = false;
+    try {
+      sharpAvailable = Boolean(sharp);
+    } catch {}
+
+    const db = loadDatabase();
+    const cdnImagesCount = (db.contents || []).filter((c: any) => c.thumbnail && c.thumbnail.includes('upc.geekclub.ir')).length;
+    const nonCdnImagesCount = (db.contents || []).filter((c: any) => c.thumbnail && !c.thumbnail.includes('upc.geekclub.ir')).length;
+
+    report.checks.push({
+      name: 'ذخیره‌سازی تصاویر و موتور فشرده‌سازی CDN (Sharp)',
+      status: isUploadsWritable && sharpAvailable ? 'pass' : 'warn',
+      details: `پوشه آپلود محلی: ${isUploadsWritable ? 'موجود' : 'ناموجود'} | کتابخانه فشرده‌سازی Sharp: ${sharpAvailable ? 'فعال' : 'غیرفعال'} | تصاویر روی CDN اختصاصی: ${cdnImagesCount} | تصاویر نیازمند انتقال: ${nonCdnImagesCount}`
+    });
+
+    if (nonCdnImagesCount > 0) {
+      report.recommendations.push(`تعداد ${nonCdnImagesCount} تصویر هنوز به CDN منتقل نشده‌اند. از ابزار انتقال خودکار عکس‌ها استفاده کنید.`);
+    }
+  } catch (err: any) {
+    errors.push(`خطا در بررسی CDN و آپلود: ${err.message}`);
+    report.checks.push({
+      name: 'ذخیره‌سازی تصاویر CDN',
+      status: 'error',
+      details: err.message
+    });
+    report.healthScore -= 20;
+  }
+
+  // 3. System Logs Assessment
+  try {
+    const logs = loadSystemLogs();
+    const errorLogs = logs.filter((l) => l.level === 'error');
+    const recentErrors = errorLogs.filter((l) => Date.now() - new Date(l.timestamp).getTime() < 24 * 60 * 60 * 1000);
+
+    report.checks.push({
+      name: 'بررسی لاگ‌های خطای ۲۴ ساعت گذشته',
+      status: recentErrors.length === 0 ? 'pass' : recentErrors.length < 5 ? 'warn' : 'error',
+      details: `تعداد کل لاگ‌ها: ${logs.length} | خطاهای اخیر: ${recentErrors.length}`
+    });
+
+    if (recentErrors.length > 0) {
+      report.recommendations.push(`تعداد ${recentErrors.length} خطا در ۲۴ ساعت گذشته ثبت شده است. جدول لاگ‌ها را بررسی نمایید.`);
+      report.healthScore -= Math.min(recentErrors.length * 5, 25);
+    }
+  } catch (err: any) {
+    report.checks.push({
+      name: 'بررسی لاگ‌های خطا',
+      status: 'info',
+      details: err.message
+    });
+  }
+
+  report.latencyMs = Date.now() - startTime;
+  report.healthScore = Math.max(0, report.healthScore);
+  report.status = errors.length > 0 ? 'error' : warnings.length > 0 ? 'warn' : 'ok';
+  report.warnings = warnings;
+  report.errors = errors;
+
+  res.json({ success: true, data: report });
+});
+
+// 8.16. GET /api/diagnostics/logs - Fetch system & client error logs
+app.get('/api/diagnostics/logs', (req: Request, res: Response) => {
+  const level = req.query.level as string;
+  const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 100;
+  let logs = loadSystemLogs();
+
+  if (level && level !== 'all') {
+    logs = logs.filter((l) => l.level === level);
+  }
+
+  res.json({
+    success: true,
+    count: logs.length,
+    data: logs.slice(0, limit)
+  });
+});
+
+// 8.17. POST /api/diagnostics/logs - Push automated system / client diagnostic error
+app.post('/api/diagnostics/logs', (req: Request, res: Response) => {
+  const { level = 'info', category = 'client', message, details } = req.body || {};
+  if (!message) {
+    return res.status(400).json({ success: false, error: 'Message field is required' });
+  }
+
+  const newLog = addSystemLog({
+    level: ['error', 'warn', 'info'].includes(level) ? level : 'info',
+    category: category || 'client',
+    message: String(message).substring(0, 500),
+    details: details || null,
+    userAgent: req.headers['user-agent'],
+    ip: req.ip || (req.headers['x-forwarded-for'] as string)
+  });
+
+  res.json({ success: true, data: newLog });
+});
+
+// 8.18. DELETE /api/diagnostics/logs - Clear system error logs
+app.delete('/api/diagnostics/logs', (req: Request, res: Response) => {
+  saveSystemLogs([]);
+  res.json({ success: true, message: 'تمام لاگ‌های سیستم با موفقیت پاکسازی شدند.' });
+});
+
+// 8.19. POST /api/diagnostics/fix-tombstones - Auto repair soft-deleted items tombstone mismatch
+app.post('/api/diagnostics/fix-tombstones', requireAdminAuth, (req: Request, res: Response) => {
+  const db = loadDatabase();
+  const contents = db.contents || [];
+  const softDeletedIds = contents.filter((c: any) => c.isDeleted).map((c: any) => c.id);
+  const originalDeletedIdsCount = (db.deletedIds || []).length;
+
+  if (db.deletedIds && Array.isArray(db.deletedIds)) {
+    db.deletedIds = db.deletedIds.filter((id: string) => !softDeletedIds.includes(id));
+  } else {
+    db.deletedIds = [];
+  }
+
+  const fixedCount = originalDeletedIdsCount - db.deletedIds.length;
+  saveDatabase(db);
+
+  addSystemLog({
+    level: 'info',
+    category: 'trash',
+    message: `اصلاح تامب‌استون‌های سطل زباله انجام شد. ${fixedCount} آیدی از لیست حذف تامب‌استون‌ها پاک گردید.`,
+    details: { fixedCount }
+  });
+
+  res.json({
+    success: true,
+    message: `اصلاح با موفقیت انجام شد. تعداد ${fixedCount} مورد ناهمخوانی سطل زباله برطرف گردید.`,
+    fixedCount
+  });
+});
+
+
 // 9. GET /api/rss - Public RSS Feed generator
 app.get('/api/rss', (req: Request, res: Response) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
