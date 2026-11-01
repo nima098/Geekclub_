@@ -660,12 +660,19 @@ async function downloadAndCacheImage(
     }
 
     const cleanUrl = validation.parsedUrl.toString();
+    let refererUrl = cleanUrl;
+    try {
+      refererUrl = `${validation.parsedUrl.protocol}//${validation.parsedUrl.hostname}/`;
+    } catch {}
+
     const response = await safeAxiosGet(cleanUrl, {
       responseType: 'arraybuffer',
-      timeout: 10000,
-      maxContentLength: 10 * 1024 * 1024,
+      timeout: 12000,
+      maxContentLength: 15 * 1024 * 1024,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': refererUrl,
+        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
       }
     });
 
@@ -1424,12 +1431,38 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
 
     const imgMatches = [
       html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i),
-      html.match(/<meta\s+content=["']([^"']+)["']\s+property=["']og:image["']/i)
+      html.match(/<meta\s+content=["']([^"']+)["']\s+property=["']og:image["']/i),
+      html.match(/<meta\s+property=["']og:image:secure_url["']\s+content=["']([^"']+)["']/i),
+      html.match(/<meta\s+name=["']twitter:image["']\s+content=["']([^"']+)["']/i),
+      html.match(/<meta\s+name=["']twitter:image:src["']\s+content=["']([^"']+)["']/i),
+      html.match(/<meta\s+content=["']([^"']+)["']\s+name=["']twitter:image["']/i),
+      html.match(/<link\s+rel=["']image_src["']\s+href=["']([^"']+)["']/i),
+      html.match(/"image"\s*:\s*["']([^"']+)["']/i),
+      html.match(/"thumbnailUrl"\s*:\s*["']([^"']+)["']/i),
+      html.match(/<img[^>]+class=["'][^"']*(?:wp-post-image|attachment-post-thumbnail|featured-image|entry-thumb|post-cover)[^"']*["'][^>]+src=["']([^"']+)["']/i),
+      html.match(/<img[^>]+src=["']([^"']+)["'][^>]+class=["'][^"']*(?:wp-post-image|attachment-post-thumbnail|featured-image|entry-thumb|post-cover)[^"']*["']/i),
+      html.match(/<img[^>]+data-src=["']([^"']+)["']/i),
+      html.match(/<img[^>]+src=["']([^"']+)["']/i)
     ];
+
     for (const im of imgMatches) {
       if (im && im[1] && im[1].trim()) {
-        image = im[1].trim();
-        break;
+        let rawImg = im[1].trim().replace(/&amp;/g, '&');
+        if (rawImg.startsWith('//')) {
+          rawImg = 'https:' + rawImg;
+        } else if (rawImg.startsWith('/')) {
+          try {
+            rawImg = new URL(rawImg, cleanUrl).toString();
+          } catch {}
+        } else if (!rawImg.startsWith('http')) {
+          try {
+            rawImg = new URL(rawImg, cleanUrl).toString();
+          } catch {}
+        }
+        if (rawImg.startsWith('http')) {
+          image = rawImg;
+          break;
+        }
       }
     }
 
@@ -1450,7 +1483,12 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
       try {
         domain = new URL(cleanUrl).hostname.replace(/^www\./, '').split('.')[0];
       } catch {}
-      finalThumbnail = await downloadAndCacheImage(image, `cover_art_${Date.now()}`, 'article', domain);
+      try {
+        finalThumbnail = await downloadAndCacheImage(image, `cover_art_${Date.now()}`, 'article', domain);
+      } catch (err: any) {
+        console.warn('Failed to cache image locally, using direct extracted image URL:', err.message);
+        finalThumbnail = image;
+      }
     }
 
     return {

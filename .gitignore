@@ -8,6 +8,8 @@ coverage/
 !.env.example
 
 # Runtime data / generated files - do not publish
+data/database.json
+data/*.json
 data/backups/
 data/*.tmp_*
 .aistudio/
