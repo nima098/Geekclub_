@@ -251,6 +251,14 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   };
 
   useEffect(() => {
+    if (isOpen) {
+      api.getContents({ includeDeleted: true }).then((latest) => {
+        if (Array.isArray(latest) && onUpdateContents) {
+          onUpdateContents(latest);
+        }
+      }).catch(() => {});
+    }
+
     if (activeTab === 'diagnostic') {
       if (!diagnosticReport) handleRunDiagnostic();
       if (!apifyDiagnosticReport) handleRunApifyDiagnostic();
@@ -260,7 +268,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       if (!diagnosticReport) handleRunDiagnostic();
       fetchDbStats();
     }
-  }, [activeTab, logFilterLevel]);
+  }, [isOpen, activeTab, logFilterLevel]);
+
 
 
   // PostgreSQL Migration State
