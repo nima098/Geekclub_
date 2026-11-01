@@ -206,18 +206,27 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   </div>
                 ) : (
                   <div
-                    className="relative w-full h-full cursor-pointer"
+                    className="relative w-full h-full cursor-pointer overflow-hidden flex items-center justify-center bg-slate-950"
                     onClick={() => onOpenArticleReader(item)}
                   >
+                    {/* لایه پس‌زمینه محو */}
+                    <img
+                      src={activeSlide.thumbnail || item.thumbnail}
+                      alt=""
+                      aria-hidden="true"
+                      className="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-60 pointer-events-none"
+                    />
+                    {/* روکش تیره ملایم */}
+                    <div className="absolute inset-0 bg-black/30 pointer-events-none" />
+                    {/* تصویر اصلی بدون برش */}
                     <img
                       src={activeSlide.thumbnail || item.thumbnail}
                       alt={item.title}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover/ig:scale-105 opacity-90 group-hover/ig:opacity-100"
+                      className="relative z-10 max-h-full max-w-full object-contain transition-transform duration-500 group-hover/ig:scale-105 opacity-95 group-hover/ig:opacity-100 drop-shadow-md"
                       loading="lazy"
                       onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-black/30" />
-                    <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="absolute inset-0 flex items-center justify-center z-20">
                       <div style={{ backgroundColor: "oklch(0.592 0.249 0.584)" }} className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl text-white flex items-center justify-center shadow-xl shadow-[oklch(0.592_0.249_0.584)]/40 group-hover/ig:scale-110 transition-all duration-300 backdrop-blur-sm">
                         <Play className="w-6 h-6 fill-white ml-0.5" />
                       </div>
@@ -226,17 +235,26 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 )
               ) : (
                 <div 
-                  className="relative w-full h-full cursor-pointer"
+                  className="relative w-full h-full cursor-pointer overflow-hidden flex items-center justify-center bg-slate-950"
                   onClick={() => onOpenArticleReader(item)}
                 >
+                  {/* لایه پس‌زمینه محو */}
+                  <img
+                    src={activeSlide.url}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-60 pointer-events-none"
+                  />
+                  {/* روکش تیره ملایم */}
+                  <div className="absolute inset-0 bg-black/30 pointer-events-none" />
+                  {/* تصویر اصلی بدون برش */}
                   <img
                     src={activeSlide.url}
                     alt={`${item.title} - اسلاید ${activeSlideIndex + 1}`}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover/ig:scale-105"
+                    className="relative z-10 max-h-full max-w-full object-contain transition-transform duration-500 group-hover/ig:scale-105 opacity-95 group-hover/ig:opacity-100 drop-shadow-md"
                     loading="lazy"
                     onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-black/30 pointer-events-none" />
                 </div>
               )}
 
