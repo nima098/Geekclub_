@@ -150,7 +150,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   src={item.thumbnail}
                   alt={item.title}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover/media:scale-105 opacity-90 group-hover/media:opacity-100"
-                  loading="lazy"
+                  decoding="async"
                   onError={(e) => handleImageError(e, getPlatformFallbackImage('youtube', item.url), 'youtube', item.id)}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-black/30" />
@@ -214,6 +214,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                       src={activeSlide.thumbnail || item.thumbnail}
                       alt=""
                       aria-hidden="true"
+                      decoding="async"
                       className="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-60 pointer-events-none"
                     />
                     {/* روکش تیره ملایم */}
@@ -223,7 +224,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                       src={activeSlide.thumbnail || item.thumbnail}
                       alt={item.title}
                       className="relative z-10 max-h-full max-w-full object-contain transition-transform duration-500 group-hover/ig:scale-105 opacity-95 group-hover/ig:opacity-100 drop-shadow-md"
-                      loading="lazy"
+                      decoding="async"
                       onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
                     />
                     <div className="absolute inset-0 flex items-center justify-center z-20">
@@ -243,6 +244,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                     src={activeSlide.url}
                     alt=""
                     aria-hidden="true"
+                    decoding="async"
                     className="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-60 pointer-events-none"
                   />
                   {/* روکش تیره ملایم */}
@@ -252,7 +254,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                     src={activeSlide.url}
                     alt={`${item.title} - اسلاید ${activeSlideIndex + 1}`}
                     className="relative z-10 max-h-full max-w-full object-contain transition-transform duration-500 group-hover/ig:scale-105 opacity-95 group-hover/ig:opacity-100 drop-shadow-md"
-                    loading="lazy"
+                    decoding="async"
                     onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
                   />
                 </div>

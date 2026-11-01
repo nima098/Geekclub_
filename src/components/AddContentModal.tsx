@@ -557,7 +557,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
           {/* URL Input */}
           <div className="space-y-1.5">
             <label className="block text-xs font-bold text-slate-200 flex items-center justify-between">
@@ -661,37 +661,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
               )}
             </div>
 
-            {/* Auto-extracted metadata banner */}
-          {fetchedMeta && (
-            <div className="p-3.5 rounded-2xl bg-indigo-950/40 border border-indigo-800/50 space-y-2 animate-in fade-in duration-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  <span className="text-xs font-bold text-indigo-200 flex items-center gap-1">
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    اطلاعات پیش‌فرض از پلتفرم استخراج شد
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleApplyFetchedMetadata}
-                  className="text-[11px] font-bold text-indigo-300 hover:text-white bg-indigo-600/30 hover:bg-indigo-600/50 px-2.5 py-1 rounded-lg border border-indigo-500/30 flex items-center gap-1 transition"
-                >
-                  <Wand2 className="w-3 h-3 text-indigo-400" />
-                  درج در فیلدهای زیر جهت ویرایش
-                </button>
-              </div>
-              <div className="text-xs text-slate-300 line-clamp-1">
-                <strong>عنوان پیش‌فرض:</strong> {fetchedMeta.title}
-              </div>
-              <div className="text-xs text-slate-400 line-clamp-1">
-                <strong>{detectedPlatform === 'article' ? 'وبسایت :' : 'نویسنده / کانال:'}</strong> {fetchedMeta.authorName} | <strong>مدت:</strong> {fetchedMeta.readingOrWatchTime}
-              </div>
-              <p className="text-[11px] text-slate-400 pt-0.5">
-                * فیلدهای زیر در حالت پیش‌فرض با اطلاعات بالا ذخیره می‌شوند مگر اینکه مقدار دلخواه خود را بنویسید.
-              </p>
-            </div>
-          )}
+
 
           {/* Title Input */}
           <div>
@@ -744,7 +714,17 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
             currentUrl={thumbnail}
             onUrlChange={(newUrl) => setThumbnail(newUrl)}
             label="تصویر کاور محتوا (آپلود مستقیم به CDN اختصاصی upc.geekclub.ir در پوشه s1)"
-            folder="contents"
+            folder={
+              detectedPlatform === 'article'
+                ? `article/${parseContentUrl(url).sourceDomain.replace(/\.[a-z]+$/, '') || 'web'}`
+                : detectedPlatform === 'instagram'
+                ? `instagram/${authorName ? authorName.replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase() : 'page'}`
+                : detectedPlatform === 'youtube'
+                ? `youtube/${parseContentUrl(url).sourceDomain.replace(/\.[a-z]+$/, '') || 'youtube'}`
+                : detectedPlatform === 'aparat'
+                ? `aparat/${parseContentUrl(url).sourceDomain.replace(/\.[a-z]+$/, '') || 'aparat'}`
+                : 'contents'
+            }
           />
 
           {/* Category with Auto-detect and Suggestion / Autocomplete */}

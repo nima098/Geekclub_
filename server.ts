@@ -1450,7 +1450,7 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
       try {
         domain = new URL(cleanUrl).hostname.replace(/^www\./, '').split('.')[0];
       } catch {}
-      finalThumbnail = await downloadAndCacheImage(image, `cover_art_${Date.now()}`, 'articles', domain);
+      finalThumbnail = await downloadAndCacheImage(image, `cover_art_${Date.now()}`, 'article', domain);
     }
 
     return {
