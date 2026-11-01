@@ -120,7 +120,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               onClick={() => onSortChange('newest')}
               className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
                 sortOption === 'newest'
-                  ? 'bg-[#0077d9] text-white shadow-md shadow-[#0077d9]/30'
+                  ? 'bg-[#7c5cff] text-white shadow-md shadow-[#7c5cff]/30'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -131,7 +131,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               onClick={() => onSortChange('most_liked')}
               className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
                 sortOption === 'most_liked'
-                  ? 'bg-[#0077d9] text-white shadow-md shadow-[#0077d9]/30'
+                  ? 'bg-[#7c5cff] text-white shadow-md shadow-[#7c5cff]/30'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -142,7 +142,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               onClick={() => onSortChange('most_comments')}
               className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
                 sortOption === 'most_comments'
-                  ? 'bg-[#0077d9] text-white shadow-md shadow-[#0077d9]/30'
+                  ? 'bg-[#7c5cff] text-white shadow-md shadow-[#7c5cff]/30'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -153,7 +153,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               onClick={() => onSortChange('trending')}
               className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
                 sortOption === 'trending'
-                  ? 'bg-[#0077d9] text-white shadow-md shadow-[#0077d9]/30'
+                  ? 'bg-[#7c5cff] text-white shadow-md shadow-[#7c5cff]/30'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -167,7 +167,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <button
               onClick={() => onViewModeChange('grid3')}
               className={`p-2 rounded-xl transition cursor-pointer ${
-                viewMode === 'grid3' ? 'bg-[#0077d9] text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                viewMode === 'grid3' ? 'bg-[#7c5cff] text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
               title="نمای گرید ۳ تایی"
             >
@@ -176,7 +176,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <button
               onClick={() => onViewModeChange('grid2')}
               className={`p-2 rounded-xl transition cursor-pointer ${
-                viewMode === 'grid2' ? 'bg-[#0077d9] text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                viewMode === 'grid2' ? 'bg-[#7c5cff] text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
               title="نمای کارت عریض"
             >
@@ -185,7 +185,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <button
               onClick={() => onViewModeChange('compact')}
               className={`p-2 rounded-xl transition cursor-pointer ${
-                viewMode === 'compact' ? 'bg-[#0077d9] text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                viewMode === 'compact' ? 'bg-[#7c5cff] text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
               title="نمای فشرده"
             >
@@ -204,7 +204,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           onClick={() => onPlatformChange('all')}
           className={`px-3.5 py-1.5 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
             selectedPlatform === 'all'
-              ? 'bg-[#0077d9] text-white shadow-md shadow-[#0077d9]/30'
+              ? 'bg-[#7c5cff] text-white shadow-md shadow-[#7c5cff]/30'
               : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 border border-slate-750'
           }`}
         >
@@ -269,7 +269,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             onClick={onToggleSavedOnly}
             className={`px-3.5 py-1.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
               showSavedOnly
-                ? 'bg-[#0077d9] text-white shadow-lg shadow-[#0077d9]/30 font-black'
+                ? 'bg-[#7c5cff] text-white shadow-lg shadow-[#7c5cff]/30 font-black'
                 : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 border border-slate-750 hover:text-white'
             }`}
             title="نمایش فقط مطالب نشان‌شده و ذخیره شده"
@@ -278,7 +278,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <span className={showSavedOnly ? 'text-white' : ''}>نشان‌شده‌ها (ذخیره‌ها)</span>
             {savedCount > 0 && (
               <span className={`px-1.5 py-0.2 rounded-full font-mono text-[10px] font-black ${
-                showSavedOnly ? 'bg-white text-[#0077d9]' : 'bg-[#0077d9] text-white'
+                showSavedOnly ? 'bg-white text-[#7c5cff]' : 'bg-[#7c5cff] text-white'
               }`}>
                 {savedCount}
               </span>
@@ -332,7 +332,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               onClick={() => onCategoryChange(cat.id)}
               className={`px-3.5 py-1.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
                 isSelected
-                  ? 'bg-[#0077d9] text-white shadow-md shadow-[#0077d9]/30'
+                  ? 'bg-[#7c5cff] text-white shadow-md shadow-[#7c5cff]/30'
                   : 'bg-slate-800/60 hover:bg-slate-800 text-slate-300 border border-slate-750'
               }`}
             >

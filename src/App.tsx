@@ -311,9 +311,9 @@ export default function App() {
       } else {
         document.documentElement.classList.add('dark');
         document.documentElement.classList.remove('light');
-        document.documentElement.style.backgroundColor = '#090d16';
+        document.documentElement.style.backgroundColor = '#0b0b10';
         document.documentElement.style.color = '#f8fafc';
-        if (metaThemeColor) metaThemeColor.setAttribute('content', '#090d16');
+        if (metaThemeColor) metaThemeColor.setAttribute('content', '#0b0b10');
       }
     } catch {
       // ignore
@@ -1480,7 +1480,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#090d16] light:bg-[#efefef] text-slate-100 light:text-slate-900 flex flex-col font-sans selection:bg-indigo-600 selection:text-white w-full">
+    <div className="min-h-screen bg-[#0b0b10] light:bg-[#efefef] text-slate-100 light:text-slate-900 flex flex-col font-sans selection:bg-indigo-600 selection:text-white w-full">
       {/* Top Navigation */}
       <Navbar
         user={user}
@@ -1670,7 +1670,7 @@ export default function App() {
                 e.preventDefault();
                 handleGoHome();
               }}
-              className="font-bold text-slate-200 hover:text-[#0077d9] transition-colors cursor-pointer"
+              className="font-bold text-slate-200 hover:text-[#7c5cff] transition-colors cursor-pointer"
               title="بازگشت به صفحه اصلی سایت"
             >
               گیک کلاب (GeekClub)
@@ -1706,21 +1706,21 @@ export default function App() {
                   setIsAdminPortalModalOpen(true);
                 }
               }}
-              className="flex items-center gap-1.5 text-[#0077d9] hover:text-[#0066bd] font-bold transition cursor-pointer bg-[#0077d9]/10 hover:bg-[#0077d9]/20 px-2.5 py-1 rounded-lg border border-[#0077d9]/30"
-              style={{ color: '#0077d9' }}
+              className="flex items-center gap-1.5 text-[#7c5cff] hover:text-[#6a4bf0] font-bold transition cursor-pointer bg-[#7c5cff]/10 hover:bg-[#7c5cff]/20 px-2.5 py-1 rounded-lg border border-[#7c5cff]/30"
+              style={{ color: '#7c5cff' }}
               title="ورود به پنل مدیریت سایت و سطل زباله"
             >
-              <Crown className="w-3.5 h-3.5 text-[#0077d9]" style={{ color: '#0077d9' }} />
-              <span style={{ color: '#0077d9' }}>پنل مدیریت سایت</span>
+              <Crown className="w-3.5 h-3.5 text-[#7c5cff]" style={{ color: '#7c5cff' }} />
+              <span style={{ color: '#7c5cff' }}>پنل مدیریت سایت</span>
             </button>
 
             <button
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="flex items-center gap-1.5 text-[#0077d9] hover:text-[#0066bd] transition cursor-pointer"
-              style={{ color: '#0077d9' }}
+              className="flex items-center gap-1.5 text-[#7c5cff] hover:text-[#6a4bf0] transition cursor-pointer"
+              style={{ color: '#7c5cff' }}
             >
-              <ArrowUp className="w-4 h-4 text-[#0077d9]" style={{ color: '#0077d9' }} />
-              <span className="text-[#0077d9]" style={{ color: '#0077d9' }}>بازگشت به بالا</span>
+              <ArrowUp className="w-4 h-4 text-[#7c5cff]" style={{ color: '#7c5cff' }} />
+              <span className="text-[#7c5cff]" style={{ color: '#7c5cff' }}>بازگشت به بالا</span>
             </button>
           </div>
         </div>
