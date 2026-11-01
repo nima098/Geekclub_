@@ -631,10 +631,15 @@ app.get('/api/proxy-image', rateLimit('proxy-image', 120, 60_000), async (req: R
   }
 });
 
-// Helper to download real cover image from external platform and cache locally & on CDN
-async function downloadAndCacheImage(imageUrl: string, filenamePrefix: string, cdnFolder: string = 'contents'): Promise<string> {
+// Helper to download real cover image from external platform and cache locally & on CDN with structured subfolders
+async function downloadAndCacheImage(
+  imageUrl: string,
+  filenamePrefix: string,
+  platform: string = 'instagram',
+  sourceName: string = 'general'
+): Promise<string> {
   if (!imageUrl) return imageUrl;
-  if (imageUrl.includes('upc.geekclub.ir') || imageUrl.startsWith('data:')) {
+  if (imageUrl.includes('upc.geekclub.ir') && !imageUrl.includes('/uploads/')) {
     return imageUrl;
   }
 
@@ -644,6 +649,16 @@ async function downloadAndCacheImage(imageUrl: string, filenamePrefix: string, c
   }
 
   try {
+    const cleanPlatform = (platform || 'general').toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'general';
+    const cleanSource = (sourceName || 'default').toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'default';
+
+    const targetFolderRelative = `uploads/${cleanPlatform}/${cleanSource}`;
+    const targetFolderDisk = path.join(UPLOADS_DIR, cleanPlatform, cleanSource);
+
+    if (!fs.existsSync(targetFolderDisk)) {
+      fs.mkdirSync(targetFolderDisk, { recursive: true });
+    }
+
     const cleanUrl = validation.parsedUrl.toString();
     const response = await safeAxiosGet(cleanUrl, {
       responseType: 'arraybuffer',
@@ -662,19 +677,13 @@ async function downloadAndCacheImage(imageUrl: string, filenamePrefix: string, c
     else if (contentType.includes('svg')) ext = 'svg';
 
     const buffer = Buffer.from(response.data);
-    if (ext === 'svg') {
-      // Remote SVGs can carry script; never store/serve them from our own origin.
-      console.warn(`[SVG Security Warning] Skipping remote SVG from ${imageUrl}`);
-      return imageUrl;
-    }
-    if (!contentType.toLowerCase().startsWith('image/')) {
+    if (ext === 'svg' || !contentType.toLowerCase().startsWith('image/')) {
       return imageUrl;
     }
 
-    // Save physically in uploads/
     const filename = `${filenamePrefix}.${ext}`;
-    const localFilePath = path.join(UPLOADS_DIR, filename);
-    let localUrl = `/uploads/${filename}`;
+    const localFilePath = path.join(targetFolderDisk, filename);
+    let localUrl = `https://upc.geekclub.ir/${targetFolderRelative}/${filename}`;
     try {
       fs.writeFileSync(localFilePath, buffer);
     } catch (fsErr: any) {
@@ -689,7 +698,7 @@ async function downloadAndCacheImage(imageUrl: string, filenamePrefix: string, c
         const formData = new FormData();
         formData.append('file', fileBlob, filename);
         formData.append('api_token', CDN_SECRET);
-        formData.append('folder', cdnFolder || 'contents');
+        formData.append('folder', `${cleanPlatform}/${cleanSource}`);
 
         const cdnResp = await fetch('https://upc.geekclub.ir/s1/upload.php', {
           method: 'POST',
@@ -703,7 +712,7 @@ async function downloadAndCacheImage(imageUrl: string, filenamePrefix: string, c
         if (cdnResp.ok) {
           const cdnData = await cdnResp.json() as any;
           if (cdnData.status && cdnData.url) {
-            console.log(`[CDN Upload SUCCESS] ${filenamePrefix} uploaded to CDN (${cdnFolder}): ${cdnData.url}`);
+            console.log(`[CDN Upload SUCCESS] ${filenamePrefix} uploaded to CDN (${cleanPlatform}/${cleanSource}): ${cdnData.url}`);
             return cdnData.url;
           }
         }
@@ -719,13 +728,28 @@ async function downloadAndCacheImage(imageUrl: string, filenamePrefix: string, c
   }
 }
 
-// Helper to download video file and cache locally & on CDN
-async function downloadAndCacheVideo(videoUrl: string, filenamePrefix: string, cdnFolder: string = 'videos'): Promise<string> {
+// Helper to download video file and cache locally & on CDN with structured subfolders
+async function downloadAndCacheVideo(
+  videoUrl: string,
+  filenamePrefix: string,
+  platform: string = 'instagram',
+  sourceName: string = 'general'
+): Promise<string> {
   if (!videoUrl) return videoUrl;
-  if (videoUrl.includes('upc.geekclub.ir') || videoUrl.startsWith('/uploads/')) {
+  if (videoUrl.includes('upc.geekclub.ir') && !videoUrl.includes('/uploads/')) {
     return videoUrl;
   }
   try {
+    const cleanPlatform = (platform || 'general').toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'general';
+    const cleanSource = (sourceName || 'default').toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'default';
+
+    const targetFolderRelative = `uploads/${cleanPlatform}/${cleanSource}`;
+    const targetFolderDisk = path.join(UPLOADS_DIR, cleanPlatform, cleanSource);
+
+    if (!fs.existsSync(targetFolderDisk)) {
+      fs.mkdirSync(targetFolderDisk, { recursive: true });
+    }
+
     const cleanUrl = videoUrl.trim().startsWith('http') ? videoUrl.trim() : `https://${videoUrl.trim()}`;
     console.log(`[Video Pipeline] Starting video download from: ${cleanUrl.substring(0, 80)}...`);
     const response = await safeAxiosGet(cleanUrl, {
@@ -740,8 +764,8 @@ async function downloadAndCacheVideo(videoUrl: string, filenamePrefix: string, c
 
     const buffer = Buffer.from(response.data);
     const filename = `${filenamePrefix}.mp4`;
-    const localFilePath = path.join(UPLOADS_DIR, filename);
-    let localUrl = `/uploads/${filename}`;
+    const localFilePath = path.join(targetFolderDisk, filename);
+    let localUrl = `https://upc.geekclub.ir/${targetFolderRelative}/${filename}`;
     try {
       fs.writeFileSync(localFilePath, buffer);
       console.log(`[Video Pipeline] Video downloaded to local server storage: ${localUrl} (${Math.round(buffer.length / 1024)} KB)`);
@@ -757,7 +781,7 @@ async function downloadAndCacheVideo(videoUrl: string, filenamePrefix: string, c
         const formData = new FormData();
         formData.append('file', fileBlob, filename);
         formData.append('api_token', CDN_SECRET);
-        formData.append('folder', cdnFolder || 'videos');
+        formData.append('folder', `${cleanPlatform}/${cleanSource}`);
 
         const cdnResp = await fetch('https://upc.geekclub.ir/s1/upload.php', {
           method: 'POST',
@@ -771,7 +795,7 @@ async function downloadAndCacheVideo(videoUrl: string, filenamePrefix: string, c
         if (cdnResp.ok) {
           const cdnData = await cdnResp.json() as any;
           if (cdnData.status && cdnData.url) {
-            console.log(`[Video Pipeline SUCCESS] Video transferred to CDN (${cdnFolder}): ${cdnData.url}`);
+            console.log(`[Video Pipeline SUCCESS] Video transferred to CDN (${cleanPlatform}/${cleanSource}): ${cdnData.url}`);
             return cdnData.url;
           }
         }
@@ -782,7 +806,7 @@ async function downloadAndCacheVideo(videoUrl: string, filenamePrefix: string, c
 
     return localUrl;
   } catch (err: any) {
-    console.warn(`[Video Pipeline Error] Failed to download video from ${videoUrl.substring(0, 60)}:`, err.message);
+    console.warn(`Failed to download video file:`, err.message);
     return videoUrl;
   }
 }
@@ -1422,7 +1446,11 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
 
     let finalThumbnail = image;
     if (image && image.startsWith('http')) {
-      finalThumbnail = await downloadAndCacheImage(image, `cover_art_${Date.now()}`);
+      let domain = 'general';
+      try {
+        domain = new URL(cleanUrl).hostname.replace(/^www\./, '').split('.')[0];
+      } catch {}
+      finalThumbnail = await downloadAndCacheImage(image, `cover_art_${Date.now()}`, 'articles', domain);
     }
 
     return {

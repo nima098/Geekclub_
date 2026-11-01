@@ -83,6 +83,21 @@ export const ImageCDNUpload: React.FC<ImageCDNUploadProps> = ({
     setTimeout(() => setIsCopied(false), 2000);
   };
 
+  const formatFullCdnUrl = (raw: string): string => {
+    if (!raw) return '';
+    let u = raw.trim();
+    if (!u.startsWith('http://') && !u.startsWith('https://') && !u.startsWith('data:')) {
+      if (u.startsWith('/')) {
+        u = `https://upc.geekclub.ir${u}`;
+      } else {
+        u = `https://upc.geekclub.ir/${u}`;
+      }
+    }
+    return u;
+  };
+
+  const displayUrl = formatFullCdnUrl(currentUrl);
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -100,12 +115,9 @@ export const ImageCDNUpload: React.FC<ImageCDNUploadProps> = ({
           type="text"
           id="cdnUrlInput"
           name="cdnUrl"
-          value={currentUrl}
+          value={displayUrl}
           onChange={(e) => {
-            let val = e.target.value.trim();
-            if (val && !val.startsWith('http') && !val.startsWith('data:') && !val.startsWith('/')) {
-              val = `${window.location.origin}/${val}`;
-            }
+            const val = formatFullCdnUrl(e.target.value);
             onUrlChange(val);
             setSuccessInfo(null);
             setErrorMessage(null);
@@ -113,10 +125,14 @@ export const ImageCDNUpload: React.FC<ImageCDNUploadProps> = ({
           placeholder={placeholder}
           className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500/80 transition dir-ltr text-left pl-9"
         />
-        {currentUrl && (
+        {displayUrl && (
           <button
             type="button"
-            onClick={copyUrl}
+            onClick={() => {
+              navigator.clipboard.writeText(displayUrl);
+              setIsCopied(true);
+              setTimeout(() => setIsCopied(false), 2000);
+            }}
             title="کپی آدرس تصویر"
             className="absolute left-2 p-1 text-slate-400 hover:text-white transition cursor-pointer"
           >
@@ -126,21 +142,21 @@ export const ImageCDNUpload: React.FC<ImageCDNUploadProps> = ({
       </div>
 
       {/* Live Cover Preview Box */}
-      {currentUrl && (
+      {displayUrl && (
         <div className="relative aspect-video w-full max-h-48 rounded-xl overflow-hidden border border-slate-700/80 bg-slate-950 flex items-center justify-center shadow-lg">
           <img
-            src={currentUrl}
+            src={displayUrl}
             alt="پیش‌نمایش تصویر کاور"
             className="w-full h-full object-cover"
             onError={(e) => {
-              if (!currentUrl.includes('/api/proxy-image') && !currentUrl.startsWith('data:')) {
-                e.currentTarget.src = `/api/proxy-image?url=${encodeURIComponent(currentUrl)}`;
+              if (!displayUrl.includes('/api/proxy-image') && !displayUrl.startsWith('data:')) {
+                e.currentTarget.src = `/api/proxy-image?url=${encodeURIComponent(displayUrl)}`;
               }
             }}
           />
           <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/75 text-[10px] text-amber-300 font-mono flex items-center gap-1 backdrop-blur-sm border border-amber-500/30">
             <CheckCircle2 className="w-3 h-3 text-amber-400" />
-            <span>{currentUrl.includes('upc.geekclub.ir') ? 'هاست شده روی CDN' : 'پیش‌نمایش تصویر'}</span>
+            <span>{displayUrl.includes('upc.geekclub.ir') ? 'هاست شده روی CDN' : 'پیش‌نمایش تصویر'}</span>
           </div>
         </div>
       )}
