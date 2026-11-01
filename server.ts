@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import dns from 'dns';
 import net from 'net';
+import sharp from 'sharp';
 import { INITIAL_CONTENT, INITIAL_COMMENTS, SUPER_ADMIN_EMAIL } from './src/data/initialData.ts';
 import {
   initPostgres,
@@ -624,16 +625,35 @@ app.get('/api/proxy-image', rateLimit('proxy-image', 120, 60_000), async (req: R
       return res.status(400).json({ success: false, error: 'SVG image contains unsafe script or event handler tags' });
     }
 
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('X-Content-Type-Options', 'nosniff');
     if (!contentType.toLowerCase().startsWith('image/')) {
       return res.status(415).json({ success: false, error: 'Only image content can be proxied' });
     }
+
     if (contentType.includes('svg')) {
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('X-Content-Type-Options', 'nosniff');
       res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox");
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.status(200).send(buffer);
     }
-    res.setHeader('Cache-Control', 'public, max-age=86400');
-    return res.status(200).send(buffer);
+
+    // Process non-SVG images with sharp for lightning fast card rendering (max width 800, quality 80 WebP)
+    try {
+      const optimizedBuffer = await sharp(buffer)
+        .resize(800, 600, { fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 80, effort: 4 })
+        .toBuffer();
+
+      res.setHeader('Content-Type', 'image/webp');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.status(200).send(optimizedBuffer);
+    } catch {
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.status(200).send(buffer);
+    }
   } catch (err: any) {
     console.warn('Image proxy failed for:', imageUrl, err.message);
     res.setHeader('Content-Type', 'image/svg+xml');
@@ -642,7 +662,7 @@ app.get('/api/proxy-image', rateLimit('proxy-image', 120, 60_000), async (req: R
   }
 });
 
-// Helper to download real cover image from external platform and cache locally & on CDN with structured subfolders
+// Helper to download real cover image from external platform, optimize with Sharp, and cache locally & on CDN with structured subfolders
 async function downloadAndCacheImage(
   imageUrl: string,
   filenamePrefix: string,
@@ -695,30 +715,49 @@ async function downloadAndCacheImage(
 
     const rawType = response.headers['content-type'];
     const contentType = typeof rawType === 'string' ? rawType : 'image/jpeg';
-    let ext = 'jpg';
-    if (contentType.includes('webp')) ext = 'webp';
-    else if (contentType.includes('png')) ext = 'png';
-    else if (contentType.includes('svg')) ext = 'svg';
+    const originalBuffer = Buffer.from(response.data);
 
-    const buffer = Buffer.from(response.data);
-    if (ext === 'svg' || !contentType.toLowerCase().startsWith('image/')) {
+    if (contentType.includes('svg') || !contentType.toLowerCase().startsWith('image/')) {
       return imageUrl;
+    }
+
+    // Automatically resize and optimize image for card layout standard (max width 800px, max height 600px, WebP format 80% quality)
+    let finalBuffer: Buffer = originalBuffer;
+    let ext = 'webp';
+    let mimeType = 'image/webp';
+
+    try {
+      finalBuffer = await sharp(originalBuffer)
+        .resize(800, 600, {
+          fit: 'inside',
+          withoutEnlargement: true
+        })
+        .webp({ quality: 80, effort: 4 })
+        .toBuffer();
+      console.log(`[Image Optimization SUCCESS] Resized cover ${filenamePrefix} from ${Math.round(originalBuffer.length / 1024)}KB to ${Math.round(finalBuffer.length / 1024)}KB (WebP)`);
+    } catch (sharpErr: any) {
+      console.warn(`[Sharp Warning] Image optimization failed for ${filenamePrefix}, using original buffer:`, sharpErr.message);
+      finalBuffer = originalBuffer;
+      if (contentType.includes('png')) ext = 'png';
+      else if (contentType.includes('webp')) ext = 'webp';
+      else ext = 'jpg';
+      mimeType = contentType;
     }
 
     const filename = `${filenamePrefix}.${ext}`;
     const localFilePath = path.join(targetFolderDisk, filename);
     let localUrl = `/${targetFolderRelative}/${filename}`;
     try {
-      fs.writeFileSync(localFilePath, buffer);
+      fs.writeFileSync(localFilePath, finalBuffer);
     } catch (fsErr: any) {
       console.warn(`[Storage Warning] Could not write image file to disk:`, fsErr.message);
       localUrl = imageUrl.startsWith('http') ? `/api/proxy-image?url=${encodeURIComponent(imageUrl)}` : imageUrl;
     }
 
-    // Upload to upc.geekclub.ir CDN (only if CDN_SECRET is configured)
+    // Upload optimized image to upc.geekclub.ir CDN (only if CDN_SECRET is configured)
     if (CDN_SECRET) {
       try {
-        const fileBlob = new Blob([buffer], { type: contentType });
+        const fileBlob = new Blob([new Uint8Array(finalBuffer)], { type: mimeType });
         const formData = new FormData();
         formData.append('file', fileBlob, filename);
         formData.append('api_token', CDN_SECRET);
@@ -736,7 +775,7 @@ async function downloadAndCacheImage(
         if (cdnResp.ok) {
           const cdnData = await cdnResp.json() as any;
           if (cdnData.status && cdnData.url) {
-            console.log(`[CDN Upload SUCCESS] ${filenamePrefix} uploaded to CDN (${cleanPlatform}/${cleanSource}): ${cdnData.url}`);
+            console.log(`[CDN Upload SUCCESS] Optimized cover ${filenamePrefix} uploaded to CDN (${cleanPlatform}/${cleanSource}): ${cdnData.url}`);
             return cdnData.url;
           }
         }
@@ -807,7 +846,7 @@ async function downloadAndCacheVideo(
     // Transfer video to CDN (upc.geekclub.ir) - only if CDN_SECRET is configured
     if (CDN_SECRET) {
       try {
-        const fileBlob = new Blob([buffer], { type: 'video/mp4' });
+        const fileBlob = new Blob([new Uint8Array(buffer)], { type: 'video/mp4' });
         const formData = new FormData();
         formData.append('file', fileBlob, filename);
         formData.append('api_token', CDN_SECRET);
@@ -846,6 +885,10 @@ app.post('/api/transfer-to-cdn', rateLimit('transfer-cdn', 20, 60_000), async (r
   const { imageUrl, folder, filenamePrefix } = req.body;
   if (!imageUrl) {
     return res.status(400).json({ success: false, error: 'imageUrl parameter is required' });
+  }
+
+  if (imageUrl.includes('upc.geekclub.ir/uploads/')) {
+    return res.json({ success: true, url: imageUrl.substring(imageUrl.indexOf('/uploads/')) });
   }
 
   if (imageUrl.includes('upc.geekclub.ir') || imageUrl.startsWith('data:') || imageUrl.startsWith('/uploads/')) {
@@ -1621,7 +1664,11 @@ async function enrichDatabaseContent(id: string, url: string) {
       changed = true;
     }
     if (meta.thumbnail && meta.thumbnail.trim()) {
-      item.thumbnail = meta.thumbnail.trim();
+      let cleanThumb = meta.thumbnail.trim();
+      if (cleanThumb.includes('upc.geekclub.ir/uploads/')) {
+        cleanThumb = cleanThumb.substring(cleanThumb.indexOf('/uploads/'));
+      }
+      item.thumbnail = cleanThumb;
       changed = true;
     }
     if (meta.videoUrl && meta.videoUrl.trim() && item.videoUrl !== meta.videoUrl) {

@@ -97,12 +97,13 @@ export const testCDNConnection = async (): Promise<CDNHealthReport> => {
 
 /**
  * Compresses an image file in the browser and converts it to WebP format.
+ * Optimized for content card cover standards (max width 800px, max height 600px).
  */
 export const compressAndConvertToWebP = (
   file: File,
-  quality = 0.82,
-  maxWidth = 1920,
-  maxHeight = 1080
+  quality = 0.80,
+  maxWidth = 800,
+  maxHeight = 600
 ): Promise<{ file: File; originalSize: number; compressedSize: number; previewUrl: string }> => {
   return new Promise((resolve, reject) => {
     // If SVG, skip canvas processing
@@ -187,8 +188,8 @@ export const uploadImageToCDN = async (
 ): Promise<{ url: string; filename: string; size: number }> => {
   const config = getCDNConfig();
 
-  // Compress first
-  const { file: compressedFile, originalSize, compressedSize } = await compressAndConvertToWebP(file);
+  // Compress and resize for card cover dimensions (max 800x600, WebP 80%)
+  const { file: compressedFile, originalSize, compressedSize } = await compressAndConvertToWebP(file, 0.80, 800, 600);
 
   const formData = new FormData();
   formData.append('file', compressedFile);
@@ -257,6 +258,9 @@ export const transferExternalUrlToCDN = async (
   filenamePrefix = 'migrated'
 ): Promise<string> => {
   if (!imageUrl || imageUrl.includes('upc.geekclub.ir') || imageUrl.startsWith('data:')) {
+    if (imageUrl.includes('upc.geekclub.ir/uploads/')) {
+      return imageUrl.substring(imageUrl.indexOf('/uploads/'));
+    }
     return imageUrl; // Already on CDN or Data URI
   }
 
