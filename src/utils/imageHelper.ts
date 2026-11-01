@@ -158,6 +158,19 @@ export const getPlatformFallbackImage = (platform?: Platform | string, rawUrl?: 
 };
 
 /**
+ * Resolves cover image URL to ensure broken host prefixes like upc.geekclub.ir/uploads/
+ * are converted into reliable local /uploads/ URLs.
+ */
+export const resolveCoverImageUrl = (url?: string | null): string => {
+  if (!url) return '';
+  let clean = url.trim();
+  if (clean.includes('upc.geekclub.ir/uploads/')) {
+    clean = clean.substring(clean.indexOf('/uploads/'));
+  }
+  return clean;
+};
+
+/**
  * Image onError handler to replace broken or unreachable image URLs with reliable local file, proxy or SVG.
  * Guaranteed never to throw infinite loops or 404 proxy cascades.
  */
@@ -181,7 +194,15 @@ export const handleImageError = (
     return;
   }
 
-  // 3. If failed on upc.geekclub.ir CDN, NEVER proxy upc.geekclub.ir (it would just 404 again)
+  // 3. If failed on upc.geekclub.ir/uploads/, the file exists locally on the website!
+  // Strip the domain and retry with local /uploads/
+  if (currentSrc.includes('upc.geekclub.ir/uploads/')) {
+    const localRel = currentSrc.substring(currentSrc.indexOf('/uploads/'));
+    target.src = localRel;
+    return;
+  }
+
+  // 4. If failed on upc.geekclub.ir CDN (e.g. broken s1 link), fallback to safe SVG
   if (currentSrc.includes('upc.geekclub.ir')) {
     if (itemId && !currentSrc.includes('/uploads/')) {
       target.src = `/uploads/cover_${itemId}.jpg`;
@@ -192,14 +213,7 @@ export const handleImageError = (
     return;
   }
 
-  // 4. If failed on local /uploads/
-  if (currentSrc.includes('/uploads/')) {
-    const safeSvg = fallbackUrl || getPlatformFallbackImage(platform);
-    target.src = safeSvg;
-    return;
-  }
-
-  // 5. If failed on external image (Unsplash, YouTube, Instagram, Google Avatars), fallback directly to offline SVG Data URI
+  // 5. If failed on local /uploads/ or external URL, fallback directly to offline SVG Data URI
   const safeSvg = (fallbackUrl && fallbackUrl.startsWith('data:')) 
     ? fallbackUrl 
     : getPlatformFallbackImage(platform);

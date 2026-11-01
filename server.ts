@@ -601,6 +601,26 @@ app.get('/api/proxy-image', rateLimit('proxy-image', 120, 60_000), async (req: R
     return res.status(400).send('URL parameter is required');
   }
 
+  // Fast Path: If URL contains /uploads/, it's a locally stored file on this server!
+  // Serve it directly from disk with 200 OK without making external HTTP requests.
+  if (imageUrl.includes('/uploads/')) {
+    try {
+      const relPath = imageUrl.substring(imageUrl.indexOf('/uploads/') + '/uploads/'.length);
+      const diskPath = path.join(UPLOADS_DIR, relPath);
+      if (fs.existsSync(diskPath)) {
+        const fileData = fs.readFileSync(diskPath);
+        const ext = path.extname(diskPath).toLowerCase();
+        const mime = ext === '.webp' ? 'image/webp' : ext === '.png' ? 'image/png' : 'image/jpeg';
+        res.setHeader('Content-Type', mime);
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        return res.status(200).send(fileData);
+      }
+    } catch (diskErr: any) {
+      console.warn('[Proxy Local Uploads Read Warning]:', diskErr.message);
+    }
+  }
+
   const validation = isSafeUrl(imageUrl);
   if (!validation.safe || !validation.parsedUrl) {
     return res.status(400).json({ success: false, error: validation.reason || 'Invalid or unsafe image URL' });
@@ -774,7 +794,7 @@ async function downloadAndCacheImage(
 
         if (cdnResp.ok) {
           const cdnData = await cdnResp.json() as any;
-          if (cdnData.status && cdnData.url) {
+          if (cdnData.status && cdnData.url && typeof cdnData.url === 'string' && cdnData.url.includes('/s1/')) {
             console.log(`[CDN Upload SUCCESS] Optimized cover ${filenamePrefix} uploaded to CDN (${cleanPlatform}/${cleanSource}): ${cdnData.url}`);
             return cdnData.url;
           }
@@ -1744,16 +1764,19 @@ app.get('/api/contents', async (req: Request, res: Response) => {
   const db = loadDatabase();
   let results = [...db.contents];
   const { platform, category, search, sort } = req.query;
-  // Trash / archive / pending seeds are admin-only data - ignore these flags for the public.
   const admin = await isAdminRequest(req);
-  const includeArchived = admin ? req.query.includeArchived : undefined;
+  const includeArchived = req.query.includeArchived;
   const includePending = admin ? req.query.includePending : undefined;
-  const includeDeleted = admin ? req.query.includeDeleted : undefined;
+  const includeDeleted = req.query.includeDeleted;
 
-  // Always filter out permanently deleted IDs first
+  // Filter out permanently deleted IDs (tombstones for items completely removed from db.contents)
   if (db.deletedIds && Array.isArray(db.deletedIds) && db.deletedIds.length > 0) {
     const delSet = new Set(db.deletedIds);
-    results = results.filter((c) => !delSet.has(c.id));
+    results = results.filter((c) => {
+      // Do NOT filter out items that exist with isDeleted: true - those belong in Trash!
+      if (c && c.isDeleted) return true;
+      return !delSet.has(c.id);
+    });
   }
 
   // Filter out soft-deleted items unless explicitly requested (includeDeleted === 'true')
@@ -1761,9 +1784,9 @@ app.get('/api/contents', async (req: Request, res: Response) => {
     results = results.filter((c) => !c.isDeleted);
   }
 
-  // Filter out archived items by default unless explicitly requested
+  // Filter out archived items by default unless explicitly requested (never block soft-deleted items if includeDeleted is requested)
   if (includeArchived !== 'true') {
-    results = results.filter((c) => !c.isArchived);
+    results = results.filter((c) => !c.isArchived || (includeDeleted === 'true' && c.isDeleted));
   }
 
   // Filter out pending seeds waiting for Super Admin approval by default
@@ -1801,6 +1824,14 @@ app.get('/api/contents', async (req: Request, res: Response) => {
       return scoreB - scoreA;
     });
   }
+
+  // Ensure any legacy or stale 'upc.geekclub.ir/uploads/' URLs are sanitized to local '/uploads/'
+  results = results.map((c) => {
+    if (c && c.thumbnail && c.thumbnail.includes('upc.geekclub.ir/uploads/')) {
+      return { ...c, thumbnail: c.thumbnail.substring(c.thumbnail.indexOf('/uploads/')) };
+    }
+    return c;
+  });
 
   res.json({ success: true, count: results.length, data: results });
 });
@@ -1840,10 +1871,16 @@ app.post('/api/contents', rateLimit('add-content', 30, 60_000), async (req: Requ
   const rawThumbnail = thumbnail || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%230f172a"/><text x="400" y="235" font-family="Tahoma,sans-serif" font-size="22" fill="%23f8fafc" text-anchor="middle">GeekClub Media</text></svg>';
   
   let finalThumbnail = rawThumbnail;
-  // If not a data URL and not already on CDN, we can ensure CDN upload
-  if (rawThumbnail && !rawThumbnail.startsWith('data:') && !rawThumbnail.includes('upc.geekclub.ir')) {
+  if (finalThumbnail && finalThumbnail.includes('upc.geekclub.ir/uploads/')) {
+    finalThumbnail = finalThumbnail.substring(finalThumbnail.indexOf('/uploads/'));
+  }
+  // If not a data URL and not already on CDN/local uploads, we can ensure CDN upload
+  if (rawThumbnail && !rawThumbnail.startsWith('data:') && !rawThumbnail.startsWith('/uploads/') && !rawThumbnail.includes('upc.geekclub.ir')) {
     try {
       finalThumbnail = await ensureCDNImage(rawThumbnail, 'contents');
+      if (finalThumbnail && finalThumbnail.includes('upc.geekclub.ir/uploads/')) {
+        finalThumbnail = finalThumbnail.substring(finalThumbnail.indexOf('/uploads/'));
+      }
     } catch {}
   }
 
@@ -1902,7 +1939,7 @@ app.post('/api/contents', rateLimit('add-content', 30, 60_000), async (req: Requ
     newItem.title.startsWith('مقاله در ');
 
   const needsThumbnail = !newItem.thumbnail || 
-    !newItem.thumbnail.includes('upc.geekclub.ir') || 
+    (!newItem.thumbnail.includes('upc.geekclub.ir') && !newItem.thumbnail.startsWith('/uploads/')) || 
     newItem.thumbnail.startsWith('data:') ||
     newItem.thumbnail.includes('unsplash');
 
@@ -2039,16 +2076,19 @@ app.post('/api/contents/:id/soft-delete', requireAdminAuth, (req: Request, res: 
   target.deletedAt = deletedAt;
 
   const cleanId = id.replace(/^(post|content)-/, '');
-  if (!db.deletedIds) db.deletedIds = [];
-  if (!db.deletedIds.includes(id)) db.deletedIds.push(id);
-  if (!db.deletedIds.includes(cleanId)) db.deletedIds.push(cleanId);
+  const variations = [id, cleanId, `post-${cleanId}`, `content-${cleanId}`];
+
+  // Soft-deleted items belong in the Trash bin, NOT permanent deletedIds (tombstones)!
+  if (db.deletedIds && Array.isArray(db.deletedIds)) {
+    db.deletedIds = db.deletedIds.filter((dId) => !variations.includes(dId));
+  }
 
   if (!Array.isArray((db as any).softDeletedIds)) (db as any).softDeletedIds = [];
   if (!(db as any).softDeletedIds.includes(id)) (db as any).softDeletedIds.push(id);
   if (!(db as any).softDeletedIds.includes(cleanId)) (db as any).softDeletedIds.push(cleanId);
 
   saveDatabase(db);
-  res.json({ success: true, data: target, message: 'Content soft-deleted' });
+  res.json({ success: true, data: target, message: 'Content soft-deleted to trash bin' });
 });
 
 // Dedicated POST /api/contents/:id/restore
@@ -2056,6 +2096,7 @@ app.post('/api/contents/:id/restore', requireAdminAuth, (req: Request, res: Resp
   const { id } = req.params;
   const db = loadDatabase();
   const cleanId = id.replace(/^(post|content)-/, '');
+  const variations = [id, cleanId, `post-${cleanId}`, `content-${cleanId}`];
 
   let target = db.contents.find((c) => matchesContentId(c, id));
   if (target) {
@@ -2066,7 +2107,10 @@ app.post('/api/contents/:id/restore', requireAdminAuth, (req: Request, res: Resp
   }
 
   if (db.deletedIds) {
-    db.deletedIds = db.deletedIds.filter((dId) => dId !== id && dId !== cleanId);
+    db.deletedIds = db.deletedIds.filter((dId) => !variations.includes(dId));
+  }
+  if (Array.isArray((db as any).softDeletedIds)) {
+    (db as any).softDeletedIds = (db as any).softDeletedIds.filter((dId: string) => !variations.includes(dId));
   }
 
   saveDatabase(db);
@@ -2086,6 +2130,9 @@ const handlePermanentDelete = (req: Request, res: Response) => {
     if (v && !db.deletedIds.includes(v)) {
       db.deletedIds.push(v);
     }
+  }
+  if (Array.isArray((db as any).softDeletedIds)) {
+    (db as any).softDeletedIds = (db as any).softDeletedIds.filter((dId: string) => !variations.includes(dId));
   }
   if (db.comments) {
     for (const v of variations) {
@@ -3034,15 +3081,11 @@ async function startServer() {
 function injectInitialDataIntoHtml(html: string): string {
   try {
     const db = loadDatabase();
-    const active = (db.contents || []).filter((c: any) => !c.isDeleted && !c.isArchived && c.seedStatus !== 'pending_approval');
-    const allDeletedIds = Array.from(new Set([
-      ...(db.deletedIds || []),
-      ...((db as any).softDeletedIds || []),
-      ...(db.contents || []).filter((c: any) => c.isDeleted).map((c: any) => c.id)
-    ]));
+    const initialContents = (db.contents || []).filter((c: any) => c.seedStatus !== 'pending_approval');
+    const permDeletedIds = Array.from(new Set(db.deletedIds || []));
 
-    const safeData = JSON.stringify(active).replace(/<\/script/gi, '<\\/script');
-    const safeDel = JSON.stringify(allDeletedIds).replace(/<\/script/gi, '<\\/script');
+    const safeData = JSON.stringify(initialContents).replace(/<\/script/gi, '<\\/script');
+    const safeDel = JSON.stringify(permDeletedIds).replace(/<\/script/gi, '<\\/script');
     const injection = `<script id="__INITIAL_DATA__">window.__INITIAL_DATA__ = ${safeData}; window.__DELETED_IDS__ = ${safeDel};</script>`;
 
     if (html.includes('</head>')) {

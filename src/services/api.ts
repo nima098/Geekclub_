@@ -152,6 +152,7 @@ export const api = {
       if (filters?.search) params.append('search', filters.search);
       if (filters?.sort) params.append('sort', filters.sort);
       params.append('includeDeleted', 'true');
+      params.append('includeArchived', 'true');
       params.append('_t', Date.now().toString());
 
       const res = await fetch(`/api/contents?${params.toString()}`, {
@@ -182,7 +183,7 @@ export const api = {
     const fetchLatest = async () => {
       if (!isSubscribed) return;
       const readHeaders = await getReadHeaders();
-      fetch(`/api/contents?includeDeleted=true&_t=${Date.now()}`, {
+      fetch(`/api/contents?includeDeleted=true&includeArchived=true&_t=${Date.now()}`, {
         cache: 'no-store',
         headers: readHeaders
       })
@@ -306,7 +307,7 @@ export const api = {
       } catch {}
     }
 
-    addDeletedId(id);
+    removeDeletedId(id);
     return ok;
   },
 

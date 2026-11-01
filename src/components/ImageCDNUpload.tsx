@@ -154,8 +154,15 @@ export const ImageCDNUpload: React.FC<ImageCDNUploadProps> = ({
             alt="پیش‌نمایش تصویر کاور"
             className="w-full h-full object-cover"
             onError={(e) => {
-              if (!displayUrl.includes('/api/proxy-image') && !displayUrl.startsWith('data:')) {
-                e.currentTarget.src = `/api/proxy-image?url=${encodeURIComponent(displayUrl)}`;
+              const current = e.currentTarget.src;
+              if (current.includes('upc.geekclub.ir/uploads/')) {
+                e.currentTarget.src = current.substring(current.indexOf('/uploads/'));
+                return;
+              }
+              if (!current.includes('/api/proxy-image') && !current.startsWith('data:')) {
+                e.currentTarget.src = `/api/proxy-image?url=${encodeURIComponent(current)}`;
+              } else {
+                e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450"><rect width="800" height="450" fill="%230f172a"/><text x="400" y="235" font-family="Tahoma,sans-serif" font-size="20" fill="%2394a3b8" text-anchor="middle">GeekClub Media</text></svg>';
               }
             }}
           />

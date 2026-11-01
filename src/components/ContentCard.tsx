@@ -23,7 +23,7 @@ import {
   Film
 } from 'lucide-react';
 import { ContentItem, ViewMode, UserProfile, MediaSlide } from '../types/content';
-import { handleImageError, getPlatformFallbackImage } from '../utils/imageHelper';
+import { handleImageError, getPlatformFallbackImage, resolveCoverImageUrl } from '../utils/imageHelper';
 
 interface ContentCardProps {
   item: ContentItem;
@@ -147,7 +147,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 onClick={() => onOpenArticleReader(item)}
               >
                 <img
-                  src={item.thumbnail}
+                  src={resolveCoverImageUrl(item.thumbnail)}
                   alt={item.title}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover/media:scale-105 opacity-90 group-hover/media:opacity-100"
                   decoding="async"
@@ -346,7 +346,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 onClick={() => onOpenArticleReader(item)}
               >
                 <img
-                  src={item.thumbnail}
+                  src={resolveCoverImageUrl(item.thumbnail)}
                   alt={item.title}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover/media:scale-105 opacity-90 group-hover/media:opacity-100"
                   loading="lazy"
@@ -371,7 +371,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             onClick={() => onOpenArticleReader(item)}
           >
             <img
-              src={item.thumbnail}
+              src={resolveCoverImageUrl(item.thumbnail)}
               alt={item.title}
               className="w-full h-full object-cover transition-transform duration-500 group-hover/art:scale-105 opacity-85 group-hover/art:opacity-100"
               loading="lazy"

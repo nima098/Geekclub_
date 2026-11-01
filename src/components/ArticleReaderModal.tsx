@@ -19,7 +19,7 @@ import {
   Check
 } from 'lucide-react';
 import { ContentItem, MediaSlide } from '../types/content';
-import { handleImageError, getPlatformFallbackImage } from '../utils/imageHelper';
+import { handleImageError, getPlatformFallbackImage, resolveCoverImageUrl } from '../utils/imageHelper';
 
 interface ArticleReaderModalProps {
   item: ContentItem | null;
@@ -269,7 +269,7 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
           {item.platform === 'article' && item.thumbnail && (
             <div className="rounded-2xl overflow-hidden aspect-video max-h-72 w-full border border-slate-800 shadow-xl">
               <img
-                src={item.thumbnail}
+                src={resolveCoverImageUrl(item.thumbnail)}
                 alt={item.title}
                 className="w-full h-full object-cover"
                 onError={(e) => handleImageError(e, getPlatformFallbackImage('article', item.url), 'article', item.id)}

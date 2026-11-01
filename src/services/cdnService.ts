@@ -257,11 +257,11 @@ export const transferExternalUrlToCDN = async (
   folder = 'contents',
   filenamePrefix = 'migrated'
 ): Promise<string> => {
-  if (!imageUrl || imageUrl.includes('upc.geekclub.ir') || imageUrl.startsWith('data:')) {
+  if (!imageUrl || imageUrl.includes('upc.geekclub.ir') || imageUrl.startsWith('data:') || imageUrl.startsWith('/uploads/')) {
     if (imageUrl.includes('upc.geekclub.ir/uploads/')) {
       return imageUrl.substring(imageUrl.indexOf('/uploads/'));
     }
-    return imageUrl; // Already on CDN or Data URI
+    return imageUrl; // Already on CDN, local storage or Data URI
   }
 
   // 1. First attempt: Call server proxy endpoint (bypasses browser CORS restrictions completely)
@@ -274,7 +274,11 @@ export const transferExternalUrlToCDN = async (
     if (apiRes.ok) {
       const data = await apiRes.json();
       if (data.success && data.url) {
-        return data.url;
+        let returnUrl = data.url;
+        if (returnUrl.includes('upc.geekclub.ir/uploads/')) {
+          returnUrl = returnUrl.substring(returnUrl.indexOf('/uploads/'));
+        }
+        return returnUrl;
       }
     }
   } catch (err) {

@@ -364,9 +364,15 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
 
       // Auto transfer cover photo (YouTube, Aparat, Instagram, Article) to personal CDN on upc.geekclub.ir/s1/
       let finalThumbnail = rawThumbnail;
-      if (!isQuickSubmit && rawThumbnail && !rawThumbnail.includes('upc.geekclub.ir')) {
+      if (finalThumbnail && finalThumbnail.includes('upc.geekclub.ir/uploads/')) {
+        finalThumbnail = finalThumbnail.substring(finalThumbnail.indexOf('/uploads/'));
+      }
+      if (!isQuickSubmit && finalThumbnail && !finalThumbnail.startsWith('/uploads/') && !finalThumbnail.includes('upc.geekclub.ir') && !finalThumbnail.startsWith('data:')) {
         try {
-          finalThumbnail = await transferExternalUrlToCDN(rawThumbnail, 'contents', `cover_${finalPlatform}`);
+          const cdnRes = await transferExternalUrlToCDN(finalThumbnail, 'contents', `cover_${finalPlatform}`);
+          if (cdnRes && !cdnRes.includes('upc.geekclub.ir/uploads/')) {
+            finalThumbnail = cdnRes;
+          }
         } catch (err) {
           console.warn('Auto CDN transfer fallback to original URL:', err);
         }

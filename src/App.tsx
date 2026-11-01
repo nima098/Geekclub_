@@ -164,7 +164,9 @@ export default function App() {
         const serverDel: string[] = Array.isArray((window as any).__DELETED_IDS__) ? (window as any).__DELETED_IDS__ : [];
         const delSet = new Set(serverDel.map((s) => String(s)));
         return raw.filter((c: ContentItem) => {
-          if (!c || c.isDeleted) return false;
+          if (!c) return false;
+          // Keep soft-deleted items so Trash can show them!
+          if (c.isDeleted) return true;
           const strId = String(c.id);
           const clean = strId.replace(/^(post|content)-/, '');
           return !delSet.has(strId) && !delSet.has(clean) && !delSet.has(`post-${clean}`) && !delSet.has(`content-${clean}`);
@@ -202,8 +204,9 @@ export default function App() {
 
       itemsToProcess = itemsToProcess.filter((item) => {
         if (!item || !item.id) return false;
-        if (item.isDeleted) return false;
         if (item.seedStatus === 'pending_approval') return false;
+        // Keep soft-deleted items so Trash can show them!
+        if (item.isDeleted) return true;
         const strId = String(item.id);
         const clean = strId.replace(/^(post|content)-/, '');
         return !localDelSet.has(strId) && !localDelSet.has(clean) && !localDelSet.has(`post-${clean}`) && !localDelSet.has(`content-${clean}`);
@@ -552,23 +555,26 @@ export default function App() {
     }
   }, [profileComments]);
 
-  // Synchronize with centralized server database in real-time
   useEffect(() => {
-    const updateDeletedIdsCache = (items: ContentItem[]) => {
+    // Ensure soft-deleted or active items that exist in the database are NOT mistakenly tombstoned locally
+    const cleanupDeletedIdsCache = (items: ContentItem[]) => {
       try {
-        const deletedFromItems = items.filter((c) => c && c.isDeleted).map((c) => String(c.id));
-        if (deletedFromItems.length > 0) {
-          const raw = localStorage.getItem('mediahub_deleted_ids_v1');
-          const existing: string[] = raw ? JSON.parse(raw) : [];
-          const allDelSet = new Set<string>([...existing]);
-          for (const dId of deletedFromItems) {
-            allDelSet.add(dId);
-            const clean = dId.replace(/^(post|content)-/, '');
-            allDelSet.add(clean);
-            allDelSet.add(`post-${clean}`);
-            allDelSet.add(`content-${clean}`);
+        const raw = localStorage.getItem('mediahub_deleted_ids_v1');
+        if (raw) {
+          const existing: string[] = JSON.parse(raw);
+          const activeOrTrashIds = new Set<string>();
+          for (const item of items) {
+            if (item && item.id) {
+              const strId = String(item.id);
+              activeOrTrashIds.add(strId);
+              const clean = strId.replace(/^(post|content)-/, '');
+              activeOrTrashIds.add(clean);
+              activeOrTrashIds.add(`post-${clean}`);
+              activeOrTrashIds.add(`content-${clean}`);
+            }
           }
-          localStorage.setItem('mediahub_deleted_ids_v1', JSON.stringify(Array.from(allDelSet)));
+          const cleaned = existing.filter((id) => !activeOrTrashIds.has(id));
+          localStorage.setItem('mediahub_deleted_ids_v1', JSON.stringify(cleaned));
         }
       } catch {}
     };
@@ -579,9 +585,9 @@ export default function App() {
         if (Array.isArray(serverContents)) {
           const fresh = applyPendingOverrides(serverContents);
           setContents(fresh);
-          updateDeletedIdsCache(fresh);
+          cleanupDeletedIdsCache(fresh);
           try {
-            localStorage.setItem('mediahub_content_v2', JSON.stringify(fresh.filter((c) => !c.isDeleted)));
+            localStorage.setItem('mediahub_content_v2', JSON.stringify(fresh));
           } catch {}
         }
       } catch (err) {
@@ -598,10 +604,10 @@ export default function App() {
       if (Array.isArray(items)) {
         const fresh = applyPendingOverrides(items);
         setContents(fresh);
-        updateDeletedIdsCache(fresh);
+        cleanupDeletedIdsCache(fresh);
         setIsInitialLoading(false);
         try {
-          localStorage.setItem('mediahub_content_v2', JSON.stringify(fresh.filter((c) => !c.isDeleted)));
+          localStorage.setItem('mediahub_content_v2', JSON.stringify(fresh));
         } catch {}
       }
     });
@@ -899,7 +905,7 @@ export default function App() {
       newItem.title.startsWith('ویدیوی آموزشی');
 
     const needsThumb = !newItem.thumbnail || 
-      !newItem.thumbnail.includes('upc.geekclub.ir') || 
+      (!newItem.thumbnail.includes('upc.geekclub.ir') && !newItem.thumbnail.startsWith('/uploads/')) || 
       newItem.thumbnail.startsWith('data:') ||
       newItem.thumbnail.includes('unsplash');
 
@@ -962,12 +968,15 @@ export default function App() {
           }
 
           if (enriched && (enriched.title || enriched.thumbnail)) {
-            // Ensure thumbnail is stored on personal CDN
+            // Ensure thumbnail is stored on personal CDN or local storage
             let finalCover = enriched.thumbnail || enriched.image;
-            if (finalCover && !finalCover.includes('upc.geekclub.ir') && !finalCover.startsWith('data:')) {
+            if (finalCover && finalCover.includes('upc.geekclub.ir/uploads/')) {
+              finalCover = finalCover.substring(finalCover.indexOf('/uploads/'));
+            }
+            if (finalCover && !finalCover.includes('upc.geekclub.ir') && !finalCover.startsWith('/uploads/') && !finalCover.startsWith('data:')) {
               try {
                 const cdnUrl = await transferExternalUrlToCDN(finalCover, 'contents', `cover_${newItem.platform}`);
-                if (cdnUrl && cdnUrl.includes('upc.geekclub.ir')) {
+                if (cdnUrl && cdnUrl.includes('upc.geekclub.ir') && !cdnUrl.includes('upc.geekclub.ir/uploads/')) {
                   finalCover = cdnUrl;
                 }
               } catch {}
@@ -1247,7 +1256,7 @@ export default function App() {
         return c;
       });
       try {
-        localStorage.setItem('mediahub_content_v2', JSON.stringify(updated.filter((c) => !c.isDeleted)));
+        localStorage.setItem('mediahub_content_v2', JSON.stringify(updated));
       } catch {}
       return updated;
     });
@@ -1264,23 +1273,15 @@ export default function App() {
       return;
     }
 
-    if (shouldDelete) {
-      try {
-        const raw = localStorage.getItem('mediahub_deleted_ids_v1');
-        const curr = raw ? JSON.parse(raw) : [];
-        const toAdd = [contentId, cleanId, `post-${cleanId}`, `content-${cleanId}`];
-        localStorage.setItem('mediahub_deleted_ids_v1', JSON.stringify(Array.from(new Set([...curr, ...toAdd]))));
-      } catch {}
-    } else {
-      try {
-        const raw = localStorage.getItem('mediahub_deleted_ids_v1');
-        if (raw) {
-          const curr = JSON.parse(raw);
-          const filtered = curr.filter((id: string) => id !== contentId && id !== cleanId && id !== `post-${cleanId}` && id !== `content-${cleanId}`);
-          localStorage.setItem('mediahub_deleted_ids_v1', JSON.stringify(filtered));
-        }
-      } catch {}
-    }
+    // Always ensure soft-deleted or restored items are NOT in the permanent-deletion tombstone list
+    try {
+      const raw = localStorage.getItem('mediahub_deleted_ids_v1');
+      if (raw) {
+        const curr = JSON.parse(raw);
+        const filtered = curr.filter((id: string) => id !== contentId && id !== cleanId && id !== `post-${cleanId}` && id !== `content-${cleanId}`);
+        localStorage.setItem('mediahub_deleted_ids_v1', JSON.stringify(filtered));
+      }
+    } catch {}
 
     if (shouldDelete) {
       addToast('info', 'محتوا به سطل بازیافت منتقل شد و از فید پنهان گردید (قابل بازگردانی از پنل ادمین).');

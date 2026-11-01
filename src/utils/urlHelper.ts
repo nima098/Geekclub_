@@ -124,11 +124,7 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
           rawThumbnail = rawThumbnail.substring(rawThumbnail.indexOf('/uploads/'));
         }
         if (rawThumbnail && !rawThumbnail.startsWith('http') && !rawThumbnail.startsWith('data:')) {
-          if (rawThumbnail.startsWith('/')) {
-            rawThumbnail = typeof window !== 'undefined' ? `${window.location.origin}${rawThumbnail}` : rawThumbnail;
-          } else {
-            rawThumbnail = typeof window !== 'undefined' ? `${window.location.origin}/${rawThumbnail}` : `/${rawThumbnail}`;
-          }
+          rawThumbnail = rawThumbnail.startsWith('/') ? rawThumbnail : `/${rawThumbnail}`;
         }
         return {
           platform,
