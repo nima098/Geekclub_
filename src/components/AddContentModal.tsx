@@ -160,6 +160,14 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
     const parsed = parseContentUrl(url.trim());
     setDetectedPlatform(parsed.platform);
     setEmbedUrl(parsed.embedUrl);
+    if (parsed.platform === 'instagram') {
+      setDescription('');
+      if (!thumbnail.trim()) setThumbnail(FALLBACK_IMAGES.instagram);
+      if (!title.trim()) setTitle('پست اینستاگرام');
+      if (!authorName.trim()) setAuthorName('پیج اینستاگرام');
+      if (!readingOrWatchTime.trim()) setReadingOrWatchTime(url.includes('reel') ? 'ریلز اینستاگرام' : 'پست اینستاگرام');
+      if (!tagsInput.trim()) setTagsInput('اینستاگرام, رسانه');
+    }
 
     let active = true;
     setIsLoadingMeta(true);
@@ -172,8 +180,16 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
           setDetectedPlatform(meta.platform);
           setEmbedUrl(meta.embedUrl);
           if (meta.title) setTitle(meta.title);
-          if (meta.description) setDescription(meta.description);
-          if (meta.thumbnail) setThumbnail(meta.thumbnail);
+          if (meta.platform === 'instagram') {
+            setDescription('');
+          } else if (meta.description) {
+            setDescription(meta.description);
+          }
+          if (meta.thumbnail) {
+            setThumbnail(meta.thumbnail);
+          } else if (meta.platform === 'instagram' && !thumbnail.trim()) {
+            setThumbnail(FALLBACK_IMAGES.instagram);
+          }
           if (meta.authorName) setAuthorName(meta.authorName);
           if (meta.readingOrWatchTime) setReadingOrWatchTime(meta.readingOrWatchTime);
           if (meta.tags && meta.tags.length > 0) setTagsInput(meta.tags.join(', '));
@@ -194,7 +210,11 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
   useEffect(() => {
     if (fetchedMeta) {
       if (fetchedMeta.title) setTitle(fetchedMeta.title);
-      if (fetchedMeta.description) setDescription(fetchedMeta.description);
+      if (fetchedMeta.platform === 'instagram') {
+        setDescription('');
+      } else if (fetchedMeta.description) {
+        setDescription(fetchedMeta.description);
+      }
       if (fetchedMeta.thumbnail) setThumbnail(fetchedMeta.thumbnail);
       if (fetchedMeta.authorName) setAuthorName(fetchedMeta.authorName);
       if (fetchedMeta.readingOrWatchTime) setReadingOrWatchTime(fetchedMeta.readingOrWatchTime);
@@ -245,7 +265,11 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
   const handleApplyFetchedMetadata = () => {
     if (!fetchedMeta) return;
     setTitle(fetchedMeta.title);
-    setDescription(fetchedMeta.description);
+    if (fetchedMeta.platform === 'instagram') {
+      setDescription('');
+    } else {
+      setDescription(fetchedMeta.description);
+    }
     setAuthorName(fetchedMeta.authorName);
     setThumbnail(fetchedMeta.thumbnail);
     setTagsInput(fetchedMeta.tags.join(', '));
@@ -313,16 +337,16 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
           : `مقاله در ${parsed.sourceDomain}`
       );
 
-      // Description fallback
-      const finalDescription = description.trim() || fetchedMeta?.description || (
-        finalPlatform === 'youtube'
-          ? 'ویدیوی به اشتراک گذاشته شده از یوتیوب.'
-          : finalPlatform === 'instagram'
-          ? 'پست یا ریلز به اشتراک گذاشته شده از اینستاگرام.'
-          : finalPlatform === 'aparat'
-          ? 'ویدیوی به اشتراک گذاشته شده از آپارات.'
-          : `مقاله تخصصی در ${parsed.sourceDomain}.`
-      );
+      // Description fallback (Instagram videos leave description empty by default unless user enters text)
+      const finalDescription = finalPlatform === 'instagram'
+        ? description.trim()
+        : (description.trim() || fetchedMeta?.description || (
+            finalPlatform === 'youtube'
+              ? 'ویدیوی به اشتراک گذاشته شده از یوتیوب.'
+              : finalPlatform === 'aparat'
+              ? 'ویدیوی به اشتراک گذاشته شده از آپارات.'
+              : `مقاله تخصصی در ${parsed.sourceDomain}.`
+          ));
 
       const finalAuthorName = authorName.trim() || fetchedMeta?.authorName || user?.displayName || 'کاربر گیک کلاب';
       let rawThumbnail = thumbnail.trim() || fetchedMeta?.thumbnail || (
