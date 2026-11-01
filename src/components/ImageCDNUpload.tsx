@@ -97,12 +97,16 @@ export const ImageCDNUpload: React.FC<ImageCDNUploadProps> = ({
       {/* Manual URL Input / Current URL Display */}
       <div className="relative flex items-center">
         <input
-          type="url"
+          type="text"
           id="cdnUrlInput"
           name="cdnUrl"
           value={currentUrl}
           onChange={(e) => {
-            onUrlChange(e.target.value);
+            let val = e.target.value.trim();
+            if (val && !val.startsWith('http') && !val.startsWith('data:') && !val.startsWith('/')) {
+              val = `${window.location.origin}/${val}`;
+            }
+            onUrlChange(val);
             setSuccessInfo(null);
             setErrorMessage(null);
           }}

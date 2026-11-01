@@ -682,33 +682,34 @@ async function downloadAndCacheImage(imageUrl: string, filenamePrefix: string, c
       localUrl = imageUrl;
     }
 
-    // Upload to upc.geekclub.ir CDN
-    try {
-      if (!CDN_SECRET) throw new Error('CDN_SECRET is not configured');
-      const fileBlob = new Blob([buffer], { type: contentType });
-      const formData = new FormData();
-      formData.append('file', fileBlob, filename);
-      formData.append('api_token', CDN_SECRET);
-      formData.append('folder', cdnFolder || 'contents');
+    // Upload to upc.geekclub.ir CDN (only if CDN_SECRET is configured)
+    if (CDN_SECRET) {
+      try {
+        const fileBlob = new Blob([buffer], { type: contentType });
+        const formData = new FormData();
+        formData.append('file', fileBlob, filename);
+        formData.append('api_token', CDN_SECRET);
+        formData.append('folder', cdnFolder || 'contents');
 
-      const cdnResp = await fetch('https://upc.geekclub.ir/s1/upload.php', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${CDN_SECRET}`,
-          'X-Api-Token': CDN_SECRET
-        },
-        body: formData
-      });
+        const cdnResp = await fetch('https://upc.geekclub.ir/s1/upload.php', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${CDN_SECRET}`,
+            'X-Api-Token': CDN_SECRET
+          },
+          body: formData
+        });
 
-      if (cdnResp.ok) {
-        const cdnData = await cdnResp.json() as any;
-        if (cdnData.status && cdnData.url) {
-          console.log(`[CDN Upload SUCCESS] ${filenamePrefix} uploaded to CDN (${cdnFolder}): ${cdnData.url}`);
-          return cdnData.url;
+        if (cdnResp.ok) {
+          const cdnData = await cdnResp.json() as any;
+          if (cdnData.status && cdnData.url) {
+            console.log(`[CDN Upload SUCCESS] ${filenamePrefix} uploaded to CDN (${cdnFolder}): ${cdnData.url}`);
+            return cdnData.url;
+          }
         }
+      } catch (cdnErr: any) {
+        console.warn(`[CDN Upload Warning] Upload to upc.geekclub.ir failed for ${filenamePrefix}:`, cdnErr.message);
       }
-    } catch (cdnErr: any) {
-      console.warn(`[CDN Upload Warning] Upload to upc.geekclub.ir failed for ${filenamePrefix}:`, cdnErr.message);
     }
 
     return localUrl;
@@ -749,33 +750,34 @@ async function downloadAndCacheVideo(videoUrl: string, filenamePrefix: string, c
       localUrl = videoUrl;
     }
 
-    // Transfer video to CDN (upc.geekclub.ir)
-    try {
-      if (!CDN_SECRET) throw new Error('CDN_SECRET is not configured');
-      const fileBlob = new Blob([buffer], { type: 'video/mp4' });
-      const formData = new FormData();
-      formData.append('file', fileBlob, filename);
-      formData.append('api_token', CDN_SECRET);
-      formData.append('folder', cdnFolder || 'videos');
+    // Transfer video to CDN (upc.geekclub.ir) - only if CDN_SECRET is configured
+    if (CDN_SECRET) {
+      try {
+        const fileBlob = new Blob([buffer], { type: 'video/mp4' });
+        const formData = new FormData();
+        formData.append('file', fileBlob, filename);
+        formData.append('api_token', CDN_SECRET);
+        formData.append('folder', cdnFolder || 'videos');
 
-      const cdnResp = await fetch('https://upc.geekclub.ir/s1/upload.php', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${CDN_SECRET}`,
-          'X-Api-Token': CDN_SECRET
-        },
-        body: formData
-      });
+        const cdnResp = await fetch('https://upc.geekclub.ir/s1/upload.php', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${CDN_SECRET}`,
+            'X-Api-Token': CDN_SECRET
+          },
+          body: formData
+        });
 
-      if (cdnResp.ok) {
-        const cdnData = await cdnResp.json() as any;
-        if (cdnData.status && cdnData.url) {
-          console.log(`[Video Pipeline SUCCESS] Video transferred to CDN (${cdnFolder}): ${cdnData.url}`);
-          return cdnData.url;
+        if (cdnResp.ok) {
+          const cdnData = await cdnResp.json() as any;
+          if (cdnData.status && cdnData.url) {
+            console.log(`[Video Pipeline SUCCESS] Video transferred to CDN (${cdnFolder}): ${cdnData.url}`);
+            return cdnData.url;
+          }
         }
+      } catch (cdnErr: any) {
+        console.warn(`[CDN Video Transfer Warning] CDN upload failed for ${filenamePrefix}, serving via local server:`, cdnErr.message);
       }
-    } catch (cdnErr: any) {
-      console.warn(`[CDN Video Transfer Warning] CDN upload failed for ${filenamePrefix}, serving via local server:`, cdnErr.message);
     }
 
     return localUrl;
@@ -951,7 +953,7 @@ export async function extractMetadataForUrl(targetUrl: string): Promise<Extracte
         rawThumb = v.big_poster || v.small_poster || '';
       }
     } catch (err: any) {
-      console.warn('Aparat official API fetch failed, trying v1 fallback:', err.message);
+      console.log('Aparat official API fetch failed, trying v1 fallback:', err.message);
       try {
         const fallbackRes = await axios.get(`https://www.aparat.com/api/fa/v1/video/video/show/videohash/${hash}`, {
           timeout: 5000,

@@ -119,12 +119,20 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
       if (data.success && (data.title || data.thumbnail)) {
         const platform = data.platform || parsed.platform;
         const inferredCat = inferCategoryFromContent(data.title || '', data.description || '', data.tags || []);
+        let rawThumbnail = data.thumbnail || '';
+        if (rawThumbnail && !rawThumbnail.startsWith('http') && !rawThumbnail.startsWith('data:')) {
+          if (rawThumbnail.startsWith('/')) {
+            rawThumbnail = typeof window !== 'undefined' ? `${window.location.origin}${rawThumbnail}` : `https://upc.geekclub.ir${rawThumbnail}`;
+          } else {
+            rawThumbnail = typeof window !== 'undefined' ? `${window.location.origin}/${rawThumbnail}` : `https://upc.geekclub.ir/${rawThumbnail}`;
+          }
+        }
         return {
           platform,
           title: data.title || '',
           description: data.description || '',
           authorName: data.authorName || '',
-          thumbnail: data.thumbnail || '',
+          thumbnail: rawThumbnail,
           embedUrl: data.embedUrl || parsed.embedUrl,
           tags: Array.isArray(data.tags) && data.tags.length > 0 ? data.tags : ['محتوا', 'فناوری'],
           category: data.category || inferredCat,
