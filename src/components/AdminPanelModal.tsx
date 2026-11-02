@@ -803,204 +803,215 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     }, 2000);
   };
 
+  type AdminTab = typeof activeTab;
+
+  const navSections: {
+    heading: string;
+    items: { id: AdminTab; label: string; icon: React.ElementType; badge?: React.ReactNode }[];
+  }[] = [
+    {
+      heading: 'اصلی',
+      items: [
+        { id: 'dashboard', label: 'داشبورد و وضعیت', icon: LayoutDashboard },
+        {
+          id: 'contents',
+          label: 'مدیریت محتوا',
+          icon: Layers,
+          badge: pendingCount > 0 ? (
+            <span className="tb-badge tb-badge-warning">{pendingCount}</span>
+          ) : trashCount > 0 ? (
+            <span className="tb-badge tb-badge-danger-lt">{trashCount}</span>
+          ) : null
+        },
+        {
+          id: 'users',
+          label: 'کاربران و انتشار مستقیم',
+          icon: Users,
+          badge: <span className="tb-badge tb-badge-muted">{usersList.length}</span>
+        }
+      ]
+    },
+    {
+      heading: 'سیستم',
+      items: [
+        { id: 'database', label: 'پایداری داده‌ها و پشتیبان', icon: Database },
+        {
+          id: 'diagnostic',
+          label: 'تست جامع و همگام‌سازی',
+          icon: ShieldAlert,
+          badge: <span className="tb-status-dot tb-status-dot-success tb-status-dot-animated" aria-hidden="true" />
+        },
+        {
+          id: 'settings',
+          label: 'تنظیمات تایید محتوا',
+          icon: Settings,
+          badge: (
+            <span
+              className={`tb-status-dot ${siteSettings.requireContentApproval ? 'tb-status-dot-warning' : 'tb-status-dot-muted'}`}
+              aria-hidden="true"
+            />
+          )
+        }
+      ]
+    },
+    {
+      heading: 'ارتباطات',
+      items: [
+        {
+          id: 'feedback',
+          label: 'انتقادات و پیشنهادات',
+          icon: MessageSquarePlus,
+          badge: pendingFeedbackCount > 0 ? (
+            <span className="tb-badge tb-badge-warning">{pendingFeedbackCount}</span>
+          ) : null
+        },
+        { id: 'broadcast', label: 'پیام همگانی', icon: Send }
+      ]
+    }
+  ];
+
+  const allNavItems = navSections.flatMap((section) => section.items);
+  const activeNavItem = allNavItems.find((item) => item.id === activeTab) ?? allNavItems[0];
+  const adminInitials = (user?.displayName || 'ادمین').trim().slice(0, 2);
+
   return (
-    <div 
-      className="fixed inset-0 z-50 w-screen h-screen bg-slate-950 flex flex-col overflow-hidden animate-in fade-in duration-200"
-      onClick={onClose}
+    <div
+      className="tabler-admin fixed inset-0 z-50 w-screen h-screen flex overflow-hidden animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+      aria-label="پنل مدیریت گیک کلاب"
     >
-      <div 
-        className="w-full h-full bg-slate-900 flex flex-col overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Fullscreen Top Header */}
-        <div className="px-4 sm:px-6 lg:px-8 py-3.5 sm:py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/95 backdrop-blur-md shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-500 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-orange-500/20 ring-2 ring-amber-400/30 shrink-0">
-              <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6" />
+      {/* Tabler navbar-vertical (sidebar) */}
+      <aside className="tb-sidebar hidden lg:flex flex-col shrink-0" aria-label="منوی پنل مدیریت">
+        <div className="tb-brand flex items-center gap-2.5 px-5 shrink-0">
+          <span className="tb-brand-mark flex items-center justify-center shrink-0">
+            <ShieldCheck className="w-4.5 h-4.5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <div className="text-sm font-bold text-slate-100 truncate">گیک کلاب</div>
+            <div className="tb-page-pretitle" dir="ltr">Admin Console</div>
+          </div>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto py-2">
+          {navSections.map((section) => (
+            <div key={section.heading}>
+              <div className="tb-nav-heading">{section.heading}</div>
+              <ul>
+                {section.items.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab(item.id)}
+                        aria-current={activeTab === item.id ? 'page' : undefined}
+                        className="tb-nav-link"
+                      >
+                        <Icon className="tb-nav-icon" aria-hidden="true" />
+                        <span className="flex-1 truncate">{item.label}</span>
+                        {item.badge}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-sm sm:text-lg font-black text-slate-100">
-                  پنل مدیریت و نظارت کل گیک کلاب
-                </h3>
-                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
-                  <Crown className="w-3 h-3 text-amber-400" />
-                  مدیر سیستم (فول اسکرین)
-                </span>
-                <span className="text-[10px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded-md hidden md:inline">
-                  3dsaz1990@gmail.com
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 hidden sm:block">
-                مدیریت انتشار، نظارت بر پست‌های معلق، سطوح دسترسی کاربران، تنظیمات و سطل بازیافت
-              </p>
+          ))}
+        </nav>
+
+        <div className="p-4 border-t border-slate-700 shrink-0">
+          <div className="flex items-center gap-2.5">
+            {user?.photoURL ? (
+              <img src={user.photoURL} alt="" className="tb-avatar object-cover" />
+            ) : (
+              <span className="tb-avatar flex items-center justify-center">{adminInitials}</span>
+            )}
+            <div className="min-w-0">
+              <div className="text-xs font-semibold text-slate-100 truncate">{user?.displayName || 'مدیر سیستم'}</div>
+              <div className="text-[11px] text-slate-500 truncate font-mono" dir="ltr">3dsaz1990@gmail.com</div>
             </div>
+          </div>
+        </div>
+      </aside>
+
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Tabler top navbar */}
+        <header className="tb-navbar flex items-center justify-between gap-3 px-4 sm:px-6 shrink-0">
+          <div className="flex items-center gap-2.5 lg:hidden min-w-0">
+            <span className="tb-brand-mark flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-4.5 h-4.5" aria-hidden="true" />
+            </span>
+            <span className="text-sm font-bold text-slate-100 truncate">پنل مدیریت گیک کلاب</span>
+          </div>
+
+          <div className="hidden lg:flex items-center gap-2">
+            <span className="tb-badge tb-badge-warning-lt">
+              <Crown className="w-3 h-3" aria-hidden="true" />
+              مدیر سیستم
+            </span>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Toggle Browser Fullscreen Button */}
             <button
               type="button"
               onClick={toggleBrowserFullscreen}
-              className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+              className="tb-btn"
               title={isBrowserFullscreen ? 'خروج از حالت تمام‌صفحه مرورگر' : 'ورود به حالت تمام‌صفحه مرورگر'}
             >
               {isBrowserFullscreen ? (
-                <>
-                  <Minimize2 className="w-4 h-4 text-amber-400" />
-                  <span className="hidden md:inline">کوچک‌نمایی</span>
-                </>
+                <Minimize2 className="w-4 h-4" aria-hidden="true" />
               ) : (
-                <>
-                  <Maximize2 className="w-4 h-4 text-amber-400" />
-                  <span className="hidden md:inline">تمام‌صفحه مرورگر</span>
-                </>
+                <Maximize2 className="w-4 h-4" aria-hidden="true" />
               )}
+              <span className="hidden md:inline">
+                {isBrowserFullscreen ? 'کوچک‌نمایی' : 'تمام‌صفحه'}
+              </span>
             </button>
 
-            {/* Back to Site Button */}
             <button
               type="button"
               onClick={onClose}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-indigo-600/25 transition cursor-pointer active:scale-95"
+              className="tb-btn tb-btn-primary"
               title="بستن پنل و بازگشت به صفحه اصلی سایت"
             >
-              <Home className="w-4 h-4" />
+              <Home className="w-4 h-4" aria-hidden="true" />
               <span>بازگشت به سایت</span>
-              <X className="w-4 h-4 ml-0.5" />
             </button>
           </div>
-        </div>
+        </header>
 
-        {/* Tab Navigation */}
-        <div className="px-4 sm:px-6 lg:px-8 border-b border-slate-800 bg-slate-900/60 shrink-0">
-          <div className="flex items-center gap-2 pt-3 text-xs font-semibold overflow-x-auto no-scrollbar">
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
-                activeTab === 'dashboard'
-                ? 'border-indigo-500 text-indigo-400 font-bold'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <LayoutDashboard className="w-4 h-4" />
-            داشبورد و وضعیت
-          </button>
+        {/* Mobile horizontal nav */}
+        <nav className="tb-tabs lg:hidden px-2 overflow-x-auto no-scrollbar shrink-0" aria-label="منوی پنل مدیریت">
+          <div className="flex items-center">
+            {allNavItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setActiveTab(item.id)}
+                  aria-current={activeTab === item.id ? 'page' : undefined}
+                  className="tb-tab"
+                >
+                  <Icon className="w-4 h-4" aria-hidden="true" />
+                  {item.label}
+                  {item.badge}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
 
-          <button
-            onClick={() => setActiveTab('contents')}
-            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
-              activeTab === 'contents'
-                ? 'border-indigo-500 text-indigo-400 font-bold'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Layers className="w-4 h-4" />
-            مدیریت محتوا
-            {pendingCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px] animate-pulse">
-                {pendingCount} در انتظار تایید
-              </span>
-            )}
-            {trashCount > 0 && (
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                {trashCount} سطل
-              </span>
-            )}
-          </button>
+        {/* Page body */}
+        <main className="flex-1 overflow-y-auto">
+          {/* Tabler page-header */}
+          <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-6 pb-4">
+            <div className="tb-page-pretitle">پنل مدیریت و نظارت کل</div>
+            <h1 className="tb-page-title mt-1">{activeNavItem.label}</h1>
+          </div>
 
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
-              activeTab === 'users'
-                ? 'border-indigo-500 text-indigo-400 font-bold'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            مدیریت کاربران و انتشار مستقیم
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 font-mono">
-              {usersList.length}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('database')}
-            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
-              activeTab === 'database'
-                ? 'border-indigo-500 text-indigo-400 font-bold'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Database className="w-4 h-4 text-cyan-400" />
-            پایداری داده‌ها و پشتیبان‌گیری
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-cyan-500/20 text-cyan-300 font-mono">
-              JSON + Firestore
-            </span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('diagnostic')}
-            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
-              activeTab === 'diagnostic'
-                ? 'border-indigo-500 text-indigo-400 font-bold'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <ShieldAlert className="w-4 h-4 text-emerald-400 animate-pulse" />
-            تست جامع دیتابیس و همگام‌سازی
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 font-mono">
-              Live Ping
-            </span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
-              activeTab === 'settings'
-                ? 'border-indigo-500 text-indigo-400 font-bold'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Settings className="w-4 h-4" />
-            تنظیمات تایید محتوا
-            <span className={`w-2 h-2 rounded-full ${siteSettings.requireContentApproval ? 'bg-amber-400' : 'bg-slate-500'}`} />
-          </button>
-
-          <button
-            onClick={() => setActiveTab('feedback')}
-            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
-              activeTab === 'feedback'
-                ? 'border-indigo-500 text-indigo-400 font-bold'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <MessageSquarePlus className="w-4 h-4" />
-            انتقادات و پیشنهادات
-            {pendingFeedbackCount > 0 && (
-              <span className="w-4 h-4 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px] flex items-center justify-center">
-                {pendingFeedbackCount}
-              </span>
-            )}
-          </button>
-
-          <button
-            onClick={() => setActiveTab('broadcast')}
-            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
-              activeTab === 'broadcast'
-                ? 'border-indigo-500 text-indigo-400 font-bold'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Send className="w-4 h-4" />
-            پیام همگانی
-          </button>
-        </div>
-      </div>
-
-      {/* Tab Body */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-950/40">
-        <div className="max-w-7xl mx-auto w-full">
+          <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pb-8">
           {/* 1. Dashboard Tab */}
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
@@ -3155,7 +3166,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
                   <button
                     type="submit"
-                    className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 transition active:scale-95 cursor-pointer"
+                    className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition active:scale-95 cursor-pointer"
                   >
                     <Send className="w-4 h-4 ml-1" />
                     ارسال اعلان رسمی به این‌باکس
@@ -3164,9 +3175,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               )}
             </div>
           )}
-        </div>
+          </div>
+        </main>
       </div>
     </div>
-  </div>
-);
+  );
 };

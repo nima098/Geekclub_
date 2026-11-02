@@ -1,0 +1,577 @@
+/*
+ * Tabler (github.com/tabler/tabler) design system, scoped to the admin panel.
+ * Tailwind v4 utilities read palette/radius values from CSS variables, so the
+ * palette is remapped to Tabler tokens inside `.tabler-admin` only and the rest
+ * of the site keeps its own look.
+ */
+
+.tabler-admin {
+  /* Tabler dark theme tokens */
+  --tb-primary: #066fd1;
+  --tb-primary-hover: #0561b8;
+  --tb-primary-lt: rgba(6, 111, 209, 0.12);
+  --tb-body-bg: #151f2c;
+  --tb-surface: #182433;
+  --tb-surface-secondary: #1b2a3c;
+  --tb-surface-tertiary: #1f2e41;
+  --tb-sidebar-bg: #182433;
+  --tb-border: #25384f;
+  --tb-border-light: #1f2e41;
+  --tb-body-color: #dce1e7;
+  --tb-heading-color: #ffffff;
+  --tb-secondary: #8a97ab;
+  --tb-muted: #6c7a91;
+  --tb-form-bg: #151f2c;
+  --tb-shadow-card: 0 0 0 1px var(--tb-border);
+  --tb-shadow-dropdown: 0 16px 24px 2px rgba(0, 0, 0, 0.25);
+  --tb-focus-ring: 0 0 0 0.25rem rgba(6, 111, 209, 0.25);
+
+  /* Remap Tailwind palette -> Tabler palette */
+  --color-slate-950: #111a25;
+  --color-slate-900: var(--tb-body-bg);
+  --color-slate-850: var(--tb-surface-secondary);
+  --color-slate-800: var(--tb-surface);
+  --color-slate-750: var(--tb-surface-tertiary);
+  --color-slate-700: var(--tb-border);
+  --color-slate-600: #354a65;
+  --color-slate-500: var(--tb-muted);
+  --color-slate-400: var(--tb-secondary);
+  --color-slate-300: #b4bfcd;
+  --color-slate-200: var(--tb-body-color);
+  --color-slate-100: #f0f3f6;
+
+  --color-indigo-300: #74b3ec;
+  --color-indigo-400: #4299e1;
+  --color-indigo-500: #066fd1;
+  --color-indigo-600: #066fd1;
+  --color-purple-500: #ae3ec9;
+  --color-purple-600: #ae3ec9;
+  --color-pink-300: #e685a7;
+  --color-pink-400: #de5c89;
+  --color-pink-500: #d6336c;
+  --color-pink-600: #d6336c;
+
+  --color-blue-300: #74b3ec;
+  --color-blue-400: #4299e1;
+  --color-blue-500: #066fd1;
+  --color-blue-600: #066fd1;
+  --color-sky-300: #8ec2ee;
+  --color-sky-400: #68adea;
+  --color-sky-500: #4299e1;
+  --color-sky-600: #4299e1;
+  --color-cyan-300: #74c7d4;
+  --color-cyan-400: #45b5c6;
+  --color-cyan-500: #17a2b8;
+  --color-cyan-600: #17a2b8;
+
+  --color-emerald-200: #ace1b4;
+  --color-emerald-300: #82d18f;
+  --color-emerald-400: #59c269;
+  --color-emerald-500: #2fb344;
+  --color-emerald-600: #2fb344;
+  --color-green-400: #59c269;
+  --color-green-500: #2fb344;
+  --color-teal-400: #3db893;
+  --color-teal-500: #0ca678;
+
+  --color-amber-200: #fbd999;
+  --color-amber-300: #f9c566;
+  --color-amber-400: #f7b233;
+  --color-amber-500: #f59f00;
+  --color-amber-600: #f59f00;
+  --color-amber-950: #3d2800;
+  --color-orange-400: #f9853a;
+  --color-orange-500: #f76707;
+  --color-yellow-400: #f7b233;
+  --color-yellow-500: #f59f00;
+
+  --color-rose-200: #efb0b0;
+  --color-rose-300: #e68888;
+  --color-rose-400: #de6161;
+  --color-rose-500: #d63939;
+  --color-rose-600: #d63939;
+  --color-rose-800: #6b1c1c;
+  --color-rose-950: #360e0e;
+  --color-red-400: #de6161;
+  --color-red-500: #d63939;
+
+  /* Tabler radii (4px base, 6px cards) */
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+  --radius-2xl: 8px;
+  --radius-3xl: 8px;
+
+  background-color: var(--tb-body-bg);
+  color: var(--tb-body-color);
+  font-size: 0.875rem;
+  line-height: 1.4285714;
+}
+
+html.light .tabler-admin {
+  /* Tabler light theme tokens */
+  --tb-primary-lt: rgba(6, 111, 209, 0.08);
+  --tb-body-bg: #f6f8fb;
+  --tb-surface: #ffffff;
+  --tb-surface-secondary: #f6f8fb;
+  --tb-surface-tertiary: #eef1f5;
+  --tb-sidebar-bg: #ffffff;
+  --tb-border: #dce1e7;
+  --tb-border-light: #e6e9ee;
+  --tb-body-color: #182433;
+  --tb-heading-color: #182433;
+  --tb-secondary: #49566c;
+  --tb-muted: #6c7a91;
+  --tb-form-bg: #ffffff;
+  --tb-shadow-card: 0 0 4px rgba(24, 36, 51, 0.04);
+  --tb-shadow-dropdown: 0 16px 24px 2px rgba(24, 36, 51, 0.08);
+
+  --color-slate-950: #eef1f5;
+  --color-slate-300: #49566c;
+  --color-slate-100: #182433;
+  --color-indigo-300: #066fd1;
+  --color-indigo-400: #066fd1;
+  --color-emerald-200: #1f7a2e;
+  --color-emerald-300: #278f39;
+  --color-emerald-400: #2fb344;
+  --color-amber-200: #8a5900;
+  --color-amber-300: #a86d00;
+  --color-amber-400: #c78100;
+  --color-rose-200: #9c2424;
+  --color-rose-300: #b32d2d;
+  --color-rose-400: #d63939;
+  --color-cyan-300: #117a8b;
+  --color-cyan-400: #17a2b8;
+  --color-sky-300: #1d78c4;
+  --color-pink-300: #b0285a;
+  --color-amber-950: #fff4dd;
+  --color-rose-950: #fbe9e9;
+  --color-rose-800: #f0c2c2;
+}
+
+/* ---------- Layout: navbar-vertical, navbar, page-header ---------- */
+
+.tabler-admin .tb-sidebar {
+  width: 15rem;
+  background: var(--tb-sidebar-bg);
+  border-inline-end: 1px solid var(--tb-border);
+}
+
+.tabler-admin .tb-brand {
+  height: 3.5rem;
+  border-bottom: 1px solid var(--tb-border);
+}
+
+.tabler-admin .tb-brand-mark {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 6px;
+  background: var(--tb-primary);
+  color: #fff;
+}
+
+.tabler-admin .tb-nav-heading {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tb-muted);
+  padding: 1rem 1.25rem 0.5rem;
+}
+
+.tabler-admin .tb-nav-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--tb-secondary);
+  text-align: start;
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.tabler-admin .tb-nav-link:hover {
+  color: var(--tb-body-color);
+  background: var(--tb-primary-lt);
+}
+
+.tabler-admin .tb-nav-link[aria-current='page'] {
+  color: var(--tb-body-color);
+  background: var(--tb-primary-lt);
+  font-weight: 600;
+}
+
+.tabler-admin .tb-nav-link[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 2px;
+  background: var(--tb-primary);
+}
+
+.tabler-admin .tb-nav-link[aria-current='page'] .tb-nav-icon {
+  color: var(--tb-primary);
+}
+
+.tabler-admin .tb-nav-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  stroke-width: 1.5;
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+
+.tabler-admin .tb-navbar {
+  min-height: 3.5rem;
+  background: var(--tb-surface);
+  border-bottom: 1px solid var(--tb-border);
+}
+
+.tabler-admin .tb-tabs {
+  background: var(--tb-surface);
+  border-bottom: 1px solid var(--tb-border);
+}
+
+.tabler-admin .tb-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.75rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--tb-secondary);
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tabler-admin .tb-tab[aria-current='page'] {
+  color: var(--tb-primary);
+  border-bottom-color: var(--tb-primary);
+}
+
+.tabler-admin .tb-page-pretitle {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tb-muted);
+}
+
+.tabler-admin .tb-page-title {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 700;
+  color: var(--tb-heading-color);
+}
+
+.tabler-admin .tb-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 6px;
+  background: var(--tb-primary-lt);
+  color: var(--tb-primary);
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+/* ---------- Badges & status dots (Tabler .badge / .status-dot) ---------- */
+
+.tabler-admin .tb-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.375rem;
+  justify-content: center;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.tabler-admin .tb-badge-warning {
+  background: #f59f00;
+  color: #fff;
+}
+
+.tabler-admin .tb-badge-warning-lt {
+  background: rgba(245, 159, 0, 0.12);
+  color: #f59f00;
+}
+
+.tabler-admin .tb-badge-danger-lt {
+  background: rgba(214, 57, 57, 0.12);
+  color: #d63939;
+}
+
+.tabler-admin .tb-badge-muted {
+  background: var(--tb-surface-tertiary);
+  color: var(--tb-secondary);
+}
+
+.tabler-admin .tb-status-dot {
+  position: relative;
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: var(--tb-muted);
+}
+
+.tabler-admin .tb-status-dot-success {
+  background: #2fb344;
+}
+
+.tabler-admin .tb-status-dot-warning {
+  background: #f59f00;
+}
+
+.tabler-admin .tb-status-dot-muted {
+  background: var(--tb-muted);
+}
+
+.tabler-admin .tb-status-dot-animated::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  animation: tb-status-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes tb-status-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tabler-admin .tb-status-dot-animated::before {
+    animation: none;
+  }
+}
+
+/* ---------- Buttons (Tabler .btn) ---------- */
+
+.tabler-admin .tb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 4px;
+  border: 1px solid var(--tb-border);
+  background: var(--tb-surface);
+  color: var(--tb-body-color);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.tabler-admin .tb-btn:hover {
+  background: var(--tb-surface-tertiary);
+}
+
+.tabler-admin .tb-btn-primary {
+  background: var(--tb-primary);
+  border-color: var(--tb-primary);
+  color: #fff;
+}
+
+.tabler-admin .tb-btn-primary:hover {
+  background: var(--tb-primary-hover);
+  border-color: var(--tb-primary-hover);
+}
+
+.tabler-admin .tb-btn:focus-visible,
+.tabler-admin .tb-nav-link:focus-visible,
+.tabler-admin .tb-tab:focus-visible {
+  outline: none;
+  box-shadow: var(--tb-focus-ring);
+}
+
+/* ---------- Existing content: card / form / badge harmonisation ---------- */
+
+/* Cards: solid surfaces with hairline borders instead of translucent glass */
+.tabler-admin.tabler-admin .bg-slate-800\/80,
+.tabler-admin.tabler-admin .bg-slate-800\/90,
+.tabler-admin.tabler-admin .bg-slate-800 {
+  background-color: var(--tb-surface) !important;
+}
+
+.tabler-admin.tabler-admin .bg-slate-900,
+.tabler-admin.tabler-admin .bg-slate-900\/80,
+.tabler-admin.tabler-admin .bg-slate-900\/60,
+.tabler-admin.tabler-admin .bg-slate-900\/95,
+.tabler-admin.tabler-admin .bg-slate-950,
+.tabler-admin.tabler-admin .bg-slate-950\/40,
+.tabler-admin.tabler-admin .bg-slate-950\/60 {
+  background-color: var(--tb-surface-secondary) !important;
+}
+
+.tabler-admin.tabler-admin .bg-slate-750,
+.tabler-admin.tabler-admin .bg-slate-700 {
+  background-color: var(--tb-surface-tertiary) !important;
+}
+
+.tabler-admin.tabler-admin .hover\:bg-slate-750:hover,
+.tabler-admin.tabler-admin .hover\:bg-slate-700:hover,
+.tabler-admin.tabler-admin .hover\:bg-slate-600:hover {
+  background-color: var(--tb-surface-tertiary) !important;
+}
+
+.tabler-admin.tabler-admin .border-slate-800,
+.tabler-admin.tabler-admin .border-slate-800\/80,
+.tabler-admin.tabler-admin .border-slate-750,
+.tabler-admin.tabler-admin .border-slate-700,
+.tabler-admin.tabler-admin .border-slate-700\/80,
+.tabler-admin.tabler-admin .border-slate-700\/60,
+.tabler-admin.tabler-admin .border-slate-900\/60 {
+  border-color: var(--tb-border) !important;
+}
+
+/* Text tokens */
+html.light .tabler-admin .text-white:not(:is(.bg-indigo-600, .bg-emerald-600, .bg-rose-600, .bg-blue-600, .bg-sky-600, .bg-cyan-600, .bg-pink-600, .bg-amber-600, .bg-rose-500, .bg-emerald-500, .tb-btn-primary, .tb-brand-mark), :is(.bg-indigo-600, .bg-emerald-600, .bg-rose-600, .bg-blue-600, .bg-sky-600, .bg-cyan-600, .bg-pink-600, .bg-amber-600, .bg-rose-500, .bg-emerald-500, .tb-btn-primary) *) {
+  color: var(--tb-heading-color);
+}
+
+.tabler-admin.tabler-admin .text-slate-100,
+.tabler-admin.tabler-admin .text-slate-200 {
+  color: var(--tb-body-color) !important;
+}
+
+.tabler-admin.tabler-admin .text-slate-300,
+.tabler-admin.tabler-admin .text-slate-400 {
+  color: var(--tb-secondary) !important;
+}
+
+.tabler-admin.tabler-admin .text-slate-500 {
+  color: var(--tb-muted) !important;
+}
+
+/* Tabler favours semibold over black weights */
+.tabler-admin .font-black,
+.tabler-admin .font-extrabold {
+  font-weight: 700;
+}
+
+/* Shadows: Tabler cards are flat with a hairline */
+.tabler-admin.tabler-admin .shadow-sm,
+.tabler-admin.tabler-admin .shadow-md,
+.tabler-admin.tabler-admin .shadow-lg {
+  box-shadow: var(--tb-shadow-card) !important;
+}
+
+.tabler-admin.tabler-admin .shadow-xl,
+.tabler-admin.tabler-admin .shadow-2xl {
+  box-shadow: var(--tb-shadow-dropdown) !important;
+}
+
+.tabler-admin.tabler-admin .shadow-inner {
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Remove gradients / glow effects in favour of solid primary */
+.tabler-admin.tabler-admin .bg-gradient-to-r,
+.tabler-admin.tabler-admin .bg-gradient-to-tr,
+.tabler-admin.tabler-admin .bg-gradient-to-br {
+  background-image: none !important;
+  background-color: var(--tb-primary) !important;
+}
+
+/* Solid action buttons keep white text in both themes */
+.tabler-admin.tabler-admin [class*='bg-indigo-600'],
+.tabler-admin.tabler-admin .bg-emerald-600,
+.tabler-admin.tabler-admin .bg-rose-600,
+.tabler-admin.tabler-admin .bg-blue-600,
+.tabler-admin.tabler-admin .bg-sky-600,
+.tabler-admin.tabler-admin .bg-cyan-600,
+.tabler-admin.tabler-admin .bg-pink-600,
+.tabler-admin.tabler-admin .bg-amber-600 {
+  color: #fff !important;
+}
+
+.tabler-admin.tabler-admin .bg-indigo-600 {
+  background-color: var(--tb-primary) !important;
+}
+
+.tabler-admin.tabler-admin .hover\:bg-indigo-500:hover {
+  background-color: var(--tb-primary-hover) !important;
+}
+
+/* Form controls (Tabler .form-control / .form-select) */
+.tabler-admin input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='range']),
+.tabler-admin.tabler-admin select,
+.tabler-admin.tabler-admin textarea {
+  background-color: var(--tb-form-bg) !important;
+  border-color: var(--tb-border) !important;
+  color: var(--tb-body-color) !important;
+  border-radius: 4px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.tabler-admin input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='range']):focus,
+.tabler-admin.tabler-admin select:focus,
+.tabler-admin.tabler-admin textarea:focus {
+  border-color: #83b7e8 !important;
+  box-shadow: var(--tb-focus-ring) !important;
+  outline: none;
+}
+
+.tabler-admin.tabler-admin input::placeholder,
+.tabler-admin.tabler-admin textarea::placeholder {
+  color: var(--tb-muted) !important;
+}
+
+.tabler-admin input[type='checkbox'],
+.tabler-admin input[type='radio'] {
+  accent-color: var(--tb-primary);
+}
+
+/* Tables (Tabler .table) */
+.tabler-admin table th {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tb-muted);
+  background: var(--tb-surface-secondary);
+}
+
+.tabler-admin table td,
+.tabler-admin table th {
+  border-color: var(--tb-border-light);
+}
+
+/* Code blocks */
+.tabler-admin pre,
+.tabler-admin code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Scrollbars */
+.tabler-admin ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tabler-admin ::-webkit-scrollbar-thumb {
+  background: var(--tb-border);
+  border-radius: 4px;
+}
