@@ -310,10 +310,6 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
               </div>
 
               <div className="flex items-center gap-3 text-xs text-slate-400">
-                <span className="flex items-center gap-1 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700/60">
-                  <Clock className="w-3.5 h-3.5 text-indigo-400" />
-                  {item.readingOrWatchTime}
-                </span>
                 <span>{item.publishedAt}</span>
               </div>
             </div>
@@ -387,17 +383,6 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <a
-              href={item.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm"
-              title={getExternalSourceLabel()}
-            >
-              <ExternalLink className="w-4 h-4 text-slate-300" />
-              <span>{getExternalSourceLabel()}</span>
-            </a>
-
             <button
               onClick={() => onToggleSave(item.id)}
               className={`p-2.5 rounded-xl border transition cursor-pointer ${

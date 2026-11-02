@@ -122,11 +122,11 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   const meta = getPlatformMeta();
 
   return (
-    <article id={item.id} className={`group flex flex-col bg-slate-900/95 backdrop-blur-xl border border-slate-800/80 rounded-[1.75rem] overflow-hidden shadow-xl transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1 ${meta.accentColor} ${
+    <article id={item.id} className={`gc-content-card group flex flex-col bg-slate-900/95 backdrop-blur-xl border border-slate-800/80 rounded-[1.75rem] overflow-hidden shadow-xl transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1 ${meta.accentColor} ${
       viewMode === 'compact' ? 'sm:flex-row' : ''
     }`}>
       {/* Media / Embed Container */}
-      <div className={`relative bg-slate-950 overflow-hidden ${
+      <div className={`gc-card-media-wrapper relative bg-slate-950 overflow-hidden ${
         viewMode === 'compact' 
           ? 'sm:w-64 sm:shrink-0 aspect-video sm:aspect-auto' 
           : 'aspect-video w-full'
@@ -198,7 +198,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                         e.stopPropagation();
                         setIsPlayingVideo(false);
                       }}
-                      className="absolute top-2 left-2 z-20 p-1.5 rounded-lg bg-black/70 hover:bg-black/90 text-white text-xs transition cursor-pointer backdrop-blur-md border border-white/20"
+                      className="btn-close-video absolute top-2 left-2 z-20 p-1.5 rounded-lg bg-black/70 hover:bg-black/90 text-white text-xs transition cursor-pointer backdrop-blur-md border border-white/20"
                       title="بستن پخش ویدیو"
                     >
                       <X className="w-4 h-4" />
@@ -270,7 +270,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                       setIsPlayingVideo(false);
                       setActiveSlideIndex((prev) => (prev - 1 + slideList.length) % slideList.length);
                     }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 z-20 p-1.5 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white border border-slate-700/80 shadow-lg backdrop-blur-md transition-all active:scale-95 cursor-pointer opacity-80 hover:opacity-100"
+                    className="btn-slide-nav btn-slide-prev absolute right-2 top-1/2 -translate-y-1/2 z-20 p-1.5 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white border border-slate-700/80 shadow-lg backdrop-blur-md transition-all active:scale-95 cursor-pointer opacity-80 hover:opacity-100"
                     title="اسلاید قبلی"
                   >
                     <ChevronRight className="w-4 h-4" />
@@ -283,14 +283,14 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                       setIsPlayingVideo(false);
                       setActiveSlideIndex((prev) => (prev + 1) % slideList.length);
                     }}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 z-20 p-1.5 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white border border-slate-700/80 shadow-lg backdrop-blur-md transition-all active:scale-95 cursor-pointer opacity-80 hover:opacity-100"
+                    className="btn-slide-nav btn-slide-next absolute left-2 top-1/2 -translate-y-1/2 z-20 p-1.5 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white border border-slate-700/80 shadow-lg backdrop-blur-md transition-all active:scale-95 cursor-pointer opacity-80 hover:opacity-100"
                     title="اسلاید بعدی"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
 
                   {/* Dots Indicator */}
-                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-950/75 border border-slate-800/80 backdrop-blur-md shadow-lg">
+                  <div className="gc-slide-dots absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-950/75 border border-slate-800/80 backdrop-blur-md shadow-lg">
                     {slideList.map((s, idx) => (
                       <button
                         key={idx}
@@ -299,7 +299,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                           setIsPlayingVideo(false);
                           setActiveSlideIndex(idx);
                         }}
-                        className={`transition-all rounded-full cursor-pointer ${
+                        className={`btn-slide-dot transition-all rounded-full cursor-pointer ${
                           idx === activeSlideIndex
                             ? 'w-4 h-1.5 bg-pink-400'
                             : 'w-1.5 h-1.5 bg-slate-500 hover:bg-slate-300'
@@ -467,7 +467,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               <button
                 key={tag}
                 onClick={() => onTagClick(tag)}
-                className="text-[11px] font-semibold text-slate-400 hover:text-indigo-300 hover:underline transition cursor-pointer"
+                className="btn-tag-chip text-[11px] font-semibold text-slate-400 hover:text-indigo-300 hover:underline transition cursor-pointer"
               >
                 #{tag}
               </button>
@@ -476,13 +476,13 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         </div>
 
         {/* M3 Joined Reaction Bar & Action Controls */}
-        <div className="pt-3.5 mt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
+        <div className="gc-card-footer pt-3.5 mt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
           {/* M3 Segmented Reaction Controls (Like / Dislike) */}
-          <div className="flex items-center gap-1 bg-slate-800/80 border border-slate-700/60 rounded-2xl p-1">
+          <div className="gc-card-reactions flex items-center gap-1 bg-slate-800/80 border border-slate-700/60 rounded-2xl p-1">
             {/* Like */}
             <button
               onClick={() => onLike(item.id)}
-              className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              className={`btn-reaction btn-reaction-like px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                 item.userReaction === 'like'
                   ? 'bg-emerald-500 text-white shadow-sm'
                   : 'text-slate-300 hover:text-emerald-400 hover:bg-slate-750'
@@ -499,7 +499,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             {/* Dislike */}
             <button
               onClick={() => onDislike(item.id)}
-              className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              className={`btn-reaction btn-reaction-dislike px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                 item.userReaction === 'dislike'
                   ? 'bg-rose-500 text-white shadow-sm'
                   : 'text-slate-300 hover:text-rose-400 hover:bg-slate-750'
@@ -512,11 +512,11 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           </div>
 
           {/* Action Buttons: Comments, Bookmark, Share */}
-          <div className="flex items-center gap-1.5">
+          <div className="gc-card-actions flex items-center gap-1.5">
             {/* Comments button */}
             <button
               onClick={() => onOpenComments(item)}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-indigo-300 border border-slate-700/60 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+              className="btn-card-comments px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-indigo-300 border border-slate-700/60 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
               title="مشاهده و ثبت نظر"
             >
               <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
@@ -526,7 +526,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             {/* Bookmark button */}
             <button
               onClick={() => onToggleSave(item.id)}
-              className={`p-1.5 rounded-xl border transition cursor-pointer ${
+              className={`btn-card-bookmark p-1.5 rounded-xl border transition cursor-pointer ${
                 item.saved
                   ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                   : 'bg-slate-800/80 hover:bg-slate-750 text-slate-400 hover:text-white border-slate-700/60'
@@ -539,7 +539,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             {/* Share button */}
             <button
               onClick={handleShare}
-              className="p-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-400 hover:text-white border border-slate-700/60 transition cursor-pointer"
+              className="btn-card-share p-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-400 hover:text-white border border-slate-700/60 transition cursor-pointer"
               title="کپی لینک اشتراک"
             >
               {isCopied ? (
@@ -556,7 +556,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   e.stopPropagation();
                   onDeleteContent(item.id);
                 }}
-                className="px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 active:scale-95 text-rose-400 hover:text-rose-300 border border-slate-700/60 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm group"
+                className="btn-card-delete px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 active:scale-95 text-rose-400 hover:text-rose-300 border border-slate-700/60 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm group"
                 title="حذف و انتقال به سطل زباله (مخصوص مدیریت)"
               >
                 <Trash2 className="w-3.5 h-3.5 text-rose-400 group-hover:scale-110 transition-transform" />
@@ -571,7 +571,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   e.stopPropagation();
                   onRestoreContent(item.id);
                 }}
-                className="px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 hover:text-emerald-100 border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+                className="btn-card-restore px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 hover:text-emerald-100 border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm"
                 title="بازگردانی محتوا از سطل زباله به صفحه اصلی"
               >
                 <RotateCcw className="w-3.5 h-3.5 text-emerald-400" />
@@ -586,7 +586,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   e.stopPropagation();
                   onPermanentDelete(item.id);
                 }}
-                className="p-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 hover:text-rose-100 border border-rose-500/40 transition cursor-pointer"
+                className="btn-card-permanent-delete p-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 hover:text-rose-100 border border-rose-500/40 transition cursor-pointer"
                 title="حذف دائمی از دیتابیس"
               >
                 <Trash2 className="w-4 h-4 text-rose-400" />

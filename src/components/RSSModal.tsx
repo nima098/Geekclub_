@@ -64,15 +64,15 @@ export const RSSModal: React.FC<RSSModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-150 overflow-y-auto"
+      className="gc-rss-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-150 overflow-y-auto"
       onClick={onClose}
     >
       <div 
-        className="w-full max-w-2xl bg-slate-900 border border-slate-750 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150 my-auto text-right"
+        className="gc-rss-modal w-full max-w-2xl bg-slate-900 border border-slate-750 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150 my-auto text-right"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 backdrop-blur-xl shrink-0">
+        <div className="gc-rss-header p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 backdrop-blur-xl shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center justify-center shadow-lg shadow-amber-500/20">
               <Rss className="w-5 h-5" />
@@ -92,7 +92,7 @@ export const RSSModal: React.FC<RSSModalProps> = ({ isOpen, onClose }) => {
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition cursor-pointer"
+            className="btn-close-rss-modal p-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition cursor-pointer"
             title="بستن پنجره"
           >
             <X className="w-5 h-5" />
@@ -100,9 +100,9 @@ export const RSSModal: React.FC<RSSModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Body */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 text-xs sm:text-sm">
+        <div className="gc-rss-body p-4 sm:p-6 overflow-y-auto space-y-5 text-xs sm:text-sm">
           {/* Main Feed Card */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-slate-800/60 border border-slate-700/80 space-y-3 shadow-inner">
+          <div className="gc-rss-main-feed p-4 sm:p-5 rounded-2xl bg-slate-800/60 border border-slate-700/80 space-y-3 shadow-inner">
             <div className="flex items-center justify-between">
               <span className="font-bold text-slate-200 flex items-center gap-2 text-xs">
                 <Rss className="w-4 h-4 text-amber-400" />
@@ -118,11 +118,11 @@ export const RSSModal: React.FC<RSSModalProps> = ({ isOpen, onClose }) => {
                 name="rssUrl"
                 readOnly
                 value={activeUrl}
-                className="flex-1 bg-transparent text-amber-300 font-mono text-xs dir-ltr focus:outline-none select-all px-1 truncate"
+                className="input-rss-url flex-1 bg-transparent text-amber-300 font-mono text-xs dir-ltr focus:outline-none select-all px-1 truncate"
               />
               <button
                 onClick={() => handleCopy(activeUrl, 'main')}
-                className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md transition active:scale-95 cursor-pointer shrink-0"
+                className="btn-copy-rss-feed px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md transition active:scale-95 cursor-pointer shrink-0"
               >
                 {copiedKey === 'main' ? (
                   <>
@@ -154,7 +154,7 @@ export const RSSModal: React.FC<RSSModalProps> = ({ isOpen, onClose }) => {
                 href={`https://feedly.com/i/subscription/feed/${encodeURIComponent(activeUrl)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 transition"
+                className="btn-feedly-subscribe px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 transition"
               >
                 <span>اشتراک در Feedly</span>
               </a>
@@ -163,7 +163,7 @@ export const RSSModal: React.FC<RSSModalProps> = ({ isOpen, onClose }) => {
                 href={`https://www.inoreader.com/?add_feed=${encodeURIComponent(activeUrl)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-bold flex items-center gap-1.5 transition"
+                className="btn-inoreader-subscribe px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-bold flex items-center gap-1.5 transition"
               >
                 <span>اشتراک در Inoreader</span>
               </a>
@@ -171,7 +171,7 @@ export const RSSModal: React.FC<RSSModalProps> = ({ isOpen, onClose }) => {
           </div>
 
           {/* Selective Category / Platform Feeds */}
-          <div className="space-y-2.5">
+          <div className="gc-rss-subfeeds space-y-2.5">
             <h3 className="font-bold text-slate-200 text-xs flex items-center gap-1.5">
               <Filter className="w-3.5 h-3.5 text-indigo-400" />
               <span>فیدهای تخصصی و دسته‌بندی‌شده:</span>
@@ -202,7 +202,7 @@ export const RSSModal: React.FC<RSSModalProps> = ({ isOpen, onClose }) => {
                         e.stopPropagation();
                         handleCopy(url, feed.id);
                       }}
-                      className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition shrink-0"
+                      className="btn-copy-specific-feed p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition shrink-0 cursor-pointer"
                       title="کپی آدرس فید"
                     >
                       {copiedKey === feed.id ? (
@@ -230,13 +230,13 @@ export const RSSModal: React.FC<RSSModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-800 bg-slate-900/90 backdrop-blur-xl flex items-center justify-between shrink-0">
+        <div className="gc-rss-footer p-4 border-t border-slate-800 bg-slate-900/90 backdrop-blur-xl flex items-center justify-between shrink-0">
           <span className="text-[11px] text-slate-400">
             فید RSS به صورت خودکار با تمام محتواهای جدید بروزرسانی می‌شود.
           </span>
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-bold transition cursor-pointer"
+            className="btn-close-rss-footer px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-bold transition cursor-pointer"
           >
             بستن
           </button>

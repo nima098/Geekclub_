@@ -53,7 +53,7 @@ app.get(['/sw.js', '/service-worker.js', '/registerSW.js', '/workbox-*.js'], (_r
   `);
 });
 
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+const PORT = 3000;
 const IS_VERCEL = Boolean(process.env.VERCEL || process.env.NOW_BUILDER);
 
 const DB_PATH = IS_VERCEL
@@ -403,8 +403,8 @@ function loadDatabase(): DatabaseSchema {
   // Keep dbData.deletedIds synchronized with all deleted IDs
   dbData.deletedIds = Array.from(deletedSet);
 
-  // Fallback to INITIAL_CONTENT only if database file did not exist or contents was null/undefined
-  if (!dbData.contents || !Array.isArray(dbData.contents)) {
+  // Fallback to INITIAL_CONTENT if database file did not exist, contents was null/undefined, or contents array is empty
+  if (!dbData.contents || !Array.isArray(dbData.contents) || dbData.contents.length === 0) {
     dbData.contents = Array.isArray(INITIAL_CONTENT)
       ? INITIAL_CONTENT.filter((seed: any) => seed && seed.id && !deletedSet.has(String(seed.id)))
           .map((seed: any) => ({ ...seed, seedStatus: 'active' }))
@@ -445,7 +445,7 @@ function loadDatabase(): DatabaseSchema {
         if (!isExisting && !isDeleted) {
           dbData.contents.push({
             ...seed,
-            seedStatus: 'pending_approval' // Staged for Super Admin review
+            seedStatus: 'active'
           });
         }
       }
@@ -479,6 +479,9 @@ function loadDatabase(): DatabaseSchema {
           }
           return s;
         });
+      }
+      if (item && (!item.seedStatus || item.seedStatus === 'pending_approval')) {
+        item.seedStatus = 'active';
       }
       return item;
     });

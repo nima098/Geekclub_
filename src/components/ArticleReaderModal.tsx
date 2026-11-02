@@ -94,22 +94,22 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto"
+      className="gc-article-reader-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto"
       onClick={onClose}
     >
       <div 
-        className="w-full max-w-4xl bg-slate-900 border border-slate-750 rounded-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden animate-in zoom-in-95 duration-200 my-auto"
+        className="gc-article-reader-modal w-full max-w-4xl bg-slate-900 border border-slate-750 rounded-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden animate-in zoom-in-95 duration-200 my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Top Header Bar */}
-        <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 backdrop-blur-xl shrink-0 gap-3">
+        <div className="gc-article-reader-header p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 backdrop-blur-xl shrink-0 gap-3">
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={onClose}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition cursor-pointer"
+              className="btn-close-article-reader p-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition cursor-pointer"
               title="بستن پنجره"
             >
               <X className="w-5 h-5" />
@@ -160,7 +160,7 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
                     />
                     <button
                       onClick={() => setIsPlayingIgVideo(false)}
-                      className="absolute top-3 left-3 z-20 p-2 rounded-xl bg-black/80 hover:bg-black text-white text-xs transition cursor-pointer backdrop-blur-md border border-white/20"
+                      className="btn-close-ig-video absolute top-3 left-3 z-20 p-2 rounded-xl bg-black/80 hover:bg-black text-white text-xs transition cursor-pointer backdrop-blur-md border border-white/20"
                       title="بستن پخش ویدیو"
                     >
                       <X className="w-4 h-4" />
@@ -168,7 +168,7 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
                   </div>
                 ) : (
                   <div
-                    className="relative w-full h-full min-h-[320px] sm:min-h-[460px] cursor-pointer overflow-hidden flex items-center justify-center bg-slate-950"
+                    className="btn-ig-play-trigger relative w-full h-full min-h-[320px] sm:min-h-[460px] cursor-pointer overflow-hidden flex items-center justify-center bg-slate-950"
                     onClick={() => setIsPlayingIgVideo(true)}
                   >
                     <img
@@ -217,7 +217,7 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
                       setIsPlayingIgVideo(false);
                       setActiveSlideIndex((prev) => (prev - 1 + slideList.length) % slideList.length);
                     }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full bg-slate-900/90 hover:bg-slate-900 text-white border border-slate-700 shadow-xl backdrop-blur-md transition cursor-pointer"
+                    className="btn-slide-nav-prev absolute right-3 top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full bg-slate-900/90 hover:bg-slate-900 text-white border border-slate-700 shadow-xl backdrop-blur-md transition cursor-pointer"
                     title="اسلاید قبلی"
                   >
                     <ChevronRight className="w-5 h-5" />
@@ -228,14 +228,14 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
                       setIsPlayingIgVideo(false);
                       setActiveSlideIndex((prev) => (prev + 1) % slideList.length);
                     }}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full bg-slate-900/90 hover:bg-slate-900 text-white border border-slate-700 shadow-xl backdrop-blur-md transition cursor-pointer"
+                    className="btn-slide-nav-next absolute left-3 top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full bg-slate-900/90 hover:bg-slate-900 text-white border border-slate-700 shadow-xl backdrop-blur-md transition cursor-pointer"
                     title="اسلاید بعدی"
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
 
                   {/* Dots Indicator */}
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-950/80 border border-slate-800 backdrop-blur-md shadow-xl">
+                  <div className="gc-slide-dots absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-950/80 border border-slate-800 backdrop-blur-md shadow-xl">
                     {slideList.map((_, idx) => (
                       <button
                         key={idx}
@@ -243,7 +243,7 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
                           setIsPlayingIgVideo(false);
                           setActiveSlideIndex(idx);
                         }}
-                        className={`transition-all rounded-full cursor-pointer ${
+                        className={`btn-slide-dot transition-all rounded-full cursor-pointer ${
                           idx === activeSlideIndex
                             ? 'w-5 h-2 bg-pink-400'
                             : 'w-2 h-2 bg-slate-500 hover:bg-slate-300'
@@ -342,12 +342,12 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
         </div>
 
         {/* Modal Footer Action Bar */}
-        <div className="p-4 sm:p-5 border-t border-slate-800 bg-slate-900/90 backdrop-blur-xl flex flex-wrap items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-2">
+        <div className="gc-article-reader-footer p-4 sm:p-5 border-t border-slate-800 bg-slate-900/90 backdrop-blur-xl flex flex-wrap items-center justify-between gap-3 shrink-0">
+          <div className="gc-article-reader-reactions flex items-center gap-2">
             {/* Like */}
             <button
               onClick={() => onLike(item.id)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
+              className={`btn-article-like px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
                 item.userReaction === 'like'
                   ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30'
                   : 'bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700/60'
@@ -361,7 +361,7 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
             {/* Dislike */}
             <button
               onClick={() => onDislike(item.id)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
+              className={`btn-article-dislike px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
                 item.userReaction === 'dislike'
                   ? 'bg-rose-500 text-white shadow-md shadow-rose-500/30'
                   : 'bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700/60'
@@ -378,7 +378,7 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
                 onClose();
                 onOpenComments(item);
               }}
-              className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+              className="btn-article-comments px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
               title="مشاهده دیدگاه‌ها"
             >
               <MessageSquare className="w-4 h-4 text-indigo-400" />
@@ -386,12 +386,12 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="gc-article-reader-tools flex items-center gap-2">
             <a
               href={item.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+              className="btn-article-external-link px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm"
               title={getExternalSourceLabel()}
             >
               <ExternalLink className="w-4 h-4 text-slate-300" />
@@ -400,7 +400,7 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
 
             <button
               onClick={() => onToggleSave(item.id)}
-              className={`p-2.5 rounded-xl border transition cursor-pointer ${
+              className={`btn-article-bookmark p-2.5 rounded-xl border transition cursor-pointer ${
                 item.saved
                   ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                   : 'bg-slate-800 text-slate-300 hover:text-white border-slate-700/60'
@@ -412,7 +412,7 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
 
             <button
               onClick={handleShareClick}
-              className="p-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 transition cursor-pointer"
+              className="btn-article-share p-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 transition cursor-pointer"
               title="کپی لینک"
             >
               {isCopied ? (

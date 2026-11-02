@@ -16,7 +16,7 @@ export const PWAInstallButton: React.FC = () => {
     return (
       <button
         onClick={install}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs shadow-md shadow-indigo-600/30 transition-all active:scale-95 cursor-pointer"
+        className="btn-pwa-install flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs shadow-md shadow-indigo-600/30 transition-all active:scale-95 cursor-pointer"
         title="نصب اپلیکیشن روی گوشی یا دسکتاپ"
       >
         <Smartphone className="w-3.5 h-3.5" />
@@ -32,15 +32,15 @@ export const PWAInstallButton: React.FC = () => {
       <>
         <button
           onClick={() => setShowIOSGuide(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-indigo-300 border border-indigo-500/30 font-bold text-xs transition cursor-pointer"
+          className="btn-pwa-ios-install flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-indigo-300 border border-indigo-500/30 font-bold text-xs transition cursor-pointer"
         >
           <Smartphone className="w-3.5 h-3.5 text-indigo-400" />
           <span>نصب روی آیفون</span>
         </button>
 
         {showIOSGuide && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-in fade-in duration-150">
-            <div className="w-full max-w-sm rounded-3xl bg-slate-900 border border-slate-700/80 p-5 shadow-2xl text-right">
+          <div className="gc-pwa-guide-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-in fade-in duration-150">
+            <div className="gc-pwa-guide-modal w-full max-w-sm rounded-3xl bg-slate-900 border border-slate-700/80 p-5 shadow-2xl text-right">
               <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <Smartphone className="w-4 h-4 text-indigo-400" />
@@ -48,7 +48,7 @@ export const PWAInstallButton: React.FC = () => {
                 </h3>
                 <button
                   onClick={() => setShowIOSGuide(false)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-white"
+                  className="btn-close-ios-guide p-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -85,7 +85,7 @@ export const PWAInstallButton: React.FC = () => {
 
               <button
                 onClick={() => setShowIOSGuide(false)}
-                className="mt-5 w-full rounded-xl bg-indigo-600 hover:bg-indigo-500 py-2.5 text-xs font-bold text-white transition"
+                className="btn-confirm-ios-guide mt-5 w-full rounded-xl bg-indigo-600 hover:bg-indigo-500 py-2.5 text-xs font-bold text-white transition cursor-pointer"
               >
                 متوجه شدم
               </button>
@@ -99,10 +99,9 @@ export const PWAInstallButton: React.FC = () => {
   // Fallback install button for other browsers / manual guide
   return (
     <button
-      onClick={() => {
-        alert('برای نصب این برنامه، در منوی مرورگر خود گزینه «Install App» یا «Add to Home screen» را انتخاب فرمایید.');
-      }}
-      className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 border border-slate-700 font-medium text-xs transition cursor-pointer"
+      onClick={() => setShowIOSGuide(true)}
+      className="btn-pwa-fallback-install hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 border border-slate-700 font-medium text-xs transition cursor-pointer"
+      title="راهنمای افزودن به صفحه اصلی"
     >
       <Download className="w-3.5 h-3.5 text-indigo-400" />
       <span>نصب وب‌اپ (PWA)</span>

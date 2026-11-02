@@ -50,23 +50,23 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
+      className="gc-comments-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div 
-        className="w-full max-w-2xl bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl flex flex-col max-h-[88vh] overflow-hidden animate-in zoom-in-95 duration-200"
+        className="gc-comments-modal modal-daily-box w-full max-w-2xl bg-[#0e1217] border border-[#282d35] rounded-3xl shadow-2xl flex flex-col max-h-[88vh] overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/60">
+        <div className="gc-comments-header modal-daily-header p-4 sm:p-5 border-b border-[#282d35] flex items-center justify-between bg-[#13171f]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#ce3df3]/20 to-[#8b5cf6]/20 text-[#ce3df3] border border-[#ce3df3]/30 flex items-center justify-center">
               <MessageSquare className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
                 نظرات و دیدگاه‌ها
-                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-semibold border border-slate-700">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-[#161b22] text-[#c9d1d9] font-semibold border border-[#282d35]">
                   {comments.length}
                 </span>
               </h3>
@@ -78,17 +78,17 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition cursor-pointer"
+            className="btn-daily-secondary btn-close-comments-modal p-2 rounded-xl text-slate-400 hover:text-white transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Comments List */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+        <div className="gc-comments-list flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
           {comments.length === 0 ? (
             <div className="text-center py-12 px-4">
-              <div className="w-14 h-14 rounded-2xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-center mx-auto mb-3 text-slate-400">
+              <div className="w-14 h-14 rounded-2xl bg-[#161b22] border border-[#282d35] flex items-center justify-center mx-auto mb-3 text-slate-400">
                 <MessageSquare className="w-6 h-6" />
               </div>
               <h4 className="text-sm font-semibold text-slate-200 mb-1">
@@ -102,14 +102,14 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
             comments.map((comment) => (
               <div 
                 key={comment.id}
-                className="p-4 rounded-2xl bg-slate-800/50 border border-slate-800 hover:border-slate-700/70 transition space-y-2.5"
+                className="gc-comment-item p-4 rounded-2xl bg-[#13171f] border border-[#282d35] hover:border-[#3b4351] transition space-y-2.5"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <img
                       src={comment.author.avatar}
                       alt={comment.author.name}
-                      className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-700"
+                      className="w-8 h-8 rounded-full object-cover ring-1 ring-[#282d35]"
                       onError={(e) => handleImageError(e, FALLBACK_IMAGES.avatar)}
                     />
                     <div>
@@ -125,13 +125,13 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
                   {/* Comment Like button */}
                   <button
                     onClick={() => onLikeComment(comment.id)}
-                    className={`px-2.5 py-1 rounded-xl text-xs font-medium flex items-center gap-1.5 transition cursor-pointer ${
+                    className={`btn-like-comment px-2.5 py-1 rounded-xl text-xs font-medium flex items-center gap-1.5 transition cursor-pointer ${
                       comment.userLiked
-                        ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30'
-                        : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700/60'
+                        ? 'bg-[#ce3df3]/20 text-[#ce3df3] border border-[#ce3df3]/40'
+                        : 'btn-daily-secondary text-slate-400 hover:text-white'
                     }`}
                   >
-                    <ThumbsUp className={`w-3.5 h-3.5 ${comment.userLiked ? 'fill-indigo-400 text-indigo-400' : ''}`} />
+                    <ThumbsUp className={`w-3.5 h-3.5 ${comment.userLiked ? 'fill-[#ce3df3] text-[#ce3df3]' : ''}`} />
                     <span>{comment.likes}</span>
                   </button>
                 </div>
@@ -145,13 +145,13 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
         </div>
 
         {/* Quick Reactions Bar */}
-        <div className="px-4 py-2 border-t border-slate-800/80 bg-slate-900/40 flex items-center gap-2 overflow-x-auto scrollbar-none">
+        <div className="gc-quick-reactions px-4 py-2 border-t border-[#282d35] bg-[#13171f]/80 flex items-center gap-2 overflow-x-auto scrollbar-none">
           <span className="text-[11px] text-slate-400 shrink-0">واکنش سریع:</span>
           {QUICK_EMOJIS.map((emoji) => (
             <button
               key={emoji}
               onClick={() => handleQuickEmoji(emoji)}
-              className="text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700/60 shrink-0 transition active:scale-95 cursor-pointer"
+              className="btn-daily-secondary btn-quick-emoji text-xs px-2.5 py-1 rounded-lg shrink-0 transition active:scale-95 cursor-pointer"
             >
               {emoji}
             </button>
@@ -159,13 +159,13 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
         </div>
 
         {/* Input Form */}
-        <div className="p-4 bg-slate-900 border-t border-slate-800">
+        <div className="gc-comments-footer modal-daily-footer p-4 bg-[#0e1217] border-t border-[#282d35]">
           {user ? (
-            <form onSubmit={handleSubmit} className="flex gap-2.5 items-end">
+            <form onSubmit={handleSubmit} className="form-submit-comment flex gap-2.5 items-end">
               <img
                 src={user.photoURL}
                 alt={user.displayName}
-                className="w-9 h-9 rounded-xl object-cover ring-2 ring-indigo-500/40 shrink-0 mb-1"
+                className="w-9 h-9 rounded-xl object-cover ring-2 ring-[#ce3df3]/40 shrink-0 mb-1"
                 onError={(e) => handleImageError(e, FALLBACK_IMAGES.avatar)}
               />
               <div className="flex-1 relative">
@@ -176,7 +176,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
                   onChange={(e) => setCommentText(e.target.value)}
                   placeholder="دیدگاه خود را بنویسید..."
                   rows={2}
-                  className="w-full p-3 rounded-2xl bg-slate-800/90 border border-slate-700 text-slate-100 placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none transition"
+                  className="textarea-daily input-comment-textarea w-full p-3 rounded-2xl bg-[#0e1217] border border-[#282d35] text-slate-100 placeholder-[#6e7681] text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#ce3df3]/25 focus:border-[#ce3df3] resize-none transition"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
@@ -188,16 +188,16 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
               <button
                 type="submit"
                 disabled={!commentText.trim()}
-                className="p-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:pointer-events-none text-white font-medium shadow-lg shadow-indigo-600/30 transition active:scale-95 cursor-pointer shrink-0"
+                className="btn-daily-primary btn-submit-comment p-3 rounded-2xl text-white font-medium shadow-lg shadow-[#ce3df3]/20 disabled:opacity-50 disabled:pointer-events-none transition active:scale-95 cursor-pointer shrink-0"
                 title="ارسال نظر"
               >
                 <Send className="w-4 h-4 ml-0.5 transform -rotate-90" />
               </button>
             </form>
           ) : (
-            <div className="p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700/70 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-right">
+            <div className="gc-login-prompt p-3.5 rounded-2xl bg-[#13171f] border border-[#282d35] flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-right">
               <div className="flex items-center gap-2">
-                <LogIn className="w-5 h-5 text-indigo-400 shrink-0" />
+                <LogIn className="w-5 h-5 text-[#ce3df3] shrink-0" />
                 <span className="text-xs text-slate-300">
                   برای ثبت نظر، ابتدا باید با حساب گوگل خود وارد شوید.
                 </span>
@@ -207,7 +207,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
                   onClose();
                   onStartGoogleLogin();
                 }}
-                className="px-4 py-2 rounded-xl bg-white text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md hover:bg-slate-100 transition cursor-pointer shrink-0"
+                className="btn-comments-google-login px-4 py-2 rounded-xl bg-white text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md hover:bg-slate-100 transition cursor-pointer shrink-0"
               >
                 ورود با گوگل
               </button>

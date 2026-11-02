@@ -124,17 +124,17 @@ export const UsernameSetupModal: React.FC<UsernameSetupModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-200"
+      className="gc-username-setup-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-200"
       onClick={onCancel}
     >
       <div 
-        className="w-full max-w-md bg-slate-900 border border-indigo-500/30 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        className="gc-username-setup-modal modal-daily-box w-full max-w-md bg-[#0e1217] border border-[#282d35] rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header */}
-        <div className="p-5 border-b border-slate-800 bg-gradient-to-r from-indigo-950/50 via-slate-900 to-purple-950/40">
+        <div className="gc-username-setup-header modal-daily-header p-5 border-b border-[#282d35] bg-[#13171f]">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 ring-2 ring-emerald-400/30 shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#ce3df3] to-[#8b5cf6] text-white flex items-center justify-center shadow-lg shadow-[#ce3df3]/25 ring-2 ring-[#ce3df3]/30 shrink-0">
               <CheckCircle2 className="w-6 h-6" />
             </div>
             <div>
@@ -142,7 +142,7 @@ export const UsernameSetupModal: React.FC<UsernameSetupModalProps> = ({
                 <h3 className="text-base font-black text-slate-100">
                   تایید هویت موفق با گوگل
                 </h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
                   تایید شد ✓
                 </span>
               </div>
@@ -154,13 +154,13 @@ export const UsernameSetupModal: React.FC<UsernameSetupModalProps> = ({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="gc-username-setup-form p-6 space-y-5">
           {/* Authenticated Google Account Info */}
-          <div className="p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700/80 flex items-center gap-3">
+          <div className="gc-google-account-info p-3.5 rounded-2xl bg-[#13171f] border border-[#282d35] flex items-center gap-3">
             <img
               src={googleUser.photoURL}
               alt={googleUser.displayName}
-              className="w-11 h-11 rounded-xl object-cover ring-2 ring-indigo-500/40 shrink-0"
+              className="w-11 h-11 rounded-xl object-cover ring-2 ring-[#ce3df3]/40 shrink-0"
             />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 flex-wrap">
@@ -182,7 +182,7 @@ export const UsernameSetupModal: React.FC<UsernameSetupModalProps> = ({
 
           <div className="space-y-1 text-right">
             <h4 className="text-sm font-bold text-slate-100 flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-indigo-400" />
+              <Sparkles className="w-4 h-4 text-[#ce3df3]" />
               تعیین نام کاربری (Username)
             </h4>
             <p className="text-xs text-slate-400 leading-relaxed">
@@ -193,11 +193,11 @@ export const UsernameSetupModal: React.FC<UsernameSetupModalProps> = ({
           {/* Username Input */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-              <AtSign className="w-3.5 h-3.5 text-indigo-400" />
+              <AtSign className="w-3.5 h-3.5 text-[#ce3df3]" />
               <span>نام کاربری شما در سایت:</span>
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-indigo-400 font-bold text-sm">
+              <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-[#ce3df3] font-bold text-sm">
                 @
               </div>
               <input
@@ -211,7 +211,7 @@ export const UsernameSetupModal: React.FC<UsernameSetupModalProps> = ({
                   setError('');
                 }}
                 placeholder="username"
-                className="w-full pr-8 pl-4 py-2.5 rounded-2xl bg-slate-800/90 border border-slate-700 text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-mono dir-ltr text-right"
+                className="input-daily input-setup-username w-full pr-8 pl-4 py-2.5 rounded-2xl bg-[#0e1217] border border-[#282d35] text-slate-100 placeholder-[#6e7681] text-sm focus:outline-none focus:ring-2 focus:ring-[#ce3df3]/25 focus:border-[#ce3df3] font-mono dir-ltr text-right transition"
               />
             </div>
             <span className="text-[10px] text-slate-500 block">
@@ -233,7 +233,7 @@ export const UsernameSetupModal: React.FC<UsernameSetupModalProps> = ({
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="نام و نام خانوادگی"
-              className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-800/90 border border-slate-700 text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              className="input-daily input-setup-displayname w-full px-3.5 py-2.5 rounded-2xl bg-[#0e1217] border border-[#282d35] text-slate-100 placeholder-[#6e7681] text-sm focus:outline-none focus:ring-2 focus:ring-[#ce3df3]/25 focus:border-[#ce3df3] transition"
             />
           </div>
 
@@ -248,7 +248,7 @@ export const UsernameSetupModal: React.FC<UsernameSetupModalProps> = ({
           <div className="pt-2 space-y-2">
             <button
               type="submit"
-              className="w-full py-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 transition cursor-pointer active:scale-98"
+              className="btn-daily-primary btn-submit-username-setup w-full py-3 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#ce3df3]/25 transition cursor-pointer active:scale-98"
             >
               <span>تکمیل ثبت‌نام و ورود به سایت</span>
               <ArrowLeft className="w-4 h-4" />
@@ -257,7 +257,7 @@ export const UsernameSetupModal: React.FC<UsernameSetupModalProps> = ({
             <button
               type="button"
               onClick={onCancel}
-              className="w-full py-2 text-xs text-slate-400 hover:text-slate-200 transition cursor-pointer"
+              className="btn-daily-secondary btn-cancel-username-setup w-full py-2.5 rounded-xl text-xs text-slate-400 hover:text-slate-200 transition cursor-pointer"
             >
               انصراف و خروج
             </button>

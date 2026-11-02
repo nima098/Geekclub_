@@ -1586,7 +1586,7 @@ export default function App() {
             </div>
             <button
               onClick={() => setShowTrashOnly(false)}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs font-bold transition cursor-pointer shrink-0 border border-slate-700/80 shadow-md"
+              className="btn-exit-trash-mode px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-100 text-xs font-bold transition cursor-pointer shrink-0 border border-slate-700/80 shadow-md"
             >
               بازگشت به فید اصلی سایت
             </button>
@@ -1595,7 +1595,7 @@ export default function App() {
 
         {/* Content Grid */}
         {isInitialLoading && filteredContents.length === 0 ? (
-          <div className={getGridClasses()}>
+          <div className={`gc-content-grid ${getGridClasses()}`}>
             {[1, 2, 3, 4, 5, 6].map((n) => (
               <div key={n} className="rounded-3xl border border-slate-800/80 bg-slate-900/60 p-4 space-y-4 animate-pulse">
                 <div className="w-full h-48 bg-slate-800/80 rounded-2xl" />
@@ -1611,7 +1611,7 @@ export default function App() {
             ))}
           </div>
         ) : filteredContents.length > 0 ? (
-          <div className={getGridClasses()}>
+          <div className={`gc-content-grid ${getGridClasses()}`}>
             {filteredContents.map((item) => (
               <ContentCard
                 key={item.id}
@@ -1637,7 +1637,7 @@ export default function App() {
           </div>
         ) : (
           /* Empty State */
-          <div className="text-center py-16 px-4 bg-slate-900/40 border border-dashed border-slate-800 rounded-3xl space-y-4">
+          <div className="gc-empty-state text-center py-16 px-4 bg-slate-900/40 border border-dashed border-slate-800 rounded-3xl space-y-4">
             <div className="w-16 h-16 rounded-3xl bg-slate-800/80 text-slate-400 flex items-center justify-center mx-auto shadow-inner">
               <SearchX className="w-8 h-8 text-slate-500" />
             </div>
@@ -1651,7 +1651,7 @@ export default function App() {
             </div>
             <button
               onClick={handleResetFilters}
-              className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 transition cursor-pointer"
+              className="btn-reset-filters-empty px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 transition cursor-pointer"
             >
               پاک کردن همه فیلترها
             </button>
@@ -1660,8 +1660,8 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-800/80 bg-slate-900/95 backdrop-blur-xl py-8 text-xs text-slate-400 mt-12 shadow-lg shadow-slate-950/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <footer className="gc-app-footer border-t border-slate-800/80 bg-slate-900/95 backdrop-blur-xl py-8 text-xs text-slate-400 mt-12 shadow-lg shadow-slate-950/20">
+        <div className="gc-footer-container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <a
               href="/"
@@ -1669,7 +1669,7 @@ export default function App() {
                 e.preventDefault();
                 handleGoHome();
               }}
-              className="font-bold text-slate-200 hover:text-[#0077d9] transition-colors cursor-pointer"
+              className="btn-footer-home font-bold text-slate-200 hover:text-[#0077d9] transition-colors cursor-pointer"
               title="بازگشت به صفحه اصلی سایت"
             >
               گیک کلاب (GeekClub)
@@ -1677,10 +1677,10 @@ export default function App() {
             <span>- پلتفرم اشتراک محتوای مناسب گیک‌ها</span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+          <div className="gc-footer-actions flex flex-wrap items-center gap-4 sm:gap-6">
             <button
               onClick={() => setIsFeedbackModalOpen(true)}
-              className="flex items-center gap-1.5 text-slate-400 hover:text-pink-300 transition cursor-pointer"
+              className="btn-footer-feedback flex items-center gap-1.5 text-slate-400 hover:text-pink-300 transition cursor-pointer"
             >
               <MessageSquarePlus className="w-3.5 h-3.5 text-pink-400" />
               انتقادات و پیشنهادات
@@ -1689,7 +1689,7 @@ export default function App() {
             {isAdmin && (
               <button
                 onClick={() => setIsRSSModalOpen(true)}
-                className="flex items-center gap-1.5 text-slate-400 hover:text-amber-300 transition cursor-pointer"
+                className="btn-footer-rss flex items-center gap-1.5 text-slate-400 hover:text-amber-300 transition cursor-pointer"
                 title="مشاهده و دریافت آدرس فید خبرخوان RSS"
               >
                 <Rss className="w-3.5 h-3.5 text-amber-400" />
@@ -1705,7 +1705,7 @@ export default function App() {
                   setIsAdminPortalModalOpen(true);
                 }
               }}
-              className="flex items-center gap-1.5 text-[#0077d9] hover:text-[#0066bd] font-bold transition cursor-pointer bg-[#0077d9]/10 hover:bg-[#0077d9]/20 px-2.5 py-1 rounded-lg border border-[#0077d9]/30"
+              className="btn-footer-admin-panel flex items-center gap-1.5 text-[#0077d9] hover:text-[#0066bd] font-bold transition cursor-pointer bg-[#0077d9]/10 hover:bg-[#0077d9]/20 px-2.5 py-1 rounded-lg border border-[#0077d9]/30"
               style={{ color: '#0077d9' }}
               title="ورود به پنل مدیریت سایت و سطل زباله"
             >
@@ -1715,7 +1715,7 @@ export default function App() {
 
             <button
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="flex items-center gap-1.5 text-[#0077d9] hover:text-[#0066bd] transition cursor-pointer"
+              className="btn-footer-scroll-top flex items-center gap-1.5 text-[#0077d9] hover:text-[#0066bd] transition cursor-pointer"
               style={{ color: '#0077d9' }}
             >
               <ArrowUp className="w-4 h-4 text-[#0077d9]" style={{ color: '#0077d9' }} />
@@ -1834,6 +1834,8 @@ export default function App() {
         onApproveContent={handleApproveContent}
         onRejectContent={handleRejectContent}
         onUpdateContents={(updatedItems) => setContents(updatedItems)}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
       />
 
       {/* Dedicated Admin Portal Login Modal */}

@@ -493,19 +493,19 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
       onClick={onClose}
     >
       <div 
-        className="w-full max-w-2xl bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden animate-in zoom-in-95 duration-200"
+        className="modal-daily-box w-full max-w-2xl bg-[#0e1217] border border-[#22272f] rounded-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden animate-in zoom-in-95 duration-200 text-slate-100"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/80">
+        <div className="modal-daily-header p-4 sm:p-5 border-b border-[#22272f] flex items-center justify-between bg-[#13171f]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-pink-500 text-white flex items-center justify-center shadow-md">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#CE3DF3] to-[#8B5CF6] text-white flex items-center justify-center shadow-lg shadow-[#CE3DF3]/25">
               <PlusCircle className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
                 اشتراک محتوای هوشمند
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#CE3DF3]/15 text-[#CE3DF3] border border-[#CE3DF3]/30">
                   تشخیص خودکار
                 </span>
               </h3>
@@ -517,23 +517,23 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition cursor-pointer"
+            className="btn-daily-secondary btn-close-modal p-2 rounded-xl bg-[#161b22] hover:bg-[#21262d] text-slate-400 hover:text-white border border-[#282d35] transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} noValidate className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="gc-modal-form flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
           {/* URL Input */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-slate-200 flex items-center justify-between">
+            <label className="label-daily block text-xs font-bold text-slate-200 flex items-center justify-between">
               <span className="flex items-center gap-1.5">
-                <LinkIcon className="w-3.5 h-3.5 text-indigo-400" />
+                <LinkIcon className="w-3.5 h-3.5 text-[#CE3DF3]" />
                 آدرس اینترنتی محتوا (URL) *
               </span>
               {isLoadingMeta && (
-                <span className="text-[11px] text-indigo-400 flex items-center gap-1 font-normal animate-pulse">
+                <span className="text-[11px] text-[#CE3DF3] flex items-center gap-1 font-normal animate-pulse">
                   <Loader2 className="w-3 h-3 animate-spin" />
                   در حال استخراج خودکار مشخصات از پلتفرم...
                 </span>
@@ -545,10 +545,10 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="مثال: https://www.youtube.com/watch?v=... یا اینستاگرام یا لینک مقاله"
-              className={`w-full px-3.5 py-2.5 rounded-2xl bg-slate-800/80 border text-slate-100 placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:ring-2 font-mono dir-ltr text-left transition ${
+              className={`input-daily input-add-content-url w-full px-3.5 py-2.5 rounded-2xl bg-[#0e1217] border text-slate-100 placeholder-[#6e7681] text-xs sm:text-sm focus:outline-none focus:ring-2 font-mono dir-ltr text-left transition ${
                 duplicateItem
                   ? 'border-rose-500 focus:ring-rose-500/50 bg-rose-950/20'
-                  : 'border-slate-700 focus:ring-indigo-500/50'
+                  : 'border-[#282d35] focus:border-[#CE3DF3] focus:ring-[#CE3DF3]/25'
               }`}
             />
           </div>
@@ -596,7 +596,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
                       onClose();
                       onOpenExistingContent(duplicateItem);
                     }}
-                    className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-md shadow-rose-600/30 shrink-0 cursor-pointer"
+                    className="btn-view-duplicate px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-md shadow-rose-600/30 shrink-0 cursor-pointer"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                     <span>دیدن مطلب در گیک کلاب</span>
@@ -630,29 +630,29 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
 
           {/* Title Input */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
-              <span className="text-indigo-300 font-bold">عنوان محتوا (قابلیت ویرایش و اصلاح دستی)</span>
+            <label className="label-daily block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+              <span className="text-[#CE3DF3] font-bold">عنوان محتوا (قابلیت ویرایش و اصلاح دستی)</span>
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="اگر عنوان پلتفرم اشتباه است، عنوان صحیح را اینجا وارد کنید..."
-              className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-100 placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              className="input-daily input-add-content-title w-full px-3.5 py-2.5 rounded-2xl bg-[#0e1217] border border-[#282d35] text-slate-100 placeholder-[#6e7681] text-xs sm:text-sm focus:outline-none focus:border-[#CE3DF3] focus:ring-2 focus:ring-[#CE3DF3]/25 transition"
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
-              <span className="text-indigo-300 font-bold">خلاصه یا توضیحات (برگرفته از توضیحات متا)</span>
+            <label className="label-daily block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+              <span className="text-[#CE3DF3] font-bold">خلاصه یا توضیحات (برگرفته از توضیحات متا)</span>
             </label>
             <textarea
               rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder={fetchedMeta?.description ? `پیش‌فرض از پلتفرم: ${fetchedMeta.description.slice(0, 80)}...` : 'توضیحات دلخواه یا خالی بگذارید تا خودکار پر شود...'}
-              className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-100 placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none"
+              className="textarea-daily textarea-add-content-desc w-full px-3.5 py-2.5 rounded-2xl bg-[#0e1217] border border-[#282d35] text-slate-100 placeholder-[#6e7681] text-xs sm:text-sm focus:outline-none focus:border-[#CE3DF3] focus:ring-2 focus:ring-[#CE3DF3]/25 resize-none transition"
             />
           </div>
 
@@ -678,8 +678,8 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="relative" ref={categoryContainerRef}>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1">
-                  <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                <label className="label-daily text-xs font-semibold text-slate-300 flex items-center gap-1">
+                  <Layers className="w-3.5 h-3.5 text-[#CE3DF3]" />
                   دسته‌بندی موضوعی
                 </label>
                 {selectedCategory === 'auto' && (
@@ -706,13 +706,13 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
                       ? `تشخیص خودکار (فعلی: ${autoInferredCategoryLabel})`
                       : 'نام دسته‌بندی را وارد کنید...'
                   }
-                  className="w-full pl-8 pr-3.5 py-2.5 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-100 placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  className="input-daily input-add-content-category w-full pl-8 pr-3.5 py-2.5 rounded-2xl bg-[#0e1217] border border-[#282d35] text-slate-100 placeholder-[#6e7681] text-xs sm:text-sm focus:outline-none focus:border-[#CE3DF3] focus:ring-2 focus:ring-[#CE3DF3]/25 transition"
                 />
                 
                 <button
                   type="button"
                   onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                  className="absolute inset-y-0 left-0 pl-2.5 flex items-center text-slate-400 hover:text-slate-200"
+                  className="btn-category-dropdown absolute inset-y-0 left-0 pl-2.5 flex items-center text-slate-400 hover:text-[#CE3DF3]"
                 >
                   <ChevronDown className="w-4 h-4" />
                 </button>
@@ -720,14 +720,14 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
 
               {/* Autocomplete & Suggestions Dropdown */}
               {showCategoryDropdown && (
-                <div className="absolute right-0 left-0 mt-1.5 z-30 bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl py-2 max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute right-0 left-0 mt-1.5 z-30 bg-[#13171f] border border-[#282d35] rounded-2xl shadow-2xl py-2 max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
                   {/* Default Auto-detect Option */}
                   <button
                     type="button"
                     onClick={() => handleSelectCategory('auto')}
-                    className={`w-full px-3.5 py-2 text-right text-xs flex items-center justify-between hover:bg-slate-800 transition ${
+                    className={`btn-category-auto w-full px-3.5 py-2 text-right text-xs flex items-center justify-between hover:bg-[#1a202c] transition ${
                       selectedCategory === 'auto'
-                        ? 'bg-indigo-600/20 text-indigo-300 font-bold'
+                        ? 'bg-[#CE3DF3]/15 text-[#CE3DF3] font-bold'
                         : 'text-slate-300'
                     }`}
                   >
@@ -755,7 +755,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
                           key={cat.id}
                           type="button"
                           onClick={() => handleSelectCategory(cat.id, cat.label)}
-                          className={`w-full px-3.5 py-2 text-right text-xs flex items-center justify-between hover:bg-slate-800 transition ${
+                          className={`btn-category-option btn-category-${cat.id} w-full px-3.5 py-2 text-right text-xs flex items-center justify-between hover:bg-slate-800 transition ${
                             isSelected
                               ? 'bg-indigo-600/20 text-indigo-300 font-bold'
                               : 'text-slate-200'
@@ -784,7 +784,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
 
             {/* Duration */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+              <label className="label-daily block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
                 <span>مدت زمان (اختیاری)</span>
               </label>
               <input
@@ -792,7 +792,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
                 value={readingOrWatchTime}
                 onChange={(e) => setReadingOrWatchTime(e.target.value)}
                 placeholder={fetchedMeta?.readingOrWatchTime || 'مثال: ۱۰ دقیقه ویدیو'}
-                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-100 placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                className="input-daily input-add-content-duration w-full px-3.5 py-2.5 rounded-2xl bg-[#0e1217] border border-[#282d35] text-slate-100 placeholder-[#6e7681] text-xs sm:text-sm focus:outline-none focus:border-[#CE3DF3] focus:ring-2 focus:ring-[#CE3DF3]/25 transition"
               />
             </div>
           </div>
@@ -800,7 +800,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
           {/* Tags & Author */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="label-daily block text-xs font-semibold text-slate-300 mb-1.5">
                 برچسب‌ها (اختیاری)
               </label>
               <input
@@ -808,12 +808,12 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
                 value={tagsInput}
                 onChange={(e) => setTagsInput(e.target.value)}
                 placeholder={fetchedMeta?.tags.join(', ') || 'هوش_مصنوعی, تکنولوژی'}
-                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-100 placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                className="input-daily input-add-content-tags w-full px-3.5 py-2.5 rounded-2xl bg-[#0e1217] border border-[#282d35] text-slate-100 placeholder-[#6e7681] text-xs sm:text-sm focus:outline-none focus:border-[#CE3DF3] focus:ring-2 focus:ring-[#CE3DF3]/25 transition"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="label-daily block text-xs font-semibold text-slate-300 mb-1.5">
                 نام منتشرکننده یا کانال (اختیاری)
               </label>
               <input
@@ -821,7 +821,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
                 value={authorName}
                 onChange={(e) => setAuthorName(e.target.value)}
                 placeholder={fetchedMeta?.authorName || user?.displayName || 'نام کانال یا نویسنده'}
-                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-100 placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                className="input-daily input-add-content-author w-full px-3.5 py-2.5 rounded-2xl bg-[#0e1217] border border-[#282d35] text-slate-100 placeholder-[#6e7681] text-xs sm:text-sm focus:outline-none focus:border-[#CE3DF3] focus:ring-2 focus:ring-[#CE3DF3]/25 transition"
               />
             </div>
           </div>
@@ -832,17 +832,17 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
               <button
                 type="button"
                 onClick={() => setShowPreview(!showPreview)}
-                className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1.5 transition"
+                className="btn-toggle-preview text-xs text-[#CE3DF3] hover:text-[#d84df7] font-semibold flex items-center gap-1.5 transition cursor-pointer"
               >
                 <Eye className="w-3.5 h-3.5" />
                 {showPreview ? 'مخفی کردن پیش‌نمایش امبد' : 'مشاهده پیش‌نمایش امبد'}
               </button>
 
               {showPreview && (
-                <div className="mt-2.5 p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                <div className="mt-2.5 p-3.5 rounded-2xl bg-[#0e1217] border border-[#282d35] space-y-3">
                   <div className="text-[11px] text-slate-400 flex items-center justify-between">
                     <span>پیش‌نمایش زنده امبد:</span>
-                    <span className="font-mono text-[10px] text-indigo-300 dir-ltr">{embedUrl || url}</span>
+                    <span className="font-mono text-[10px] text-[#CE3DF3] dir-ltr">{embedUrl || url}</span>
                   </div>
 
                   {detectedPlatform === 'youtube' && (
@@ -868,13 +868,13 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
                   )}
 
                   {detectedPlatform === 'instagram' && (
-                    <div className="p-4 text-center rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300">
+                    <div className="p-4 text-center rounded-xl bg-[#13171f] border border-[#282d35] text-xs text-slate-300">
                       پست اینستاگرام شناسایی شده از آدرس: <span className="font-mono text-pink-400">{url}</span>
                     </div>
                   )}
 
                   {detectedPlatform === 'article' && (
-                    <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+                    <div className="p-4 rounded-xl bg-[#13171f] border border-[#282d35] space-y-1.5">
                       <h4 className="font-bold text-slate-200 text-sm">
                         {title || fetchedMeta?.title || 'عنوان مقاله'}
                       </h4>
@@ -904,40 +904,40 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
 
           {/* Google reCAPTCHA Widget (If enabled by Admin) */}
           {siteSettings?.enableCaptcha && (
-            <div className="p-3.5 rounded-2xl bg-slate-950/85 border border-slate-800 flex items-center justify-between gap-3">
+            <div className="p-3.5 rounded-2xl bg-[#0e1217] border border-[#282d35] flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
                   id="recaptcha_checkbox"
                   checked={captchaVerified}
                   onChange={(e) => setCaptchaVerified(e.target.checked)}
-                  className="w-5 h-5 rounded accent-indigo-600 cursor-pointer"
+                  className="w-5 h-5 rounded accent-[#CE3DF3] cursor-pointer"
                 />
                 <label htmlFor="recaptcha_checkbox" className="text-xs text-slate-300 cursor-pointer select-none">
                   من ربات نیستم <span className="text-[10px] text-slate-400 font-mono block">reCAPTCHA (تایید امنیتی گوگل)</span>
                 </label>
               </div>
 
-              <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-slate-900 border border-slate-800 text-[10px] text-slate-400 font-mono">
-                <span className="text-blue-400 font-bold">reCAPTCHA</span>
+              <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-[#13171f] border border-[#282d35] text-[10px] text-slate-400 font-mono">
+                <span className="text-[#CE3DF3] font-bold">reCAPTCHA</span>
                 <span>Privacy - Terms</span>
               </div>
             </div>
           )}
 
-          {/* Submit & Cancel Buttons */}
-          <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-2.5">
-            <button
+            {/* Submit & Cancel Buttons */}
+            <div className="modal-daily-footer gc-modal-footer pt-3 border-t border-[#22272f] flex items-center justify-end gap-2.5">
+              <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-semibold transition cursor-pointer"
+                className="btn-daily-secondary btn-modal-cancel px-4 py-2.5 rounded-xl bg-[#161b22] hover:bg-[#21262d] text-slate-300 text-xs font-semibold border border-[#282d35] transition cursor-pointer"
               >
                 انصراف
               </button>
               <button
                 type="submit"
                 disabled={!url.trim() || Boolean(duplicateItem) || isSubmitting}
-                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:pointer-events-none text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition active:scale-95 cursor-pointer"
+                className="btn-daily-primary btn-modal-submit px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#CE3DF3] to-[#8B5CF6] hover:from-[#d84df7] hover:to-[#9d71f8] disabled:opacity-50 disabled:pointer-events-none text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-[#CE3DF3]/25 transition active:scale-95 cursor-pointer"
               >
                 {isSubmitting ? (
                   <>

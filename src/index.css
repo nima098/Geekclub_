@@ -195,50 +195,699 @@ html.light {
     box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04) !important;
   }
 
-  /* Form Elements */
+  /* Form Elements - daily.dev Light Mode Styling */
   input, textarea, select {
     background-color: #ffffff !important;
-    color: #0f172a !important;
-    border-color: #cbd5e1 !important;
+    color: #0e1217 !important;
+    border-color: #d0d7de !important;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: #a334e9 !important;
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(206, 61, 243, 0.25) !important;
   }
 
   input::placeholder, textarea::placeholder {
-    color: #94a3b8 !important;
+    color: #8c959f !important;
   }
 
-  /* Retain Primary Accent Buttons in Pure #0077d9 & White Text */
-  .bg-\[\#0077d9\],
-  .bg-indigo-600,
-  .bg-indigo-500 {
-    background-color: #0077d9 !important;
+  /* daily.dev Form Light Mode Containers */
+  .modal-daily-box,
+  .gc-feedback-modal,
+  .gc-username-setup-modal,
+  .gc-comments-modal,
+  .gc-admin-portal-modal {
+    background-color: #ffffff !important;
+    border-color: #e2e4e8 !important;
+    color: #0e1217 !important;
+  }
+
+  .modal-daily-header,
+  .gc-feedback-header,
+  .gc-comments-header,
+  .gc-username-setup-header,
+  .gc-admin-portal-header {
+    background-color: #f8fafc !important;
+    border-color: #e2e4e8 !important;
+  }
+
+  .modal-daily-footer,
+  .gc-modal-footer,
+  .gc-comments-footer,
+  .gc-admin-portal-footer {
+    background-color: #ffffff !important;
+    border-color: #e2e4e8 !important;
+  }
+
+  /* daily.dev Secondary Buttons in Light Mode */
+  .btn-daily-secondary,
+  .btn-modal-cancel,
+  .btn-close-modal,
+  .btn-close-feedback-modal,
+  .btn-close-comments,
+  .btn-close-comments-modal,
+  .btn-close-admin-portal,
+  .btn-cancel-username-setup,
+  .btn-close-portal-footer,
+  .btn-copy-domain {
+    background-color: #f3f4f6 !important;
+    color: #24292f !important;
+    border-color: #d0d7de !important;
+  }
+
+  .btn-daily-secondary:hover,
+  .btn-modal-cancel:hover,
+  .btn-close-modal:hover,
+  .btn-close-feedback-modal:hover,
+  .btn-close-comments:hover,
+  .btn-close-comments-modal:hover,
+  .btn-close-admin-portal:hover,
+  .btn-cancel-username-setup:hover,
+  .btn-close-portal-footer:hover,
+  .btn-copy-domain:hover {
+    background-color: #e5e7eb !important;
+    color: #0e1217 !important;
+    border-color: #c2c8d0 !important;
+  }
+
+  /* Retain daily.dev Primary Gradient Buttons */
+  .btn-daily-primary,
+  .btn-modal-submit,
+  .btn-submit-feedback,
+  .btn-submit-comment,
+  .btn-submit-username-setup,
+  .btn-save-profile,
+  .btn-guestbook-submit,
+  .btn-admin-enter-panel,
+  .btn-admin-pin-submit {
+    background: linear-gradient(135deg, #ce3df3 0%, #8b5cf6 100%) !important;
     color: #ffffff !important;
+    box-shadow: 0 4px 14px 0 rgba(206, 61, 243, 0.3) !important;
+    border: none !important;
   }
 
-  .bg-\[\#0077d9\] *,
-  .bg-\[\#0077d9\] span,
-  .bg-\[\#0077d9\] svg,
-  .bg-indigo-600 *,
-  .bg-indigo-600 .text-white,
-  .bg-indigo-600 span,
-  .bg-indigo-600 svg,
-  .bg-indigo-500 .text-white,
-  .bg-indigo-500 span,
-  .bg-indigo-500 svg {
-    color: #ffffff !important;
+  .btn-daily-primary:hover,
+  .btn-modal-submit:hover:not(:disabled),
+  .btn-submit-feedback:hover:not(:disabled),
+  .btn-submit-comment:hover:not(:disabled),
+  .btn-submit-username-setup:hover:not(:disabled),
+  .btn-save-profile:hover:not(:disabled),
+  .btn-guestbook-submit:hover:not(:disabled),
+  .btn-admin-enter-panel:hover:not(:disabled),
+  .btn-admin-pin-submit:hover:not(:disabled) {
+    background: linear-gradient(135deg, #d84df7 0%, #9d71f8 100%) !important;
+    box-shadow: 0 6px 20px 0 rgba(206, 61, 243, 0.45) !important;
   }
 
-  .text-indigo-400,
-  .text-indigo-300 {
-    color: #0077d9 !important;
+  /* ==========================================================================
+     Tabler UI Design System for Admin Panel (Light & Dark Mode)
+     https://github.com/tabler/tabler
+     ========================================================================== */
+
+  /* Tabler Light Mode Rules */
+  html.light .admin-panel-daily,
+  html.light .admin-panel-tabler,
+  html.light .admin-panel-daily .bg-\[\#0e1217\],
+  html.light .admin-panel-tabler .bg-\[\#0e1217\],
+  html.light .admin-panel-tabler .bg-\[\#090d16\],
+  html.light .admin-panel-tabler .bg-slate-950,
+  html.light .admin-panel-tabler .bg-slate-900 {
+    background-color: #f4f6fa !important;
+    color: #182433 !important;
   }
 
-  .bg-indigo-500\/15 {
-    background-color: rgba(0, 119, 217, 0.12) !important;
+  html.light .admin-panel-daily .gc-admin-header,
+  html.light .admin-panel-tabler .gc-admin-header,
+  html.light .admin-panel-daily .gc-admin-tabs-bar,
+  html.light .admin-panel-tabler .gc-admin-tabs-bar,
+  html.light .admin-panel-daily .bg-\[\#13171f\],
+  html.light .admin-panel-tabler .bg-\[\#13171f\],
+  html.light .admin-panel-tabler .bg-\[\#0f172a\],
+  html.light .admin-panel-tabler .bg-slate-800,
+  html.light .admin-panel-tabler .bg-slate-800\/80,
+  html.light .admin-panel-tabler .bg-slate-800\/90 {
+    background-color: #ffffff !important;
+    border-color: #e6e8ec !important;
+    color: #182433 !important;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04) !important;
+  }
+
+  html.light .admin-panel-daily .bg-\[\#161b22\],
+  html.light .admin-panel-tabler .bg-\[\#161b22\],
+  html.light .admin-panel-tabler .bg-slate-900\/60,
+  html.light .admin-panel-tabler .bg-slate-900\/80,
+  html.light .admin-panel-tabler .bg-slate-950\/60 {
+    background-color: #f8fafc !important;
+    border-color: #e6e8ec !important;
+    color: #182433 !important;
+  }
+
+  html.light .admin-panel-daily .border-\[\#282d35\],
+  html.light .admin-panel-tabler .border-\[\#282d35\],
+  html.light .admin-panel-tabler .border-\[\#1e293b\],
+  html.light .admin-panel-tabler .border-slate-800,
+  html.light .admin-panel-tabler .border-slate-700 {
+    border-color: #e6e8ec !important;
+  }
+
+  html.light .admin-panel-daily .text-slate-100,
+  html.light .admin-panel-tabler .text-slate-100,
+  html.light .admin-panel-daily .text-slate-200,
+  html.light .admin-panel-tabler .text-slate-200 {
+    color: #182433 !important;
+  }
+
+  html.light .admin-panel-daily .text-slate-300,
+  html.light .admin-panel-tabler .text-slate-300,
+  html.light .admin-panel-daily .text-slate-400,
+  html.light .admin-panel-tabler .text-slate-400 {
+    color: #626976 !important;
+  }
+
+  html.light .admin-panel-daily .text-slate-500,
+  html.light .admin-panel-tabler .text-slate-500 {
+    color: #8c959f !important;
+  }
+
+  /* Tabler Accent Blue in Light Mode */
+  html.light .admin-panel-daily .text-\[\#ce3df3\],
+  html.light .admin-panel-tabler .text-\[\#ce3df3\],
+  html.light .admin-panel-daily .border-\[\#ce3df3\],
+  html.light .admin-panel-tabler .border-\[\#ce3df3\] {
+    color: #206bc4 !important;
+    border-color: #206bc4 !important;
+  }
+
+  html.light .admin-panel-daily .bg-\[\#ce3df3\]\/10,
+  html.light .admin-panel-tabler .bg-\[\#ce3df3\]\/10,
+  html.light .admin-panel-daily .bg-\[\#ce3df3\]\/15,
+  html.light .admin-panel-tabler .bg-\[\#ce3df3\]\/15,
+  html.light .admin-panel-daily .bg-\[\#ce3df3\]\/20,
+  html.light .admin-panel-tabler .bg-\[\#ce3df3\]\/20 {
+    background-color: rgba(32, 107, 196, 0.08) !important;
+    color: #206bc4 !important;
+    border-color: rgba(32, 107, 196, 0.2) !important;
+  }
+
+  html.light .admin-panel-daily .bg-amber-500\/10,
+  html.light .admin-panel-tabler .bg-amber-500\/10,
+  html.light .admin-panel-tabler .bg-amber-500\/20 {
+    background-color: rgba(245, 159, 0, 0.1) !important;
+    color: #d97706 !important;
+    border-color: rgba(245, 159, 0, 0.2) !important;
+  }
+
+  html.light .admin-panel-daily .bg-rose-500\/10,
+  html.light .admin-panel-tabler .bg-rose-500\/10,
+  html.light .admin-panel-tabler .bg-rose-500\/20,
+  html.light .admin-panel-tabler .bg-rose-950\/30 {
+    background-color: rgba(214, 57, 57, 0.08) !important;
+    color: #d63939 !important;
+    border-color: rgba(214, 57, 57, 0.2) !important;
+  }
+
+  html.light .admin-panel-daily .bg-emerald-500\/10,
+  html.light .admin-panel-tabler .bg-emerald-500\/10,
+  html.light .admin-panel-tabler .bg-emerald-500\/20 {
+    background-color: rgba(47, 179, 68, 0.08) !important;
+    color: #2fb344 !important;
+    border-color: rgba(47, 179, 68, 0.2) !important;
+  }
+
+  html.light .admin-panel-tabler .bg-cyan-500\/20 {
+    background-color: rgba(23, 162, 184, 0.08) !important;
+    color: #17a2b8 !important;
+    border-color: rgba(23, 162, 184, 0.2) !important;
+  }
+
+  html.light .admin-panel-tabler .bg-pink-500\/10,
+  html.light .admin-panel-tabler .bg-pink-500\/20 {
+    background-color: rgba(214, 51, 132, 0.08) !important;
+    color: #d63384 !important;
+    border-color: rgba(214, 51, 132, 0.2) !important;
   }
 
   /* Article reader modal content box */
   .prose-invert {
     color: #334155 !important;
   }
+}
+
+/* ==========================================================================
+   Tabler UI Design System for Admin Panel (Light & Dark Mode)
+   https://github.com/tabler/tabler
+   ========================================================================== */
+
+/* 1. Tabler Light Mode Rules */
+html.light .admin-panel-daily,
+html.light .admin-panel-tabler {
+  background-color: #f4f6fa !important;
+  color: #182433 !important;
+}
+
+html.light .admin-panel-tabler .bg-\[\#0e1217\],
+html.light .admin-panel-tabler .bg-\[\#090d16\],
+html.light .admin-panel-tabler .bg-slate-950,
+html.light .admin-panel-tabler .bg-slate-900 {
+  background-color: #f4f6fa !important;
+  color: #182433 !important;
+}
+
+html.light .admin-panel-tabler .gc-admin-header,
+html.light .admin-panel-tabler .gc-admin-tabs-bar,
+html.light .admin-panel-tabler .bg-\[\#13171f\],
+html.light .admin-panel-tabler .bg-\[\#0f172a\],
+html.light .admin-panel-tabler .bg-slate-800,
+html.light .admin-panel-tabler .bg-slate-800\/80,
+html.light .admin-panel-tabler .bg-slate-800\/90 {
+  background-color: #ffffff !important;
+  border-color: #e6e8ec !important;
+  color: #182433 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04) !important;
+}
+
+html.light .admin-panel-tabler .bg-\[\#161b22\],
+html.light .admin-panel-tabler .bg-slate-900\/60,
+html.light .admin-panel-tabler .bg-slate-900\/80,
+html.light .admin-panel-tabler .bg-slate-950\/60 {
+  background-color: #f8fafc !important;
+  border-color: #e6e8ec !important;
+  color: #182433 !important;
+}
+
+html.light .admin-panel-tabler .border-\[\#282d35\],
+html.light .admin-panel-tabler .border-\[\#1e293b\],
+html.light .admin-panel-tabler .border-slate-800,
+html.light .admin-panel-tabler .border-slate-700 {
+  border-color: #e6e8ec !important;
+}
+
+html.light .admin-panel-tabler .text-slate-100,
+html.light .admin-panel-tabler .text-slate-200 {
+  color: #182433 !important;
+}
+
+html.light .admin-panel-tabler .text-slate-300,
+html.light .admin-panel-tabler .text-slate-400 {
+  color: #626976 !important;
+}
+
+html.light .admin-panel-tabler .text-slate-500 {
+  color: #8c959f !important;
+}
+
+/* Tabler Buttons in Light Mode */
+html.light .admin-panel-tabler .btn-daily-primary,
+html.light .admin-panel-tabler .btn-tabler-primary {
+  background: #206bc4 !important;
+  color: #ffffff !important;
+  border: 1px solid #206bc4 !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+html.light .admin-panel-tabler .btn-daily-primary:hover,
+html.light .admin-panel-tabler .btn-tabler-primary:hover {
+  background: #1a569d !important;
+  border-color: #1a569d !important;
+}
+
+html.light .admin-panel-tabler .btn-daily-secondary,
+html.light .admin-panel-tabler .btn-tabler-secondary,
+html.light .admin-panel-tabler .btn-admin-theme-toggle {
+  background-color: #ffffff !important;
+  color: #182433 !important;
+  border: 1px solid #dce1e7 !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+html.light .admin-panel-tabler .btn-daily-secondary:hover,
+html.light .admin-panel-tabler .btn-tabler-secondary:hover,
+html.light .admin-panel-tabler .btn-admin-theme-toggle:hover {
+  background-color: #f8fafc !important;
+  color: #182433 !important;
+  border-color: #c9d2dc !important;
+}
+
+/* Tabler Inputs in Light Mode */
+html.light .admin-panel-tabler input,
+html.light .admin-panel-tabler select,
+html.light .admin-panel-tabler textarea {
+  background-color: #ffffff !important;
+  border-color: #dce1e7 !important;
+  color: #182433 !important;
+}
+
+html.light .admin-panel-tabler input:focus,
+html.light .admin-panel-tabler select:focus,
+html.light .admin-panel-tabler textarea:focus {
+  border-color: #206bc4 !important;
+  box-shadow: 0 0 0 2px rgba(32, 107, 196, 0.25) !important;
+}
+
+/* Tabler Accent Blue & Badges in Light Mode */
+html.light .admin-panel-tabler .text-\[\#ce3df3\],
+html.light .admin-panel-tabler .border-\[\#ce3df3\] {
+  color: #206bc4 !important;
+  border-color: #206bc4 !important;
+}
+
+html.light .admin-panel-tabler .bg-\[\#ce3df3\]\/10,
+html.light .admin-panel-tabler .bg-\[\#ce3df3\]\/15,
+html.light .admin-panel-tabler .bg-\[\#ce3df3\]\/20 {
+  background-color: rgba(32, 107, 196, 0.08) !important;
+  color: #206bc4 !important;
+  border-color: rgba(32, 107, 196, 0.2) !important;
+}
+
+html.light .admin-panel-tabler .bg-amber-500\/10,
+html.light .admin-panel-tabler .bg-amber-500\/20 {
+  background-color: rgba(245, 159, 0, 0.1) !important;
+  color: #d97706 !important;
+  border-color: rgba(245, 159, 0, 0.2) !important;
+}
+
+html.light .admin-panel-tabler .bg-rose-500\/10,
+html.light .admin-panel-tabler .bg-rose-500\/20,
+html.light .admin-panel-tabler .bg-rose-950\/30 {
+  background-color: rgba(214, 57, 57, 0.08) !important;
+  color: #d63939 !important;
+  border-color: rgba(214, 57, 57, 0.2) !important;
+}
+
+html.light .admin-panel-tabler .bg-emerald-500\/10,
+html.light .admin-panel-tabler .bg-emerald-500\/20 {
+  background-color: rgba(47, 179, 68, 0.08) !important;
+  color: #2fb344 !important;
+  border-color: rgba(47, 179, 68, 0.2) !important;
+}
+
+html.light .admin-panel-tabler .bg-cyan-500\/20 {
+  background-color: rgba(23, 162, 184, 0.08) !important;
+  color: #17a2b8 !important;
+  border-color: rgba(23, 162, 184, 0.2) !important;
+}
+
+html.light .admin-panel-tabler .bg-pink-500\/10,
+html.light .admin-panel-tabler .bg-pink-500\/20 {
+  background-color: rgba(214, 51, 132, 0.08) !important;
+  color: #d63384 !important;
+  border-color: rgba(214, 51, 132, 0.2) !important;
+}
+
+/* 2. Tabler Dark Mode Rules (Active when Home Page is in Dark Mode) */
+html:not(.light) .admin-panel-daily,
+html:not(.light) .admin-panel-tabler,
+html.dark .admin-panel-daily,
+html.dark .admin-panel-tabler {
+  background-color: #182433 !important;
+  color: #f8fafc !important;
+}
+
+html:not(.light) .admin-panel-tabler .bg-\[\#0e1217\],
+html:not(.light) .admin-panel-tabler .bg-\[\#090d16\],
+html.dark .admin-panel-tabler .bg-\[\#0e1217\],
+html.dark .admin-panel-tabler .bg-\[\#090d16\] {
+  background-color: #182433 !important;
+  color: #f8fafc !important;
+}
+
+html:not(.light) .admin-panel-tabler .gc-admin-header,
+html:not(.light) .admin-panel-tabler .gc-admin-tabs-bar,
+html:not(.light) .admin-panel-tabler .bg-\[\#13171f\],
+html:not(.light) .admin-panel-tabler .bg-\[\#0f172a\],
+html:not(.light) .admin-panel-tabler .bg-slate-800,
+html.dark .admin-panel-tabler .gc-admin-header,
+html.dark .admin-panel-tabler .gc-admin-tabs-bar,
+html.dark .admin-panel-tabler .bg-\[\#13171f\],
+html.dark .admin-panel-tabler .bg-\[\#0f172a\],
+html.dark .admin-panel-tabler .bg-slate-800 {
+  background-color: #1e2c3b !important;
+  border-color: #2b3b4c !important;
+  color: #f8fafc !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.2) !important;
+}
+
+html:not(.light) .admin-panel-tabler .bg-\[\#161b22\],
+html.dark .admin-panel-tabler .bg-\[\#161b22\] {
+  background-color: #151f2c !important;
+  border-color: #2b3b4c !important;
+  color: #f8fafc !important;
+}
+
+html:not(.light) .admin-panel-tabler .border-\[\#282d35\],
+html:not(.light) .admin-panel-tabler .border-\[\#1e293b\],
+html.dark .admin-panel-tabler .border-\[\#282d35\],
+html.dark .admin-panel-tabler .border-\[\#1e293b\] {
+  border-color: #2b3b4c !important;
+}
+
+html:not(.light) .admin-panel-tabler .text-slate-100,
+html:not(.light) .admin-panel-tabler .text-slate-200,
+html.dark .admin-panel-tabler .text-slate-100,
+html.dark .admin-panel-tabler .text-slate-200 {
+  color: #f8fafc !important;
+}
+
+html:not(.light) .admin-panel-tabler .text-slate-300,
+html:not(.light) .admin-panel-tabler .text-slate-400,
+html.dark .admin-panel-tabler .text-slate-300,
+html.dark .admin-panel-tabler .text-slate-400 {
+  color: #8a99ad !important;
+}
+
+/* Tabler Buttons in Dark Mode */
+html:not(.light) .admin-panel-tabler .btn-daily-primary,
+html:not(.light) .admin-panel-tabler .btn-tabler-primary,
+html.dark .admin-panel-tabler .btn-daily-primary,
+html.dark .admin-panel-tabler .btn-tabler-primary {
+  background: #206bc4 !important;
+  color: #ffffff !important;
+  border: 1px solid #206bc4 !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2) !important;
+}
+
+html:not(.light) .admin-panel-tabler .btn-daily-primary:hover,
+html:not(.light) .admin-panel-tabler .btn-tabler-primary:hover,
+html.dark .admin-panel-tabler .btn-daily-primary:hover,
+html.dark .admin-panel-tabler .btn-tabler-primary:hover {
+  background: #3179cd !important;
+  border-color: #3179cd !important;
+}
+
+html:not(.light) .admin-panel-tabler .btn-daily-secondary,
+html:not(.light) .admin-panel-tabler .btn-tabler-secondary,
+html:not(.light) .admin-panel-tabler .btn-admin-theme-toggle,
+html.dark .admin-panel-tabler .btn-daily-secondary,
+html.dark .admin-panel-tabler .btn-tabler-secondary,
+html.dark .admin-panel-tabler .btn-admin-theme-toggle {
+  background-color: #1e2c3b !important;
+  color: #f8fafc !important;
+  border: 1px solid #2b3b4c !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2) !important;
+}
+
+html:not(.light) .admin-panel-tabler .btn-daily-secondary:hover,
+html:not(.light) .admin-panel-tabler .btn-tabler-secondary:hover,
+html:not(.light) .admin-panel-tabler .btn-admin-theme-toggle:hover,
+html.dark .admin-panel-tabler .btn-daily-secondary:hover,
+html.dark .admin-panel-tabler .btn-tabler-secondary:hover,
+html.dark .admin-panel-tabler .btn-admin-theme-toggle:hover {
+  background-color: #26384a !important;
+  color: #ffffff !important;
+  border-color: #384c60 !important;
+}
+
+/* Tabler Inputs in Dark Mode */
+html:not(.light) .admin-panel-tabler input,
+html:not(.light) .admin-panel-tabler select,
+html:not(.light) .admin-panel-tabler textarea,
+html.dark .admin-panel-tabler input,
+html.dark .admin-panel-tabler select,
+html.dark .admin-panel-tabler textarea {
+  background-color: #151f2c !important;
+  border-color: #2b3b4c !important;
+  color: #f8fafc !important;
+}
+
+html:not(.light) .admin-panel-tabler input:focus,
+html:not(.light) .admin-panel-tabler select:focus,
+html:not(.light) .admin-panel-tabler textarea:focus,
+html.dark .admin-panel-tabler input:focus,
+html.dark .admin-panel-tabler select:focus,
+html.dark .admin-panel-tabler textarea:focus {
+  border-color: #4299e1 !important;
+  box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.25) !important;
+}
+
+/* Tabler Accents and Badges in Dark Mode */
+html:not(.light) .admin-panel-tabler .text-\[\#ce3df3\],
+html.dark .admin-panel-tabler .text-\[\#ce3df3\] {
+  color: #4299e1 !important;
+}
+
+html:not(.light) .admin-panel-tabler .border-\[\#ce3df3\],
+html.dark .admin-panel-tabler .border-\[\#ce3df3\] {
+  border-color: #206bc4 !important;
+}
+
+html:not(.light) .admin-panel-tabler .bg-\[\#ce3df3\]\/10,
+html:not(.light) .admin-panel-tabler .bg-\[\#ce3df3\]\/15,
+html:not(.light) .admin-panel-tabler .bg-\[\#ce3df3\]\/20,
+html.dark .admin-panel-tabler .bg-\[\#ce3df3\]\/10,
+html.dark .admin-panel-tabler .bg-\[\#ce3df3\]\/15,
+html.dark .admin-panel-tabler .bg-\[\#ce3df3\]\/20 {
+  background-color: rgba(32, 107, 196, 0.18) !important;
+  color: #4299e1 !important;
+  border-color: rgba(32, 107, 196, 0.3) !important;
+}
+
+html:not(.light) .admin-panel-tabler .bg-amber-500\/10,
+html:not(.light) .admin-panel-tabler .bg-amber-500\/20,
+html.dark .admin-panel-tabler .bg-amber-500\/10,
+html.dark .admin-panel-tabler .bg-amber-500\/20 {
+  background-color: rgba(245, 159, 0, 0.15) !important;
+  color: #f59f00 !important;
+  border-color: rgba(245, 159, 0, 0.3) !important;
+}
+
+html:not(.light) .admin-panel-tabler .bg-rose-500\/10,
+html:not(.light) .admin-panel-tabler .bg-rose-500\/20,
+html.dark .admin-panel-tabler .bg-rose-500\/10,
+html.dark .admin-panel-tabler .bg-rose-500\/20 {
+  background-color: rgba(214, 57, 57, 0.15) !important;
+  color: #ff6b6b !important;
+  border-color: rgba(214, 57, 57, 0.3) !important;
+}
+
+html:not(.light) .admin-panel-tabler .bg-emerald-500\/10,
+html:not(.light) .admin-panel-tabler .bg-emerald-500\/20,
+html.dark .admin-panel-tabler .bg-emerald-500\/10,
+html.dark .admin-panel-tabler .bg-emerald-500\/20 {
+  background-color: rgba(47, 179, 68, 0.15) !important;
+  color: #2fb344 !important;
+  border-color: rgba(47, 179, 68, 0.3) !important;
+}
+
+/* ==========================================================================
+   daily.dev Form Design System (Global Rules & Dark Mode Defaults)
+   ========================================================================== */
+
+/* Dark Mode Default Form Inputs */
+html:not(.light) input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]),
+html:not(.light) textarea,
+html:not(.light) select,
+html:not(.light) .input-daily,
+html:not(.light) .textarea-daily,
+html:not(.light) .select-daily {
+  background-color: #0e1217;
+  color: #f3f4f6;
+  border-color: #282d35;
+}
+
+html:not(.light) input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):focus,
+html:not(.light) textarea:focus,
+html:not(.light) select:focus,
+html:not(.light) .input-daily:focus,
+html:not(.light) .textarea-daily:focus,
+html:not(.light) .select-daily:focus {
+  border-color: #ce3df3;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(206, 61, 243, 0.28);
+}
+
+html:not(.light) input::placeholder,
+html:not(.light) textarea::placeholder {
+  color: #6e7681;
+}
+
+/* daily.dev Primary Gradient Button */
+.btn-daily-primary,
+.btn-modal-submit,
+.btn-submit-feedback,
+.btn-submit-comment,
+.btn-submit-username-setup,
+.btn-save-profile,
+.btn-guestbook-submit,
+.btn-admin-enter-panel,
+.btn-admin-pin-submit {
+  background: linear-gradient(135deg, #ce3df3 0%, #8b5cf6 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px 0 rgba(206, 61, 243, 0.25);
+  border: none;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-daily-primary:hover:not(:disabled),
+.btn-modal-submit:hover:not(:disabled),
+.btn-submit-feedback:hover:not(:disabled),
+.btn-submit-comment:hover:not(:disabled),
+.btn-submit-username-setup:hover:not(:disabled),
+.btn-save-profile:hover:not(:disabled),
+.btn-guestbook-submit:hover:not(:disabled),
+.btn-admin-enter-panel:hover:not(:disabled),
+.btn-admin-pin-submit:hover:not(:disabled) {
+  background: linear-gradient(135deg, #d84df7 0%, #9d71f8 100%);
+  box-shadow: 0 6px 20px 0 rgba(206, 61, 243, 0.4);
+}
+
+/* daily.dev Secondary / Cancel Button (Dark Mode) */
+html:not(.light) .btn-daily-secondary,
+html:not(.light) .btn-modal-cancel,
+html:not(.light) .btn-close-modal,
+html:not(.light) .btn-close-feedback-modal,
+html:not(.light) .btn-close-comments,
+html:not(.light) .btn-close-comments-modal,
+html:not(.light) .btn-close-admin-portal,
+html:not(.light) .btn-cancel-username-setup,
+html:not(.light) .btn-close-portal-footer,
+html:not(.light) .btn-copy-domain {
+  background-color: #161b22;
+  color: #c9d1d9;
+  border: 1px solid #282d35;
+  transition: all 0.15s ease-in-out;
+}
+
+html:not(.light) .btn-daily-secondary:hover,
+html:not(.light) .btn-modal-cancel:hover,
+html:not(.light) .btn-close-modal:hover,
+html:not(.light) .btn-close-feedback-modal:hover,
+html:not(.light) .btn-close-comments:hover,
+html:not(.light) .btn-close-comments-modal:hover,
+html:not(.light) .btn-close-admin-portal:hover,
+html:not(.light) .btn-cancel-username-setup:hover,
+html:not(.light) .btn-close-portal-footer:hover,
+html:not(.light) .btn-copy-domain:hover {
+  background-color: #21262d;
+  color: #ffffff;
+  border-color: #3b4351;
+}
+
+/* daily.dev Modal Box in Dark Mode */
+html:not(.light) .modal-daily-box,
+html:not(.light) .gc-feedback-modal,
+html:not(.light) .gc-username-setup-modal,
+html:not(.light) .gc-comments-modal,
+html:not(.light) .gc-admin-portal-modal {
+  background-color: #0e1217;
+  border-color: #22272f;
+  color: #f3f4f6;
+}
+
+html:not(.light) .modal-daily-header,
+html:not(.light) .gc-feedback-header,
+html:not(.light) .gc-comments-header,
+html:not(.light) .gc-username-setup-header,
+html:not(.light) .gc-admin-portal-header {
+  background-color: #13171f;
+  border-color: #22272f;
+}
+
+html:not(.light) .modal-daily-footer,
+html:not(.light) .gc-modal-footer,
+html:not(.light) .gc-comments-footer,
+html:not(.light) .gc-admin-portal-footer {
+  background-color: #0e1217;
+  border-color: #22272f;
 }
 

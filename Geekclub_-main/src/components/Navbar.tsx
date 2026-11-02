@@ -121,10 +121,14 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </a>
 
-          {/* Theme Mode Toggle Button (Sun / Moon) */}
+        </div>
+
+        {/* Action Controls & User Account Zone */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 min-w-0">
+          {/* Theme Mode Toggle Button (Sun / Moon) - Moved to Right Side */}
           <button
             onClick={onToggleTheme}
-            className="p-2 sm:p-2.5 rounded-xl bg-slate-800/80 shrink-0 hover:bg-slate-750 text-slate-300 hover:text-amber-400 border border-slate-700/60 transition cursor-pointer flex items-center justify-center group"
+            className="p-2 sm:p-2.5 rounded-xl bg-slate-800/80 shrink-0 hover:bg-slate-750 text-slate-300 hover:text-amber-400 border border-slate-700/60 transition cursor-pointer flex items-center justify-center group order-first"
             title={theme === 'dark' ? 'تغییر به حالت روشن (Light Mode)' : 'تغییر به حالت تاریک (Dark Mode)'}
             aria-label="تغییر پوسته"
           >
@@ -134,10 +138,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Moon className="w-4 h-4 text-slate-300 transition-transform duration-300 group-hover:-rotate-12" />
             )}
           </button>
-        </div>
-
-        {/* Action Controls & User Account Zone */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 min-w-0">
 
           {/* Feedback & Suggestions Button */}
           {user && (
