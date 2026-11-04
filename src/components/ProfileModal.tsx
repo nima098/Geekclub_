@@ -187,15 +187,15 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
   return (
     <div 
-      className="gc-profile-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div 
-        className="gc-profile-modal w-full max-w-3xl bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden animate-in zoom-in-95 duration-200"
+        className="w-full max-w-3xl bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header */}
-        <div className="gc-profile-header p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 gap-3">
+        <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 gap-3">
           <div className="flex items-center gap-3">
             <img
               src={photoURL}
@@ -241,17 +241,17 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
           <button
             onClick={onClose}
-            className="btn-close-profile-modal p-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition cursor-pointer shrink-0"
+            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Tab Navigation */}
-        <div className="gc-profile-tabs flex items-center gap-1 sm:gap-2 px-4 pt-3 border-b border-slate-800 bg-slate-900/50 text-xs font-semibold overflow-x-auto scrollbar-none">
+        <div className="flex items-center gap-1 sm:gap-2 px-4 pt-3 border-b border-slate-800 bg-slate-900/50 text-xs font-semibold overflow-x-auto scrollbar-none">
           <button
             onClick={() => setActiveTab('my_contents')}
-            className={`btn-profile-tab btn-profile-tab-contents pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap ${
               activeTab === 'my_contents'
                 ? 'border-indigo-500 text-indigo-400 font-bold'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -266,7 +266,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
           <button
             onClick={() => setActiveTab('settings')}
-            className={`btn-profile-tab btn-profile-tab-settings pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap ${
               activeTab === 'settings'
                 ? 'border-indigo-500 text-indigo-400 font-bold'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -278,7 +278,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
           <button
             onClick={() => setActiveTab('inbox')}
-            className={`btn-profile-tab btn-profile-tab-inbox pb-3 px-3 border-b-2 flex items-center gap-1.5 transition relative whitespace-nowrap cursor-pointer ${
+            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition relative whitespace-nowrap ${
               activeTab === 'inbox'
                 ? 'border-indigo-500 text-indigo-400 font-bold'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -295,7 +295,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
           <button
             onClick={() => setActiveTab('guestbook')}
-            className={`btn-profile-tab btn-profile-tab-guestbook pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap ${
               activeTab === 'guestbook'
                 ? 'border-indigo-500 text-indigo-400 font-bold'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -345,10 +345,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     وضعیت انتشار:
                   </span>
 
-                  <div className="gc-profile-status-filters flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-750">
+                  <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-750">
                     <button
                       onClick={() => setFilterStatus('all')}
-                      className={`btn-filter-status btn-filter-status-all px-2.5 py-1 text-xs rounded-lg transition cursor-pointer ${
+                      className={`px-2.5 py-1 text-xs rounded-lg transition ${
                         filterStatus === 'all'
                           ? 'bg-indigo-600 text-white font-bold'
                           : 'text-slate-400 hover:text-slate-200'
@@ -358,7 +358,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     </button>
                     <button
                       onClick={() => setFilterStatus('approved')}
-                      className={`btn-filter-status btn-filter-status-approved px-2.5 py-1 text-xs rounded-lg transition cursor-pointer ${
+                      className={`px-2.5 py-1 text-xs rounded-lg transition ${
                         filterStatus === 'approved'
                           ? 'bg-emerald-600 text-white font-bold'
                           : 'text-slate-400 hover:text-slate-200'
@@ -368,7 +368,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     </button>
                     <button
                       onClick={() => setFilterStatus('pending')}
-                      className={`btn-filter-status btn-filter-status-pending px-2.5 py-1 text-xs rounded-lg transition cursor-pointer ${
+                      className={`px-2.5 py-1 text-xs rounded-lg transition ${
                         filterStatus === 'pending'
                           ? 'bg-amber-600 text-white font-bold'
                           : 'text-slate-400 hover:text-slate-200'
@@ -379,7 +379,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     {rejectedCount > 0 && (
                       <button
                         onClick={() => setFilterStatus('rejected')}
-                        className={`btn-filter-status btn-filter-status-rejected px-2.5 py-1 text-xs rounded-lg transition cursor-pointer ${
+                        className={`px-2.5 py-1 text-xs rounded-lg transition ${
                           filterStatus === 'rejected'
                             ? 'bg-rose-600 text-white font-bold'
                             : 'text-slate-400 hover:text-slate-200'
@@ -394,10 +394,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 {/* Platform Filter */}
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800">
                   <span className="text-xs font-bold text-slate-300">پلتفرم:</span>
-                  <div className="gc-profile-platform-filters flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-750">
+                  <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-750">
                     <button
                       onClick={() => setFilterPlatform('all')}
-                      className={`btn-filter-platform btn-filter-platform-all px-2.5 py-1 text-xs rounded-lg transition cursor-pointer ${
+                      className={`px-2.5 py-1 text-xs rounded-lg transition ${
                         filterPlatform === 'all'
                           ? 'bg-indigo-600 text-white font-bold'
                           : 'text-slate-400 hover:text-slate-200'
@@ -407,7 +407,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     </button>
                     <button
                       onClick={() => setFilterPlatform('youtube')}
-                      className={`btn-filter-platform btn-filter-platform-youtube px-2.5 py-1 text-xs rounded-lg transition flex items-center gap-1 cursor-pointer ${
+                      className={`px-2.5 py-1 text-xs rounded-lg transition flex items-center gap-1 ${
                         filterPlatform === 'youtube'
                           ? 'bg-indigo-600 text-white font-bold'
                           : 'text-slate-400 hover:text-slate-200'
@@ -418,7 +418,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     </button>
                     <button
                       onClick={() => setFilterPlatform('instagram')}
-                      className={`btn-filter-platform btn-filter-platform-instagram px-2.5 py-1 text-xs rounded-lg transition flex items-center gap-1 cursor-pointer ${
+                      className={`px-2.5 py-1 text-xs rounded-lg transition flex items-center gap-1 ${
                         filterPlatform === 'instagram'
                           ? 'bg-indigo-600 text-white font-bold'
                           : 'text-slate-400 hover:text-slate-200'
@@ -429,7 +429,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     </button>
                     <button
                       onClick={() => setFilterPlatform('article')}
-                      className={`btn-filter-platform btn-filter-platform-article px-2.5 py-1 text-xs rounded-lg transition flex items-center gap-1 cursor-pointer ${
+                      className={`px-2.5 py-1 text-xs rounded-lg transition flex items-center gap-1 ${
                         filterPlatform === 'article'
                           ? 'bg-indigo-600 text-white font-bold'
                           : 'text-slate-400 hover:text-slate-200'
@@ -440,7 +440,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     </button>
                     <button
                       onClick={() => setFilterPlatform('aparat')}
-                      className={`btn-filter-platform btn-filter-platform-aparat px-2.5 py-1 text-xs rounded-lg transition flex items-center gap-1 cursor-pointer ${
+                      className={`px-2.5 py-1 text-xs rounded-lg transition flex items-center gap-1 ${
                         filterPlatform === 'aparat'
                           ? 'bg-indigo-600 text-white font-bold'
                           : 'text-slate-400 hover:text-slate-200'
@@ -453,7 +453,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               </div>
 
               {/* Compact Contents List */}
-              <div className="gc-profile-contents-list space-y-2.5">
+              <div className="space-y-2.5">
                 {filteredUserContents.length === 0 ? (
                   <div className="text-center py-10 text-slate-400 bg-slate-800/30 rounded-2xl border border-slate-800 text-xs space-y-2">
                     <Layers className="w-8 h-8 mx-auto opacity-40 text-slate-400" />
@@ -463,7 +463,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   filteredUserContents.map((item) => (
                     <div
                       key={item.id}
-                      className="gc-profile-content-item p-3 sm:p-3.5 rounded-2xl bg-slate-800/50 border border-slate-800 hover:bg-slate-800/80 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
+                      className="p-3 sm:p-3.5 rounded-2xl bg-slate-800/50 border border-slate-800 hover:bg-slate-800/80 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
                     >
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         {/* Thumbnail */}
@@ -539,7 +539,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                                 onClose();
                                 onOpenArticle(item);
                               }}
-                              className="btn-profile-view-article px-2.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                              className="px-2.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                               title="خواندن کامل مقاله"
                             >
                               <BookOpen className="w-3.5 h-3.5" />
@@ -553,7 +553,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                                 onClose();
                                 onOpenComments(item);
                               }}
-                              className="btn-profile-view-comments px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                              className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                               title="مشاهده نظرات"
                             >
                               <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
@@ -608,13 +608,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     </p>
                     
                     {/* Preset Avatars Grid */}
-                    <div className="gc-preset-avatars flex flex-wrap gap-2 justify-center sm:justify-start">
+                    <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
                       {PRESET_AVATARS.map((avatar, idx) => (
                         <button
                           key={idx}
                           type="button"
                           onClick={() => setPhotoURL(avatar)}
-                          className={`btn-avatar-preset w-9 h-9 rounded-xl overflow-hidden border-2 transition cursor-pointer ${
+                          className={`w-9 h-9 rounded-xl overflow-hidden border-2 transition ${
                             photoURL === avatar ? 'border-indigo-500 scale-105 ring-2 ring-indigo-500/30' : 'border-transparent hover:border-slate-600'
                           }`}
                         >
@@ -650,7 +650,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     required
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    className="input-daily input-profile-displayname w-full px-3.5 py-2.5 rounded-2xl bg-[#0e1217] border border-[#282d35] text-slate-100 placeholder-[#6e7681] text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#ce3df3]/25 focus:border-[#ce3df3] transition"
+                    className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-100 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                   />
                 </div>
 
@@ -670,7 +670,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                       required
                       value={username}
                       onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
-                      className="input-daily input-profile-username w-full pr-8 pl-3.5 py-2.5 rounded-2xl bg-[#0e1217] border border-[#282d35] text-slate-100 placeholder-[#6e7681] text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#ce3df3]/25 focus:border-[#ce3df3] font-mono dir-ltr text-left transition"
+                      className="w-full pr-8 pl-3.5 py-2.5 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-100 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-mono dir-ltr text-left"
                     />
                   </div>
                 </div>
@@ -688,12 +688,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
                   placeholder="چند کلمه درباره علایق تکنولوژی، برنامه‌نویسی یا تخصص‌های خود بنویسید..."
-                  className="textarea-daily textarea-profile-bio w-full px-3.5 py-2.5 rounded-2xl bg-[#0e1217] border border-[#282d35] text-slate-100 placeholder-[#6e7681] text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#ce3df3]/25 focus:border-[#ce3df3] resize-none transition"
+                  className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-100 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none"
                 />
               </div>
 
               {/* Privacy Settings: Hide Email */}
-              <div className="p-4 rounded-2xl bg-[#13171f] border border-[#282d35] flex items-center justify-between gap-4">
+              <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-700/80 flex items-center justify-between gap-4">
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
                     <EyeOff className="w-4 h-4 text-amber-400" />
@@ -709,7 +709,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setHideEmail(!hideEmail)}
-                  className={`btn-toggle-hide-email p-1 text-2xl transition cursor-pointer ${
+                  className={`p-1 text-2xl transition cursor-pointer ${
                     hideEmail ? 'text-emerald-400' : 'text-slate-500'
                   }`}
                   title={hideEmail ? 'ایمیل مخفی است' : 'ایمیل نمایش داده می‌شود'}
@@ -719,10 +719,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               </div>
 
               {/* Profile Comments Setting: Allow Comments */}
-              <div className="p-4 rounded-2xl bg-[#13171f] border border-[#282d35] flex items-center justify-between gap-4">
+              <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-700/80 flex items-center justify-between gap-4">
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4 text-[#ce3df3]" />
+                    <MessageSquare className="w-4 h-4 text-indigo-400" />
                     <span className="text-xs sm:text-sm font-bold text-slate-200">
                       امکان درج نظر در پروفایل توسط دیگران
                     </span>
@@ -735,8 +735,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setAllowProfileComments(!allowProfileComments)}
-                  className={`btn-toggle-allow-comments p-1 text-2xl transition cursor-pointer ${
-                    allowProfileComments ? 'text-[#ce3df3]' : 'text-slate-500'
+                  className={`p-1 text-2xl transition cursor-pointer ${
+                    allowProfileComments ? 'text-indigo-400' : 'text-slate-500'
                   }`}
                   title={allowProfileComments ? 'ثبت نظر مجاز است' : 'ثبت نظر غیرفعال است'}
                 >
@@ -745,10 +745,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               </div>
 
               {/* Submit Button */}
-              <div className="gc-profile-settings-footer flex justify-end pt-2">
+              <div className="flex justify-end pt-2">
                 <button
                   type="submit"
-                  className="btn-daily-primary btn-save-profile px-6 py-2.5 rounded-xl text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-[#ce3df3]/25 transition active:scale-95 cursor-pointer"
+                  className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition active:scale-95 cursor-pointer"
                 >
                   <Save className="w-4 h-4" />
                   ذخیره تغییرات پروفایل
@@ -759,14 +759,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
           {/* 3. Inbox & Messages Tab */}
           {activeTab === 'inbox' && (
-            <div className="gc-profile-inbox-section space-y-4">
+            <div className="space-y-4">
               {selectedMessage ? (
                 /* Single Message Detailed View */
-                <div className="gc-inbox-message-detail p-5 rounded-2xl bg-slate-800/60 border border-slate-700/80 space-y-4 animate-in fade-in duration-150">
+                <div className="p-5 rounded-2xl bg-slate-800/60 border border-slate-700/80 space-y-4 animate-in fade-in duration-150">
                   <div className="flex items-center justify-between border-b border-slate-700 pb-3">
                     <button
                       onClick={() => setSelectedMessage(null)}
-                      className="btn-inbox-back text-xs text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1 cursor-pointer"
+                      className="text-xs text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1"
                     >
                       ← بازگشت به لیست پیام‌ها
                     </button>
@@ -808,7 +808,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 </div>
               ) : (
                 /* Messages List */
-                <div className="gc-inbox-messages-list space-y-2.5">
+                <div className="space-y-2.5">
                   <div className="flex items-center justify-between text-xs text-slate-400 px-1 mb-2">
                     <span>صندوق پیام‌های ورودی از مدیریت و سایر کاربران</span>
                     <span>{inbox.length} پیام</span>
@@ -827,7 +827,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                           setSelectedMessage(msg);
                           if (!msg.read) onMarkMessageRead(msg.id);
                         }}
-                        className={`btn-inbox-item p-3.5 rounded-2xl border transition cursor-pointer flex items-center justify-between gap-3 group ${
+                        className={`p-3.5 rounded-2xl border transition cursor-pointer flex items-center justify-between gap-3 group ${
                           !msg.read
                             ? 'bg-indigo-950/30 border-indigo-500/40 hover:bg-indigo-950/50'
                             : 'bg-slate-800/40 border-slate-800 hover:bg-slate-800/70'
@@ -880,7 +880,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
           {/* 4. Profile Guestbook / Comments Tab */}
           {activeTab === 'guestbook' && (
-            <div className="gc-profile-guestbook-section space-y-5">
+            <div className="space-y-5">
               <div className="p-3.5 rounded-2xl bg-slate-800/40 border border-slate-800 flex items-center justify-between text-xs">
                 <span className="text-slate-300">
                   وضعیت پیام‌گذاری روی پروفایل:
@@ -900,7 +900,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
               {/* Comment input form if enabled */}
               {allowProfileComments ? (
-                <form onSubmit={handleCommentSubmit} className="gc-guestbook-form space-y-2">
+                <form onSubmit={handleCommentSubmit} className="space-y-2">
                   <label className="block text-xs font-bold text-slate-300">
                     نوشتن پیام جدید روی دیوار پروفایل:
                   </label>
@@ -912,12 +912,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                       value={newCommentText}
                       onChange={(e) => setNewCommentText(e.target.value)}
                       placeholder="پیام یا نظر خود را برای این کاربر بنویسید..."
-                      className="textarea-daily textarea-guestbook-comment flex-1 p-3 rounded-2xl bg-[#0e1217] border border-[#282d35] text-slate-100 placeholder-[#6e7681] text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#ce3df3]/25 focus:border-[#ce3df3] resize-none transition"
+                      className="flex-1 p-3 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-100 placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none"
                     />
                     <button
                       type="submit"
                       disabled={!newCommentText.trim()}
-                      className="btn-daily-primary btn-guestbook-submit px-4 rounded-2xl text-white font-bold text-xs flex items-center justify-center gap-1 shadow-lg shadow-[#ce3df3]/25 transition cursor-pointer self-end py-3 disabled:opacity-50"
+                      className="px-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-lg shadow-indigo-600/30 transition cursor-pointer self-end py-3"
                     >
                       <Send className="w-4 h-4 ml-0.5" />
                       ارسال
@@ -931,7 +931,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               )}
 
               {/* Comments list */}
-              <div className="gc-guestbook-comments-list space-y-3 pt-2">
+              <div className="space-y-3 pt-2">
                 <h4 className="text-xs font-bold text-slate-300">
                   پیام‌های ثبت شده روی دیوار پروفایل ({profileComments.length}):
                 </h4>
@@ -944,7 +944,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   profileComments.map((pc) => (
                     <div
                       key={pc.id}
-                      className="gc-guestbook-item p-3.5 rounded-2xl bg-slate-800/50 border border-slate-800 space-y-1.5"
+                      className="p-3.5 rounded-2xl bg-slate-800/50 border border-slate-800 space-y-1.5"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">

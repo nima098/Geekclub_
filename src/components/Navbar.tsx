@@ -93,13 +93,13 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, [showProfileMenu]);
 
   return (
-    <header className="gc-header sticky top-0 z-30 w-full max-w-full overflow-x-clip bg-slate-900/95 backdrop-blur-xl border-b border-slate-800/80 shadow-md shadow-slate-950/20">
-      <div className="gc-header-container max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 h-16 sm:h-18 flex items-center justify-between gap-1.5 sm:gap-4 w-full min-w-0">
+    <header className="sticky top-0 z-30 w-full max-w-full overflow-x-clip bg-slate-900/95 backdrop-blur-xl border-b border-slate-800/80 shadow-md shadow-slate-950/20">
+      <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 h-16 sm:h-18 flex items-center justify-between gap-1.5 sm:gap-4 w-full min-w-0">
         {/* Brand & Wordmark Zone */}
-        <div className="gc-brand-zone flex items-center gap-1.5 sm:gap-3 shrink-0 min-w-0">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 min-w-0">
           <a 
             href="/"
-            className="gc-brand-link flex items-center gap-3 cursor-pointer group no-underline text-inherit" 
+            className="flex items-center gap-3 cursor-pointer group no-underline text-inherit" 
             onClick={(e) => {
               e.preventDefault();
               if (onGoHome) {
@@ -124,11 +124,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Action Controls & User Account Zone */}
-        <div className="gc-header-actions flex items-center gap-1.5 sm:gap-2.5 shrink-0 min-w-0">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 min-w-0">
           {/* Theme Mode Toggle Button (Sun / Moon) - Moved to Right Side */}
           <button
             onClick={onToggleTheme}
-            className="btn-theme-toggle p-2 sm:p-2.5 rounded-xl bg-slate-800/80 shrink-0 hover:bg-slate-750 text-slate-300 hover:text-amber-400 border border-slate-700/60 transition cursor-pointer flex items-center justify-center group order-first"
+            className="p-2 sm:p-2.5 rounded-xl bg-slate-800/80 shrink-0 hover:bg-slate-750 text-slate-300 hover:text-amber-400 border border-slate-700/60 transition cursor-pointer flex items-center justify-center group order-first"
             title={theme === 'dark' ? 'تغییر به حالت روشن (Light Mode)' : 'تغییر به حالت تاریک (Dark Mode)'}
             aria-label="تغییر پوسته"
           >
@@ -143,7 +143,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {user && (
             <button
               onClick={onOpenFeedbackModal}
-              className="btn-navbar-feedback p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-sky-300 border border-slate-700/60 font-medium text-xs flex items-center gap-1.5 transition cursor-pointer shrink-0"
+              className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-sky-300 border border-slate-700/60 font-medium text-xs flex items-center gap-1.5 transition cursor-pointer shrink-0"
               title="ثبت انتقادات و پیشنهادات"
             >
               <MessageSquarePlus className="w-4 h-4 text-[#0077d9]" />
@@ -155,7 +155,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {Boolean(user?.isAdmin || user?.email?.toLowerCase() === '3dsaz1990@gmail.com') && (
             <button
               onClick={onOpenRSSModal}
-              className="btn-navbar-rss p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-amber-400 border border-slate-700/60 font-medium text-xs flex items-center gap-1.5 transition cursor-pointer shrink-0"
+              className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-amber-400 border border-slate-700/60 font-medium text-xs flex items-center gap-1.5 transition cursor-pointer shrink-0"
               title="فید خبرخوان RSS سایت"
             >
               <Rss className="w-4 h-4 text-amber-400" />
@@ -169,7 +169,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Primary Material Add Content Button */}
           <button
             onClick={onOpenAddModal}
-            className="btn-navbar-add-content px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#0077d9] hover:bg-[#0066bd] active:scale-95 text-white font-bold text-xs sm:text-sm flex items-center gap-1 sm:gap-1.5 shadow-lg shadow-[#0077d9]/30 transition-all cursor-pointer shrink-0"
+            className="px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#0077d9] hover:bg-[#0066bd] active:scale-95 text-white font-bold text-xs sm:text-sm flex items-center gap-1 sm:gap-1.5 shadow-lg shadow-[#0077d9]/30 transition-all cursor-pointer shrink-0"
           >
             <PlusCircle className="w-4 h-4 text-white fill-none" />
             <span className="whitespace-nowrap text-white">اشتراک محتوا</span>
@@ -177,10 +177,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Google Auth / User Profile */}
           {user ? (
-            <div className="gc-profile-menu-container relative" ref={profileMenuRef}>
+            <div className="relative" ref={profileMenuRef}>
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="btn-profile-toggle flex items-center gap-2 p-1.5 pr-2.5 rounded-2xl bg-slate-800/90 hover:bg-slate-750 border border-slate-700/80 transition cursor-pointer text-right"
+                className="flex items-center gap-2 p-1.5 pr-2.5 rounded-2xl bg-slate-800/90 hover:bg-slate-750 border border-slate-700/80 transition cursor-pointer text-right"
               >
                 <div className="hidden lg:block text-right">
                   <div className="text-xs font-bold text-slate-100 truncate max-w-[100px]">
@@ -227,7 +227,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         onClick={() => {
                           onToggleTheme();
                         }}
-                        className="btn-dropdown-theme w-full text-right px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-xl flex items-center justify-between transition cursor-pointer"
+                        className="w-full text-right px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-xl flex items-center justify-between transition cursor-pointer"
                       >
                         <span className="flex items-center gap-2">
                           {theme === 'dark' ? (
@@ -244,7 +244,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           setShowProfileMenu(false);
                           onOpenProfileModal();
                         }}
-                        className="btn-dropdown-profile-edit w-full text-right px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-xl flex items-center justify-between transition cursor-pointer"
+                        className="w-full text-right px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-xl flex items-center justify-between transition cursor-pointer"
                       >
                         <span className="flex items-center gap-2">
                           <UserIcon className="w-4 h-4 text-slate-300" />
@@ -257,7 +257,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           setShowProfileMenu(false);
                           onToggleSavedOnly();
                         }}
-                        className={`btn-dropdown-saved-list w-full text-right px-3 py-2 text-xs rounded-xl flex items-center justify-between transition cursor-pointer ${
+                        className={`w-full text-right px-3 py-2 text-xs rounded-xl flex items-center justify-between transition cursor-pointer ${
                           showSavedOnly 
                             ? 'bg-amber-500/15 text-amber-300 font-bold border border-amber-500/30' 
                             : 'text-slate-200 hover:text-white hover:bg-slate-800'
@@ -279,7 +279,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           setShowProfileMenu(false);
                           onOpenProfileModal();
                         }}
-                        className="btn-dropdown-inbox w-full text-right px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-xl flex items-center justify-between transition cursor-pointer"
+                        className="w-full text-right px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-xl flex items-center justify-between transition cursor-pointer"
                       >
                         <span className="flex items-center gap-2">
                           <Inbox className="w-4 h-4 text-slate-300" />
@@ -298,7 +298,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                             setShowProfileMenu(false);
                             onOpenAdminModal();
                           }}
-                          className="btn-dropdown-admin-panel w-full text-right px-3 py-2 text-xs text-amber-300 hover:text-amber-200 hover:bg-amber-500/10 rounded-xl flex items-center justify-between transition cursor-pointer font-bold border border-amber-500/20"
+                          className="w-full text-right px-3 py-2 text-xs text-amber-300 hover:text-amber-200 hover:bg-amber-500/10 rounded-xl flex items-center justify-between transition cursor-pointer font-bold border border-amber-500/20"
                         >
                           <span className="flex items-center gap-2">
                             <Crown className="w-4 h-4 text-amber-400" />
@@ -311,7 +311,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                             setShowProfileMenu(false);
                             onOpenAdminModal();
                           }}
-                          className="btn-dropdown-admin-panel w-full text-right px-3 py-2 text-xs text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl flex items-center justify-between transition cursor-pointer"
+                          className="w-full text-right px-3 py-2 text-xs text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl flex items-center justify-between transition cursor-pointer"
                         >
                           <span className="flex items-center gap-2">
                             <Crown className="w-4 h-4 text-slate-400" />
@@ -325,7 +325,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           setShowProfileMenu(false);
                           onStartGoogleLogin();
                         }}
-                        className="btn-dropdown-google-switch w-full text-right px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-xl flex items-center gap-2 transition cursor-pointer"
+                        className="w-full text-right px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-xl flex items-center gap-2 transition cursor-pointer"
                       >
                         <Share2 className="w-4 h-4 text-slate-300" />
                         تغییر یا مدیریت حساب گوگل
@@ -336,7 +336,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           setShowProfileMenu(false);
                           onLogout();
                         }}
-                        className="btn-dropdown-logout w-full text-right px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-xl flex items-center gap-2 transition mt-1 cursor-pointer"
+                        className="w-full text-right px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-xl flex items-center gap-2 transition mt-1 cursor-pointer"
                       >
                         <LogOut className="w-4 h-4 text-slate-300" />
                         خروج از حساب
@@ -349,7 +349,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={onStartGoogleLogin}
               disabled={isLoggingIn}
-              className="btn-login-google px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 active:scale-95 disabled:opacity-75 text-slate-900 font-bold text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 active:scale-95 disabled:opacity-75 text-slate-900 font-bold text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer"
             >
               {isLoggingIn ? (
                 <>

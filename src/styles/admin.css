@@ -1,0 +1,101 @@
+/* ==========================================================================
+   GeekClub Design System - Admin Panel & High Contrast Dashboard
+   Reference path: /src/styles/admin.css
+   ========================================================================== */
+
+.admin-panel-daily,
+.admin-panel-tabler,
+.admin-theme-container {
+  background-color: var(--admin-bg) !important;
+  color: var(--admin-text-primary) !important;
+}
+
+.gc-admin-card,
+.admin-card-box {
+  background-color: var(--admin-card-bg) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: var(--admin-text-primary) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.gc-admin-card:hover,
+.admin-card-box:hover {
+  background-color: var(--admin-card-hover) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+}
+
+.gc-admin-header,
+.gc-admin-tabs-bar {
+  background-color: var(--admin-card-bg) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.admin-title-primary {
+  color: var(--admin-text-primary) !important;
+}
+
+.admin-desc-secondary {
+  color: var(--admin-text-secondary) !important;
+}
+
+/* Status Badges */
+.admin-badge-success {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  color: var(--admin-success) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+}
+
+.admin-badge-warning {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+  color: var(--admin-warning) !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+}
+
+.admin-badge-danger {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  color: var(--admin-danger) !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+}
+
+/* Admin Action Buttons */
+.btn-admin-action-approve {
+  background-color: var(--admin-success) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+.btn-admin-action-approve:hover {
+  filter: brightness(1.1) !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35) !important;
+}
+
+.btn-admin-action-warning {
+  background-color: var(--admin-warning) !important;
+  color: #0f172a !important;
+  font-weight: 700 !important;
+}
+.btn-admin-action-warning:hover {
+  filter: brightness(1.1) !important;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35) !important;
+}
+
+.btn-admin-action-delete {
+  background-color: var(--admin-danger) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+.btn-admin-action-delete:hover {
+  filter: brightness(1.1) !important;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35) !important;
+}
+
+/* Tabler Dark Mode Integration */
+html:not(.light) .admin-panel-tabler {
+  background-color: var(--admin-bg) !important;
+  color: var(--admin-text-primary) !important;
+}
+
+html:not(.light) .admin-panel-tabler .gc-admin-header,
+html:not(.light) .admin-panel-tabler .gc-admin-tabs-bar {
+  background-color: var(--admin-card-bg) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}

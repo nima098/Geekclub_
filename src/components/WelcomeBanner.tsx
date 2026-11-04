@@ -26,7 +26,7 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
   if (isDismissed) return null;
 
   return (
-    <div className="gc-welcome-banner w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-2">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-2">
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950/80 to-slate-900 border border-indigo-500/30 p-6 sm:p-8 shadow-2xl shadow-indigo-950/50 text-right">
         {/* Ambient Glow Elements */}
         <div className="absolute -top-24 -right-24 w-72 h-72 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none" />
@@ -35,7 +35,7 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
         {/* Close / Dismiss Button */}
         <button
           onClick={() => setIsDismissed(true)}
-          className="btn-dismiss-welcome-banner absolute top-4 left-4 p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-400 hover:text-white transition-all cursor-pointer border border-slate-700/50"
+          className="absolute top-4 left-4 p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-400 hover:text-white transition-all cursor-pointer border border-slate-700/50"
           title="بستن پیام خوش‌آمدگویی"
           aria-label="بستن"
         >
@@ -80,7 +80,7 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
             <button
               onClick={onStartGoogleLogin}
               disabled={isLoggingIn}
-              className="btn-welcome-google-login flex-1 sm:flex-none px-5 py-3 rounded-2xl bg-white hover:bg-slate-100 active:scale-95 disabled:opacity-75 text-slate-950 font-bold text-xs sm:text-sm flex items-center justify-center gap-2.5 shadow-xl shadow-white/10 transition-all cursor-pointer"
+              className="flex-1 sm:flex-none px-5 py-3 rounded-2xl bg-white hover:bg-slate-100 active:scale-95 disabled:opacity-75 text-slate-950 font-bold text-xs sm:text-sm flex items-center justify-center gap-2.5 shadow-xl shadow-white/10 transition-all cursor-pointer"
             >
               {isLoggingIn ? (
                 <>
@@ -114,7 +114,7 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
 
             <button
               onClick={onOpenAddModal}
-              className="btn-welcome-add-content flex-1 sm:flex-none px-4 py-3 rounded-2xl bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
+              className="flex-1 sm:flex-none px-4 py-3 rounded-2xl bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
               <PlusCircle className="w-4 h-4 text-indigo-300" />
               <span>اشتراک‌گذاری محتوا</span>

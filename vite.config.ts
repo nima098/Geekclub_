@@ -108,11 +108,10 @@ export default defineConfig(() => {
     ],
     resolve: {
       alias: {
-        '@': path.resolve(import.meta.dirname || process.cwd(), '.'),
+        '@': path.resolve(__dirname, '.'),
       },
     },
     server: {
-      allowedHosts: true as const,
       hmr: false,
       watch: {},
     },

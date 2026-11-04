@@ -125,17 +125,17 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
 
   return (
     <div 
-      className="gc-admin-portal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div 
-        className="gc-admin-portal-modal modal-daily-box w-full max-w-lg bg-[#0e1217] border border-[#282d35] rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        className="w-full max-w-lg bg-slate-900 border border-amber-500/30 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header */}
-        <div className="gc-admin-portal-header modal-daily-header p-5 border-b border-[#282d35] flex items-center justify-between bg-[#13171f]">
+        <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-gradient-to-r from-amber-950/40 via-slate-900 to-indigo-950/40">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#ce3df3] to-[#8b5cf6] text-white flex items-center justify-center shadow-lg shadow-[#ce3df3]/25 ring-2 ring-[#ce3df3]/30">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-600 text-white flex items-center justify-center shadow-lg shadow-amber-500/20 ring-2 ring-amber-400/30">
               <Crown className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -143,7 +143,7 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
                 <h3 className="text-base sm:text-lg font-black text-slate-100">
                   پورتال ورود اختصاصی مدیریت
                 </h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#ce3df3]/15 text-[#ce3df3] border border-[#ce3df3]/30">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
                   انحصاری
                 </span>
               </div>
@@ -155,17 +155,17 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
 
           <button
             onClick={onClose}
-            className="btn-daily-secondary btn-close-admin-portal p-2 rounded-xl text-slate-400 hover:text-white transition cursor-pointer"
+            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="gc-admin-portal-body p-6 space-y-6">
+        <div className="p-6 space-y-6">
           {/* Current Status Banner */}
           {isAlreadyAdmin ? (
-            <div className="gc-admin-status-banner p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-3">
+            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-3">
               <div className="flex items-center gap-2.5 text-emerald-400 font-bold text-sm">
                 <ShieldCheck className="w-5 h-5 shrink-0" />
                 <span>حساب شما به عنوان مدیر ارشد سایت شناسایی شده است.</span>
@@ -178,7 +178,7 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
                   onClose();
                   onOpenAdminPanel();
                 }}
-                className="btn-daily-primary btn-admin-enter-panel w-full py-3 rounded-xl text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#ce3df3]/25 transition cursor-pointer active:scale-98"
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition cursor-pointer active:scale-98"
               >
                 <Crown className="w-4 h-4" />
                 <span>ورود به پنل ادمین</span>
@@ -187,13 +187,13 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="p-4 rounded-2xl bg-[#13171f] border border-[#282d35] space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold text-[#ce3df3]">
-                  <Lock className="w-4 h-4 text-[#ce3df3]" />
+              <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/80 space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
+                  <Lock className="w-4 h-4 text-amber-400" />
                   <span>دسترسی محافظت‌شده و اختصاصی</span>
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  این بخش برای مدیریت کل سایت تعبیه شده است. برای ورود و فعال‌سازی اختیارات مدیریتی برای حساب <strong className="text-[#ce3df3] font-mono">{SUPER_ADMIN_EMAIL}</strong> روی دکمه زیر کلیک نمایید.
+                  این بخش برای مدیریت کل سایت تعبیه شده است. برای ورود و فعال‌سازی اختیارات مدیریتی برای حساب <strong className="text-amber-300 font-mono">{SUPER_ADMIN_EMAIL}</strong> روی دکمه زیر کلیک نمایید.
                 </p>
 
                 {/* Google Sign In Button */}
@@ -201,10 +201,10 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
                   type="button"
                   onClick={handleGoogleAdminLogin}
                   disabled={isGoogleLoading}
-                  className="btn-admin-google-login w-full py-3 px-4 rounded-2xl bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs sm:text-sm flex items-center justify-center gap-2.5 shadow-lg transition cursor-pointer active:scale-98"
+                  className="w-full py-3 px-4 rounded-2xl bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs sm:text-sm flex items-center justify-center gap-2.5 shadow-lg transition cursor-pointer active:scale-98"
                 >
                   {isGoogleLoading ? (
-                    <Loader2 className="w-4 h-4 text-[#ce3df3] animate-spin" />
+                    <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
                   ) : (
                     <svg className="w-4 h-4" viewBox="0 0 24 24">
                       <path
@@ -232,10 +232,10 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
               </div>
 
               {/* Optional PIN authentication */}
-              <form onSubmit={handlePinSubmit} className="form-admin-pin p-4 rounded-2xl bg-[#13171f] border border-[#282d35] space-y-3">
+              <form onSubmit={handlePinSubmit} className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                    <KeyRound className="w-3.5 h-3.5 text-[#ce3df3]" />
+                    <KeyRound className="w-3.5 h-3.5 text-indigo-400" />
                     <span>کد امنیتی یا پین مدیریت (اختیاری):</span>
                   </label>
                 </div>
@@ -251,11 +251,11 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
                       setErrorMessage('');
                     }}
                     placeholder="کد عبور یا خالی بگذارید..."
-                    className="input-daily input-security-pin flex-1 px-3.5 py-2.5 rounded-xl bg-[#0e1217] border border-[#282d35] text-slate-200 text-xs placeholder-[#6e7681] focus:outline-none focus:ring-2 focus:ring-[#ce3df3]/25 focus:border-[#ce3df3] font-mono transition"
+                    className="flex-1 px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 text-xs placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono"
                   />
                   <button
                     type="submit"
-                    className="btn-daily-primary btn-admin-pin-submit px-4 py-2 rounded-xl text-white text-xs font-bold transition shadow-sm cursor-pointer shrink-0"
+                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-amber-300 text-xs font-bold transition border border-slate-700 cursor-pointer"
                   >
                     تایید و ورود
                   </button>
@@ -274,13 +274,13 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
                           جهت فعال‌سازی پاپ‌آپ ورود گوگل در این دامنه، کافی است دامنه زیر را کپی کرده و در تنظیمات فایربیس (Authorized Domains) ثبت فرمایید:
                         </p>
                         <div className="flex items-center gap-2">
-                          <div className="flex-1 p-2 rounded-xl bg-[#0e1217] border border-[#282d35] font-mono text-[11px] text-[#ce3df3] dir-ltr select-all truncate">
+                          <div className="flex-1 p-2 rounded-xl bg-slate-900 border border-slate-700 font-mono text-[11px] text-amber-200 dir-ltr select-all truncate">
                             {currentDomain}
                           </div>
                           <button
                             type="button"
                             onClick={handleCopyDomain}
-                            className="btn-daily-secondary btn-copy-domain px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 shrink-0 transition cursor-pointer"
+                            className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold border border-slate-700 flex items-center gap-1 shrink-0 transition cursor-pointer"
                           >
                             {copiedDomain ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                             <span>{copiedDomain ? 'کپی شد' : 'کپی دامنه'}</span>
@@ -292,7 +292,7 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
                             href={firebaseSettingsUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-[#ce3df3] hover:underline flex items-center gap-1 font-semibold"
+                            className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-semibold underline"
                           >
                             <span>ورود به تنظیمات فایربیس</span>
                             <ExternalLink className="w-3.5 h-3.5" />
@@ -301,7 +301,7 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
                           <button
                             type="button"
                             onClick={() => handleProceedAsAdmin()}
-                            className="btn-admin-direct-bypass text-[11px] font-bold text-[#ce3df3] hover:underline cursor-pointer"
+                            className="text-[11px] font-bold text-amber-300 hover:text-amber-200 underline cursor-pointer"
                           >
                             ورود مستقیم به عنوان {SUPER_ADMIN_EMAIL} ←
                           </button>
@@ -315,16 +315,16 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
           )}
 
           {/* Dedicated Link Box */}
-          <div className="gc-admin-link-box p-4 rounded-2xl bg-[#13171f] border border-[#282d35] space-y-2.5">
+          <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-[#ce3df3]" />
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                 لینک اختصاصی ورود به مدیریت شما:
               </span>
               <button
                 type="button"
                 onClick={handleCopyLink}
-                className="btn-copy-admin-link text-xs text-[#ce3df3] hover:underline font-semibold flex items-center gap-1 transition cursor-pointer"
+                className="text-xs text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1 transition cursor-pointer"
               >
                 {isCopied ? (
                   <>
@@ -340,18 +340,18 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
               </button>
             </div>
 
-            <div className="p-2.5 rounded-xl bg-[#0e1217] border border-[#282d35] font-mono text-[11px] text-slate-200 dir-ltr overflow-x-auto select-all">
+            <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800/80 font-mono text-[11px] text-amber-200/90 dir-ltr overflow-x-auto select-all">
               {adminLink}
             </div>
 
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              با باز کردن این لینک در مرورگر یا اضافه کردن <code className="bg-[#161b22] px-1 py-0.5 rounded text-[#ce3df3]">?admin=true</code> یا <code className="bg-[#161b22] px-1 py-0.5 rounded text-[#ce3df3]">#admin</code> به انتهای آدرس سایت، مستقیماً وارد این پورتال خواهید شد.
+              با باز کردن این لینک در مرورگر یا اضافه کردن <code className="bg-slate-800 px-1 py-0.5 rounded text-amber-300">?admin=true</code> یا <code className="bg-slate-800 px-1 py-0.5 rounded text-amber-300">#admin</code> به انتهای آدرس سایت، مستقیماً وارد این پورتال خواهید شد.
             </p>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="gc-admin-portal-footer modal-daily-footer p-4 border-t border-[#282d35] bg-[#13171f] flex items-center justify-between text-xs text-slate-400">
+        <div className="p-4 border-t border-slate-800 bg-slate-900/60 flex items-center justify-between text-xs text-slate-400">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span>سامانه امنیتی فعال است</span>
@@ -359,7 +359,7 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
 
           <button
             onClick={onClose}
-            className="btn-daily-secondary btn-close-portal-footer px-4 py-2 rounded-xl text-slate-300 hover:text-white transition cursor-pointer"
+            className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white transition cursor-pointer"
           >
             بستن
           </button>

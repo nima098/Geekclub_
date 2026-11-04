@@ -128,7 +128,7 @@ export const ImageCDNUpload: React.FC<ImageCDNUploadProps> = ({
             setErrorMessage(null);
           }}
           placeholder={placeholder}
-          className="input-daily w-full bg-[#0e1217] border border-[#282d35] rounded-xl px-3 py-2 text-xs text-slate-100 placeholder-[#6e7681] focus:outline-none focus:ring-2 focus:ring-[#ce3df3]/25 focus:border-[#ce3df3] transition dir-ltr text-left pl-9"
+          className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500/80 transition dir-ltr text-left pl-9"
         />
         {displayUrl && (
           <button

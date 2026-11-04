@@ -1,0 +1,122 @@
+/* ==========================================================================
+   GeekClub Design System - UI Components & Forms
+   Reference path: /src/styles/components.css
+   ========================================================================== */
+
+/* Dark Mode Form Inputs */
+html:not(.light) input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]),
+html:not(.light) textarea,
+html:not(.light) select,
+html:not(.light) .input-daily,
+html:not(.light) .textarea-daily,
+html:not(.light) .select-daily {
+  background-color: #0e1217;
+  color: #f3f4f6;
+  border-color: #282d35;
+}
+
+html:not(.light) input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):focus,
+html:not(.light) textarea:focus,
+html:not(.light) select:focus,
+html:not(.light) .input-daily:focus,
+html:not(.light) .textarea-daily:focus,
+html:not(.light) .select-daily:focus {
+  border-color: #0077d9;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 119, 217, 0.28);
+}
+
+html:not(.light) input::placeholder,
+html:not(.light) textarea::placeholder {
+  color: #6e7681;
+}
+
+/* Primary Gradient Buttons */
+.btn-daily-primary,
+.btn-modal-submit,
+.btn-submit-feedback,
+.btn-submit-comment,
+.btn-submit-username-setup,
+.btn-save-profile,
+.btn-guestbook-submit,
+.btn-admin-enter-panel,
+.btn-admin-pin-submit {
+  background-color: #0077d9;
+  color: #ffffff;
+  box-shadow: 0 4px 14px 0 rgba(0, 119, 217, 0.25);
+  border: none;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-daily-primary:hover:not(:disabled),
+.btn-modal-submit:hover:not(:disabled),
+.btn-submit-feedback:hover:not(:disabled),
+.btn-submit-comment:hover:not(:disabled),
+.btn-submit-username-setup:hover:not(:disabled),
+.btn-save-profile:hover:not(:disabled),
+.btn-guestbook-submit:hover:not(:disabled),
+.btn-admin-enter-panel:hover:not(:disabled),
+.btn-admin-pin-submit:hover:not(:disabled) {
+  background-color: #0062b3;
+  box-shadow: 0 6px 20px 0 rgba(0, 119, 217, 0.4);
+}
+
+/* Secondary & Cancel Buttons (Dark Mode) */
+html:not(.light) .btn-daily-secondary,
+html:not(.light) .btn-modal-cancel,
+html:not(.light) .btn-close-modal,
+html:not(.light) .btn-close-feedback-modal,
+html:not(.light) .btn-close-comments,
+html:not(.light) .btn-close-comments-modal,
+html:not(.light) .btn-close-admin-portal,
+html:not(.light) .btn-cancel-username-setup,
+html:not(.light) .btn-close-portal-footer,
+html:not(.light) .btn-copy-domain {
+  background-color: #161b22;
+  color: #c9d1d9;
+  border: 1px solid #282d35;
+  transition: all 0.15s ease-in-out;
+}
+
+html:not(.light) .btn-daily-secondary:hover,
+html:not(.light) .btn-modal-cancel:hover,
+html:not(.light) .btn-close-modal:hover,
+html:not(.light) .btn-close-feedback-modal:hover,
+html:not(.light) .btn-close-comments:hover,
+html:not(.light) .btn-close-comments-modal:hover,
+html:not(.light) .btn-close-admin-portal:hover,
+html:not(.light) .btn-cancel-username-setup:hover,
+html:not(.light) .btn-close-portal-footer:hover,
+html:not(.light) .btn-copy-domain:hover {
+  background-color: #21262d;
+  color: #ffffff;
+  border-color: #3b4351;
+}
+
+/* Modals Container Styles */
+html:not(.light) .modal-daily-box,
+html:not(.light) .gc-feedback-modal,
+html:not(.light) .gc-username-setup-modal,
+html:not(.light) .gc-comments-modal,
+html:not(.light) .gc-admin-portal-modal {
+  background-color: #0e1217;
+  border-color: #22272f;
+  color: #f3f4f6;
+}
+
+html:not(.light) .modal-daily-header,
+html:not(.light) .gc-feedback-header,
+html:not(.light) .gc-comments-header,
+html:not(.light) .gc-username-setup-header,
+html:not(.light) .gc-admin-portal-header {
+  background-color: #13171f;
+  border-color: #22272f;
+}
+
+html:not(.light) .modal-daily-footer,
+html:not(.light) .gc-modal-footer,
+html:not(.light) .gc-comments-footer,
+html:not(.light) .gc-admin-portal-footer {
+  background-color: #0e1217;
+  border-color: #22272f;
+}
