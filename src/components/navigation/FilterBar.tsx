@@ -20,7 +20,7 @@ import {
   Bookmark,
   Trash2
 } from 'lucide-react';
-import { Platform, Category, SortOption, ViewMode } from '../types/content';
+import { Platform, Category, SortOption, ViewMode } from '../../types/content';
 
 interface FilterBarProps {
   searchQuery: string;

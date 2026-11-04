@@ -9,8 +9,8 @@ import {
   User as UserIcon,
   LogIn
 } from 'lucide-react';
-import { ContentItem, CommentItem, UserProfile } from '../types/content';
-import { handleImageError, FALLBACK_IMAGES } from '../utils/imageHelper';
+import { ContentItem, CommentItem, UserProfile } from '../../types/content';
+import { handleImageError, FALLBACK_IMAGES } from '../../utils/imageHelper';
 
 interface CommentsModalProps {
   item: ContentItem | null;

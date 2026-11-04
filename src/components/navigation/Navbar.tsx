@@ -20,9 +20,9 @@ import {
   Moon,
   Rss
 } from 'lucide-react';
-import { UserProfile } from '../types/content';
-import { PWAInstallButton } from './PWAInstallButton';
-import { handleImageError, FALLBACK_IMAGES } from '../utils/imageHelper';
+import { UserProfile } from '../../types/content';
+import { PWAInstallButton } from '../common/PWAInstallButton';
+import { handleImageError, FALLBACK_IMAGES } from '../../utils/imageHelper';
 
 interface NavbarProps {
   user: UserProfile | null;

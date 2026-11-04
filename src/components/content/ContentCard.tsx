@@ -22,8 +22,8 @@ import {
   Layers,
   Film
 } from 'lucide-react';
-import { ContentItem, ViewMode, UserProfile, MediaSlide } from '../types/content';
-import { handleImageError, getPlatformFallbackImage, resolveCoverImageUrl } from '../utils/imageHelper';
+import { ContentItem, ViewMode, UserProfile, MediaSlide } from '../../types/content';
+import { handleImageError, getPlatformFallbackImage, resolveCoverImageUrl } from '../../utils/imageHelper';
 
 interface ContentCardProps {
   item: ContentItem;

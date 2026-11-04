@@ -36,9 +36,9 @@ import {
   Award,
   Layers
 } from 'lucide-react';
-import { UserProfile, InboxMessage, ProfileComment, ContentItem, Platform } from '../types/content';
-import { ImageCDNUpload } from './ImageCDNUpload';
-import { handleImageError, FALLBACK_IMAGES } from '../utils/imageHelper';
+import { UserProfile, InboxMessage, ProfileComment, ContentItem, Platform } from '../../types/content';
+import { ImageCDNUpload } from '../common/ImageCDNUpload';
+import { handleImageError, FALLBACK_IMAGES } from '../../utils/imageHelper';
 
 interface ProfileModalProps {
   isOpen: boolean;

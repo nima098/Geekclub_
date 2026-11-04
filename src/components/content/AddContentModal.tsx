@@ -18,8 +18,8 @@ import {
   AlertTriangle,
   ExternalLink
 } from 'lucide-react';
-import { ImageCDNUpload } from './ImageCDNUpload';
-import { transferExternalUrlToCDN } from '../services/cdnService';
+import { ImageCDNUpload } from '../common/ImageCDNUpload';
+import { transferExternalUrlToCDN } from '../../services/cdnService';
 import { 
   Platform, 
   Category, 
@@ -28,9 +28,9 @@ import {
   SITE_CATEGORIES, 
   inferCategoryFromContent,
   SiteAdminSettings
-} from '../types/content';
-import { parseContentUrl, fetchMetadataFromUrl, ExtractedMetadata } from '../utils/urlHelper';
-import { FALLBACK_IMAGES, getAuthorAvatar } from '../utils/imageHelper';
+} from '../../types/content';
+import { parseContentUrl, fetchMetadataFromUrl, ExtractedMetadata } from '../../utils/urlHelper';
+import { FALLBACK_IMAGES, getAuthorAvatar } from '../../utils/imageHelper';
 
 interface AddContentModalProps {
   isOpen: boolean;

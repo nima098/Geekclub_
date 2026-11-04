@@ -18,8 +18,8 @@ import {
   Layers,
   Check
 } from 'lucide-react';
-import { ContentItem, MediaSlide } from '../types/content';
-import { handleImageError, getPlatformFallbackImage, resolveCoverImageUrl } from '../utils/imageHelper';
+import { ContentItem, MediaSlide } from '../../types/content';
+import { handleImageError, getPlatformFallbackImage, resolveCoverImageUrl } from '../../utils/imageHelper';
 
 interface ArticleReaderModalProps {
   item: ContentItem | null;

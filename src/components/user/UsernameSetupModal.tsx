@@ -9,8 +9,8 @@ import {
   Crown,
   AlertCircle
 } from 'lucide-react';
-import { UserProfile } from '../types/content';
-import { SUPER_ADMIN_EMAIL } from '../data/initialData';
+import { UserProfile } from '../../types/content';
+import { SUPER_ADMIN_EMAIL } from '../../data/initialData';
 
 interface GoogleTempUser {
   uid: string;

@@ -49,20 +49,20 @@ import {
   getDriveAccessToken, 
   uploadBackupToGoogleDrive,
   initDriveAuthListener
-} from '../utils/googleDrive';
+} from '../../utils/googleDrive';
 import { 
   ContentItem, 
   FeedbackItem, 
   UserProfile, 
   InboxMessage, 
   SiteAdminSettings 
-} from '../types/content';
+} from '../../types/content';
 import { 
   resolveCoverImageUrl, 
   handleImageError, 
   getPlatformFallbackImage 
-} from '../utils/imageHelper';
-import { api, getAdminHeaders } from '../services/api';
+} from '../../utils/imageHelper';
+import { api, getAdminHeaders } from '../../services/api';
 import { 
   getCDNConfig, 
   saveCDNConfig, 
@@ -70,7 +70,7 @@ import {
   testCDNConnection,
   transferExternalUrlToCDN,
   CDNHealthReport
-} from '../services/cdnService';
+} from '../../services/cdnService';
 
 interface AdminPanelModalProps {
   isOpen: boolean;

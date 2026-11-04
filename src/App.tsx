@@ -5,49 +5,23 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
-  Navbar 
-} from './components/Navbar';
-import { 
-  FilterBar 
-} from './components/FilterBar';
-import { 
-  ContentCard 
-} from './components/ContentCard';
-import { 
-  CommentsModal 
-} from './components/CommentsModal';
-import { 
-  ArticleReaderModal 
-} from './components/ArticleReaderModal';
-import { 
-  AddContentModal 
-} from './components/AddContentModal';
-import { 
-  UsernameSetupModal 
-} from './components/UsernameSetupModal';
-import { 
-  DomainAuthHelpModal 
-} from './components/DomainAuthHelpModal';
-import { FALLBACK_IMAGES, getPlatformFallbackImage, getAuthorAvatar } from './utils/imageHelper';
-import { 
-  ProfileModal 
-} from './components/ProfileModal';
-import { 
-  FeedbackModal 
-} from './components/FeedbackModal';
-import { 
-  AdminPanelModal 
-} from './components/AdminPanelModal';
-import { 
-  AdminPortalLoginModal 
-} from './components/AdminPortalLoginModal';
-import { 
-  RSSModal 
-} from './components/RSSModal';
-import { 
+  Navbar,
+  FilterBar,
+  ContentCard, 
+  CommentsModal, 
+  ArticleReaderModal, 
+  AddContentModal, 
+  UsernameSetupModal, 
+  DomainAuthHelpModal, 
+  ProfileModal, 
+  FeedbackModal, 
+  AdminPanelModal, 
+  AdminPortalLoginModal, 
+  RSSModal, 
   Toast, 
   ToastMessage 
-} from './components/Toast';
+} from './components';
+import { FALLBACK_IMAGES, getPlatformFallbackImage, getAuthorAvatar } from './utils/imageHelper';
 import { 
   ContentItem, 
   CommentItem, 

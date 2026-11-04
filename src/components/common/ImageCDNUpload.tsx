@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Upload, Image as ImageIcon, CheckCircle2, AlertCircle, RefreshCw, FileText, ArrowUpRight, Copy, Check } from 'lucide-react';
-import { compressAndConvertToWebP, uploadImageToCDN, getCDNConfig } from '../services/cdnService';
+import { compressAndConvertToWebP, uploadImageToCDN, getCDNConfig } from '../../services/cdnService';
 
 interface ImageCDNUploadProps {
   currentUrl?: string;

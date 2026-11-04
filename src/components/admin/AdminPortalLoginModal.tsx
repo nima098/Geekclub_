@@ -13,10 +13,10 @@ import {
   AlertCircle,
   Loader2
 } from 'lucide-react';
-import { UserProfile } from '../types/content';
-import { SUPER_ADMIN_USER, SUPER_ADMIN_EMAIL } from '../data/initialData';
-import { loginWithGooglePopup } from '../lib/firebase';
-import { setAdminToken, verifyAdminKey } from '../services/api';
+import { UserProfile } from '../../types/content';
+import { SUPER_ADMIN_USER, SUPER_ADMIN_EMAIL } from '../../data/initialData';
+import { loginWithGooglePopup } from '../../lib/firebase';
+import { setAdminToken, verifyAdminKey } from '../../services/api';
 
 interface AdminPortalLoginModalProps {
   isOpen: boolean;

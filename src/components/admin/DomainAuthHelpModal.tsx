@@ -9,7 +9,7 @@ import {
   ArrowLeft,
   Sparkles
 } from 'lucide-react';
-import { SUPER_ADMIN_EMAIL } from '../data/initialData';
+import { SUPER_ADMIN_EMAIL } from '../../data/initialData';
 
 interface DomainAuthHelpModalProps {
   isOpen: boolean;

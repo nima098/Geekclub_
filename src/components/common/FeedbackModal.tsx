@@ -12,7 +12,7 @@ import {
   User,
   Mail
 } from 'lucide-react';
-import { FeedbackItem, UserProfile } from '../types/content';
+import { FeedbackItem, UserProfile } from '../../types/content';
 
 interface FeedbackModalProps {
   isOpen: boolean;
