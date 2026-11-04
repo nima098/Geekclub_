@@ -3358,8 +3358,10 @@ function injectInitialDataIntoHtml(html: string): string {
   }
 }
 
-  if (process.env.NODE_ENV === 'production') {
-    const distPath = path.resolve(__dirname, 'dist');
+  const distPath = path.resolve(__dirname, 'dist');
+  const isProd = process.env.NODE_ENV === 'production' || (process.env.NODE_ENV !== 'development' && fs.existsSync(path.resolve(distPath, 'index.html')));
+
+  if (isProd) {
     app.use(
       express.static(distPath, {
         index: false,
