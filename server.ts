@@ -53,7 +53,7 @@ app.get(['/sw.js', '/service-worker.js', '/registerSW.js', '/workbox-*.js'], (_r
   `);
 });
 
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 const IS_VERCEL = Boolean(process.env.VERCEL || process.env.NOW_BUILDER);
 
 const DB_PATH = IS_VERCEL
