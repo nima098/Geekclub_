@@ -8,7 +8,7 @@ import crypto from 'crypto';
 import dns from 'dns';
 import net from 'net';
 import sharp from 'sharp';
-import { INITIAL_CONTENT, INITIAL_COMMENTS, SUPER_ADMIN_EMAIL } from './src/data/initialData.ts';
+import { INITIAL_CONTENT, INITIAL_COMMENTS, SUPER_ADMIN_EMAIL } from './src/data/initialData';
 import {
   initPostgres,
   isPostgresConnected,
@@ -16,7 +16,7 @@ import {
   loadDatabaseFromPostgres,
   saveDatabaseToPostgres,
   recordPostgresBackup
-} from './src/db/postgres.ts';
+} from './src/db/postgres';
 
 const getDirname = (): string => {
   try {
@@ -3407,8 +3407,15 @@ function injectInitialDataIntoHtml(html: string): string {
   }
 
   if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
-    app.listen(PORT, '0.0.0.0', () => {
+    const server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 GeekClub full-stack server running on http://0.0.0.0:${PORT}`);
+    });
+    server.on('error', (err: any) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`[Server Error] Port ${PORT} is already in use by an orphaned process! Run 'fuser -k ${PORT}/tcp' or 'killall -9 node' on your VPS.`);
+      } else {
+        console.error('[Server Startup Error]:', err.message);
+      }
     });
   }
 }
