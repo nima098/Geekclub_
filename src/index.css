@@ -1,6 +1,624 @@
 /* ==========================================================================
-   GeekClub Main CSS Entry Point
-   Redirects directly to /src/styles/index.css as the primary source of truth.
+   GeekClub Master Stylesheet & Design System
+   Source of Truth: /src/index.css
+   Includes: Tailwind v4, Design Tokens, Components, Admin Panel & Light Mode
    ========================================================================== */
 
-@import "./styles/index.css";
+@import "tailwindcss";
+
+/* --------------------------------------------------------------------------
+   1. Design Tokens & CSS Variables
+   -------------------------------------------------------------------------- */
+:root {
+  /* Admin Panel & Dashboard Theme Reference Palette */
+  --admin-bg: #090d16;          /* پس‌زمینه کل صفحه پنل */
+  --admin-card-bg: #131d31;     /* پس‌زمینه کارت‌ها و جدول‌ها */
+  --admin-card-hover: #1a2744;  /* حالت هاور باکس‌ها */
+  --admin-text-primary: #ffffff; /* متن‌های مهم و تیترها */
+  --admin-text-secondary: #94a3b8; /* متن‌های توضیحی و ثانویه */
+  --admin-success: #10b981;     /* رنگ تایید و انتشار */
+  --admin-warning: #f59e0b;     /* رنگ وضعیت در انتظار بررسی */
+  --admin-danger: #ef4444;      /* رنگ حذف و سطل زباله */
+
+  /* Brand Colors & Primary Accents */
+  --color-primary-blue: #0077d9;
+  --color-primary-hover: #0062b3;
+  --color-accent-purple: #ce3df3;
+
+  /* Typography */
+  --font-family-base: 'Vazirmatn', 'Vazir', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+@theme {
+  --font-sans: 'Vazirmatn', 'Vazir', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-vazir: 'Vazirmatn', 'Vazir', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --color-indigo-600: #0077d9;
+  --color-indigo-500: #0077d9;
+  --color-indigo-400: #0077d9;
+  --color-pink-600: #0077d9;
+  --color-pink-500: #0077d9;
+  --color-pink-400: #0077d9;
+  --color-purple-600: #0077d9;
+  --color-purple-500: #0077d9;
+  --color-purple-400: #0077d9;
+}
+
+/* --------------------------------------------------------------------------
+   2. Base Styles & Global Reset
+   -------------------------------------------------------------------------- */
+@layer base {
+  *, ::before, ::after {
+    font-family: 'Vazirmatn', 'Vazir', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  
+  html {
+    scroll-behavior: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scroll-padding-top: 80px;
+    overflow-y: auto;
+  }
+
+  body {
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html, body, button, input, textarea, select {
+    font-family: 'Vazirmatn', 'Vazir', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+    direction: rtl;
+    text-align: right;
+  }
+
+  p {
+    line-height: 1.85;
+  }
+
+  /* Default Dark Mode */
+  html:not(.light), body:not(.light) {
+    background-color: #090d16;
+    color: #f1f5f9;
+    color-scheme: dark;
+  }
+
+  /* Light Mode (Material Flat 2.0 Light) */
+  html.light, body.light {
+    background-color: #efefef !important;
+    color: #0f172a;
+    color-scheme: light;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* --------------------------------------------------------------------------
+   3. UI Components, Inputs & Buttons
+   -------------------------------------------------------------------------- */
+html:not(.light) input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]),
+html:not(.light) textarea,
+html:not(.light) select,
+html:not(.light) .input-daily,
+html:not(.light) .textarea-daily,
+html:not(.light) .select-daily {
+  background-color: #0e1217;
+  color: #f3f4f6;
+  border-color: #282d35;
+}
+
+html:not(.light) input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):focus,
+html:not(.light) textarea:focus,
+html:not(.light) select:focus,
+html:not(.light) .input-daily:focus,
+html:not(.light) .textarea-daily:focus,
+html:not(.light) .select-daily:focus {
+  border-color: #0077d9;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 119, 217, 0.28);
+}
+
+html:not(.light) input::placeholder,
+html:not(.light) textarea::placeholder {
+  color: #6e7681;
+}
+
+/* Named Action Buttons */
+.btn-daily-primary,
+.btn-modal-submit,
+.btn-submit-feedback,
+.btn-submit-comment,
+.btn-submit-username-setup,
+.btn-save-profile,
+.btn-guestbook-submit,
+.btn-admin-enter-panel,
+.btn-admin-pin-submit {
+  background-color: #0077d9;
+  color: #ffffff;
+  box-shadow: 0 4px 14px 0 rgba(0, 119, 217, 0.25);
+  border: none;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-daily-primary:hover:not(:disabled),
+.btn-modal-submit:hover:not(:disabled),
+.btn-submit-feedback:hover:not(:disabled),
+.btn-submit-comment:hover:not(:disabled),
+.btn-submit-username-setup:hover:not(:disabled),
+.btn-save-profile:hover:not(:disabled),
+.btn-guestbook-submit:hover:not(:disabled),
+.btn-admin-enter-panel:hover:not(:disabled),
+.btn-admin-pin-submit:hover:not(:disabled) {
+  background-color: #0062b3;
+  box-shadow: 0 6px 20px 0 rgba(0, 119, 217, 0.4);
+}
+
+/* Secondary & Cancel Buttons */
+html:not(.light) .btn-daily-secondary,
+html:not(.light) .btn-modal-cancel,
+html:not(.light) .btn-close-modal,
+html:not(.light) .btn-close-feedback-modal,
+html:not(.light) .btn-close-comments,
+html:not(.light) .btn-close-comments-modal,
+html:not(.light) .btn-close-admin-portal,
+html:not(.light) .btn-cancel-username-setup,
+html:not(.light) .btn-close-portal-footer,
+html:not(.light) .btn-copy-domain {
+  background-color: #161b22;
+  color: #c9d1d9;
+  border: 1px solid #282d35;
+  transition: all 0.15s ease-in-out;
+}
+
+html:not(.light) .btn-daily-secondary:hover,
+html:not(.light) .btn-modal-cancel:hover,
+html:not(.light) .btn-close-modal:hover,
+html:not(.light) .btn-close-feedback-modal:hover,
+html:not(.light) .btn-close-comments:hover,
+html:not(.light) .btn-close-comments-modal:hover,
+html:not(.light) .btn-close-admin-portal:hover,
+html:not(.light) .btn-cancel-username-setup:hover,
+html:not(.light) .btn-close-portal-footer:hover,
+html:not(.light) .btn-copy-domain:hover {
+  background-color: #21262d;
+  color: #ffffff;
+  border-color: #3b4351;
+}
+
+/* Modals */
+html:not(.light) .modal-daily-box,
+html:not(.light) .gc-feedback-modal,
+html:not(.light) .gc-username-setup-modal,
+html:not(.light) .gc-comments-modal,
+html:not(.light) .gc-admin-portal-modal {
+  background-color: #0e1217;
+  border-color: #22272f;
+  color: #f3f4f6;
+}
+
+html:not(.light) .modal-daily-header,
+html:not(.light) .gc-feedback-header,
+html:not(.light) .gc-comments-header,
+html:not(.light) .gc-username-setup-header,
+html:not(.light) .gc-admin-portal-header {
+  background-color: #13171f;
+  border-color: #22272f;
+}
+
+html:not(.light) .modal-daily-footer,
+html:not(.light) .gc-modal-footer,
+html:not(.light) .gc-comments-footer,
+html:not(.light) .gc-admin-portal-footer {
+  background-color: #0e1217;
+  border-color: #22272f;
+}
+
+/* --------------------------------------------------------------------------
+   4. Platform Badges & Chips (Solid Background Fills, Zero Colored Text)
+   -------------------------------------------------------------------------- */
+.gc-chip-platform-youtube {
+  background-color: #dc2626 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: 1px solid #ef4444 !important;
+}
+
+.gc-chip-platform-instagram {
+  background-color: #db2777 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: 1px solid #ec4899 !important;
+}
+
+.gc-chip-platform-aparat {
+  background-color: #e11d48 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: 1px solid #f43f5e !important;
+}
+
+.gc-chip-platform-article {
+  background-color: #059669 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: 1px solid #10b981 !important;
+}
+
+.gc-reaction-like-active {
+  background-color: #10b981 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35) !important;
+}
+
+.gc-reaction-dislike-active {
+  background-color: #ef4444 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35) !important;
+}
+
+.gc-tag-item {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+  transition: all 0.15s ease-in-out !important;
+}
+
+.gc-tag-item:hover {
+  background-color: #0077d9 !important;
+  color: #ffffff !important;
+  border-color: #0077d9 !important;
+}
+
+html.light .gc-tag-item {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+html.light .gc-tag-item:hover {
+  background-color: #0077d9 !important;
+  color: #ffffff !important;
+}
+
+/* Focus Mode: Specific Element Selector Rule */
+html:not(.light) div#root:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1),
+html:not(.light) div#root:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) strong,
+html:not(.light) div#root:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) span:not(.bg-\[\#0077d9\]) {
+  color: #ffffff !important;
+}
+
+html.light div#root:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1),
+html.light div#root:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) strong,
+html.light div#root:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) span:not(.bg-\[\#0077d9\]) {
+  color: #0f172a !important;
+}
+
+/* --------------------------------------------------------------------------
+   5. Admin Panel & High Contrast Solid Backgrounds
+   -------------------------------------------------------------------------- */
+.admin-panel-daily,
+.admin-panel-tabler,
+.admin-theme,
+.admin-theme-container {
+  background-color: var(--admin-bg) !important;
+  color: var(--admin-text-primary) !important;
+}
+
+html:not(.light) .admin-panel-daily,
+html:not(.light) .admin-panel-tabler,
+html:not(.light) .admin-theme,
+html:not(.light) .admin-theme-container,
+html:not(.light) .gc-admin-portal-modal {
+  color: var(--admin-text-primary) !important;
+}
+
+html.light .admin-panel-daily,
+html.light .admin-panel-tabler,
+html.light .admin-theme,
+html.light .admin-theme-container,
+html.light .gc-admin-portal-modal {
+  color: #0f172a !important;
+}
+
+.gc-admin-card,
+.admin-card-box {
+  background-color: var(--admin-card-bg) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: var(--admin-text-primary) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.gc-admin-card:hover,
+.admin-card-box:hover {
+  background-color: var(--admin-card-hover) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+}
+
+.gc-admin-header,
+.gc-admin-tabs-bar {
+  background-color: var(--admin-card-bg) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.admin-title-primary {
+  color: var(--admin-text-primary) !important;
+}
+
+.admin-desc-secondary {
+  color: var(--admin-text-secondary) !important;
+}
+
+/* Status Badges - High Contrast Solid Background Fills (No Colored Text) */
+.admin-badge-success,
+.gc-badge-success {
+  background-color: var(--admin-success) !important;
+  color: #ffffff !important;
+  border: 1px solid #10b981 !important;
+  font-weight: 700 !important;
+}
+
+.admin-badge-warning,
+.gc-badge-warning {
+  background-color: var(--admin-warning) !important;
+  color: #0f172a !important;
+  border: 1px solid #f59e0b !important;
+  font-weight: 700 !important;
+}
+
+.admin-badge-danger,
+.gc-badge-danger {
+  background-color: var(--admin-danger) !important;
+  color: #ffffff !important;
+  border: 1px solid #ef4444 !important;
+  font-weight: 700 !important;
+}
+
+.admin-badge-info,
+.gc-badge-primary {
+  background-color: var(--color-primary-blue) !important;
+  color: #ffffff !important;
+  border: 1px solid #0077d9 !important;
+  font-weight: 700 !important;
+}
+
+.admin-badge-purple,
+.gc-badge-purple {
+  background-color: #9333ea !important;
+  color: #ffffff !important;
+  border: 1px solid #a855f7 !important;
+  font-weight: 700 !important;
+}
+
+/* Admin Action Buttons */
+.btn-admin-action-approve {
+  background-color: var(--admin-success) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+.btn-admin-action-approve:hover {
+  filter: brightness(1.1) !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35) !important;
+}
+
+.btn-admin-action-warning {
+  background-color: var(--admin-warning) !important;
+  color: #0f172a !important;
+  font-weight: 700 !important;
+}
+.btn-admin-action-warning:hover {
+  filter: brightness(1.1) !important;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35) !important;
+}
+
+.btn-admin-action-delete {
+  background-color: var(--admin-danger) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+.btn-admin-action-delete:hover {
+  filter: brightness(1.1) !important;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35) !important;
+}
+
+.btn-restore-json-backup {
+  background-color: var(--color-primary-blue) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: 1px solid #0077d9 !important;
+  box-shadow: 0 4px 12px rgba(0, 119, 217, 0.25) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.btn-restore-json-backup:hover {
+  background-color: var(--color-primary-hover) !important;
+  box-shadow: 0 6px 18px rgba(0, 119, 217, 0.4) !important;
+}
+
+/* --------------------------------------------------------------------------
+   6. Light Mode Overrides
+   -------------------------------------------------------------------------- */
+html.light ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+html.light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+html.light {
+  .bg-\[\#090d16\] {
+    background-color: #efefef !important;
+    color: #0f172a;
+  }
+
+  .bg-slate-950,
+  .bg-slate-900 {
+    background-color: #ffffff !important;
+    color: #0f172a;
+  }
+
+  .bg-slate-950\/40,
+  .bg-slate-950\/60,
+  .bg-slate-950\/80,
+  .bg-slate-950\/90 {
+    background-color: #efefef !important;
+  }
+
+  .bg-slate-900\/95,
+  .bg-slate-900\/90,
+  .bg-slate-900\/80,
+  .bg-slate-900\/70,
+  .bg-slate-900\/60,
+  .bg-slate-900\/50,
+  .bg-slate-900\/40,
+  .bg-slate-900\/20 {
+    background-color: #ffffff !important;
+  }
+
+  .bg-slate-800,
+  .bg-slate-800\/90,
+  .bg-slate-800\/80,
+  .bg-slate-800\/70,
+  .bg-slate-800\/60,
+  .bg-slate-800\/50,
+  .bg-slate-800\/40,
+  .bg-slate-800\/30,
+  .bg-slate-800\/20,
+  .bg-slate-850 {
+    background-color: #f1f5f9 !important;
+  }
+
+  .bg-slate-750 {
+    background-color: #e2e8f0 !important;
+  }
+
+  .border-slate-800,
+  .border-slate-800\/90,
+  .border-slate-800\/80,
+  .border-slate-800\/60,
+  .border-slate-800\/50,
+  .border-slate-800\/40,
+  .border-slate-750,
+  .border-slate-700,
+  .border-slate-700\/80,
+  .border-slate-700\/60 {
+    border-color: #e2e8f0 !important;
+  }
+
+  .text-slate-100,
+  .text-slate-200 {
+    color: #0f172a !important;
+  }
+
+  .text-slate-300,
+  .text-slate-400 {
+    color: #475569 !important;
+  }
+
+  .text-slate-500 {
+    color: #64748b !important;
+  }
+
+  .hover\:bg-slate-800:hover,
+  .hover\:bg-slate-800\/80:hover,
+  .hover\:bg-slate-800\/60:hover,
+  .hover\:bg-slate-800\/50:hover,
+  .hover\:bg-slate-800\/40:hover,
+  .hover\:bg-slate-750:hover {
+    background-color: #e2e8f0 !important;
+  }
+
+  .hover\:bg-slate-700:hover {
+    background-color: #cbd5e1 !important;
+  }
+
+  .bg-slate-950\/80,
+  .bg-slate-950\/90,
+  .bg-slate-900\/90 {
+    background-color: rgba(15, 23, 42, 0.5) !important;
+  }
+
+  .shadow-xl,
+  .shadow-2xl,
+  .shadow-lg {
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04) !important;
+  }
+
+  input, textarea, select {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: #94a3b8 !important;
+  }
+
+  .bg-\[\#0077d9\],
+  .bg-indigo-600,
+  .bg-indigo-500,
+  .btn-daily-primary,
+  .admin-badge-success,
+  .admin-badge-danger,
+  .gc-chip-platform-youtube,
+  .gc-chip-platform-instagram,
+  .gc-chip-platform-aparat,
+  .gc-chip-platform-article {
+    color: #ffffff !important;
+  }
+
+  .bg-\[\#0077d9\] *,
+  .bg-\[\#0077d9\] span,
+  .bg-\[\#0077d9\] svg,
+  .bg-indigo-600 *,
+  .bg-indigo-600 .text-white,
+  .bg-indigo-600 span,
+  .bg-indigo-600 svg,
+  .bg-indigo-500 .text-white,
+  .bg-indigo-500 span,
+  .bg-indigo-500 svg,
+  .admin-badge-success *,
+  .admin-badge-danger * {
+    color: #ffffff !important;
+  }
+
+  .admin-badge-warning,
+  .gc-badge-warning {
+    color: #0f172a !important;
+  }
+
+  .text-indigo-400,
+  .text-indigo-300,
+  .text-emerald-400,
+  .text-amber-400,
+  .text-rose-400,
+  .text-cyan-400 {
+    color: #0f172a !important;
+  }
+
+  .bg-indigo-500\/15 {
+    background-color: rgba(0, 119, 217, 0.12) !important;
+  }
+
+  .prose-invert {
+    color: #334155 !important;
+  }
+}
+
+/* Dark mode custom variant */
+@custom-variant dark (&:where(.dark, .dark *));

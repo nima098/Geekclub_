@@ -805,7 +805,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-50 w-screen h-screen bg-slate-950 flex flex-col overflow-hidden animate-in fade-in duration-200"
+      className="admin-theme fixed inset-0 z-50 w-screen h-screen bg-slate-950 flex flex-col overflow-hidden animate-in fade-in duration-200"
+      dir="rtl"
       onClick={onClose}
     >
       <div 
