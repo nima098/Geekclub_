@@ -1,6 +1,11 @@
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './styles/index.css';
+import './styles/variables.css';
+import './styles/base.css';
+import './styles/components.css';
+import './styles/admin.css';
+import './styles/light-mode.css';
 import { api } from './services/api.ts';
 
 // Global error handler & unhandled rejection listener for automated system diagnostics
