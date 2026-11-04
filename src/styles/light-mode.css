@@ -132,11 +132,17 @@ html.light {
     color: #94a3b8 !important;
   }
 
-  /* Retain Primary Accent Buttons in Pure #0077d9 & White Text */
+  /* Retain Primary Accent Buttons & Badges in Solid Color Fill & White Text */
   .bg-\[\#0077d9\],
   .bg-indigo-600,
-  .bg-indigo-500 {
-    background-color: #0077d9 !important;
+  .bg-indigo-500,
+  .btn-daily-primary,
+  .admin-badge-success,
+  .admin-badge-danger,
+  .gc-chip-platform-youtube,
+  .gc-chip-platform-instagram,
+  .gc-chip-platform-aparat,
+  .gc-chip-platform-article {
     color: #ffffff !important;
   }
 
@@ -149,13 +155,25 @@ html.light {
   .bg-indigo-600 svg,
   .bg-indigo-500 .text-white,
   .bg-indigo-500 span,
-  .bg-indigo-500 svg {
+  .bg-indigo-500 svg,
+  .admin-badge-success *,
+  .admin-badge-danger * {
     color: #ffffff !important;
   }
 
+  .admin-badge-warning,
+  .gc-badge-warning {
+    color: #0f172a !important;
+  }
+
+  /* High contrast dark text for normal elements in light mode */
   .text-indigo-400,
-  .text-indigo-300 {
-    color: #0077d9 !important;
+  .text-indigo-300,
+  .text-emerald-400,
+  .text-amber-400,
+  .text-rose-400,
+  .text-cyan-400 {
+    color: #0f172a !important;
   }
 
   .bg-indigo-500\/15 {

@@ -90,30 +90,30 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     switch (item.platform) {
       case 'youtube':
         return {
-          icon: <Youtube className="w-3 h-3 text-red-400" />,
+          icon: <Youtube className="w-3.5 h-3.5 text-white" />,
           label: 'یوتیوب',
-          badgeBg: 'bg-slate-800/80 text-slate-200 border border-slate-700/60 shadow-md',
+          badgeBg: 'gc-chip-platform-youtube px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs font-bold shadow-md',
           accentColor: 'hover:border-red-500/60'
         };
       case 'instagram':
         return {
-          icon: <Instagram className="w-3 h-3 text-pink-400" />,
+          icon: <Instagram className="w-3.5 h-3.5 text-white" />,
           label: 'اینستاگرام',
-          badgeBg: 'bg-slate-800/80 text-slate-200 border border-slate-700/60 shadow-md',
+          badgeBg: 'gc-chip-platform-instagram px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs font-bold shadow-md',
           accentColor: 'hover:border-pink-500/60'
         };
       case 'article':
         return {
-          icon: <Newspaper className="w-3 h-3 text-emerald-400" />,
+          icon: <Newspaper className="w-3.5 h-3.5 text-white" />,
           label: 'مقاله وب',
-          badgeBg: 'bg-slate-800/80 text-slate-200 border border-slate-700/60 shadow-md',
+          badgeBg: 'gc-chip-platform-article px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs font-bold shadow-md',
           accentColor: 'hover:border-emerald-500/60'
         };
       case 'aparat':
         return {
-          icon: <Video className="w-3 h-3 text-rose-400" />,
+          icon: <Video className="w-3.5 h-3.5 text-white" />,
           label: 'آپارات',
-          badgeBg: 'bg-slate-800/80 text-slate-200 border border-slate-700/60 shadow-md',
+          badgeBg: 'gc-chip-platform-aparat px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs font-bold shadow-md',
           accentColor: 'hover:border-rose-500/60'
         };
     }
@@ -461,13 +461,13 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             {item.description}
           </p>
 
-          {/* Tags - Quiet Unboxed Text Buttons */}
+          {/* Tags - High-Contrast Chip Badges */}
           <div className="flex flex-wrap gap-1.5 mt-3">
             {item.tags.map((tag) => (
               <button
                 key={tag}
                 onClick={() => onTagClick(tag)}
-                className="text-[11px] font-semibold text-slate-400 hover:text-indigo-300 hover:underline transition cursor-pointer"
+                className="gc-tag-item px-2 py-0.5 rounded-lg text-[11px] font-semibold transition cursor-pointer"
               >
                 #{tag}
               </button>
@@ -484,12 +484,12 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               onClick={() => onLike(item.id)}
               className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                 item.userReaction === 'like'
-                  ? 'bg-emerald-500 text-white shadow-sm'
-                  : 'text-slate-300 hover:text-emerald-400 hover:bg-slate-750'
+                  ? 'gc-reaction-like-active'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-750'
               }`}
               title="پسندیدم (لایک)"
             >
-              <ThumbsUp className={`w-3.5 h-3.5 ${item.userReaction === 'like' ? 'fill-white' : ''}`} />
+              <ThumbsUp className={`w-3.5 h-3.5 ${item.userReaction === 'like' ? 'fill-white text-white' : ''}`} />
               <span className="font-mono">{item.likesCount}</span>
             </button>
 
@@ -501,12 +501,12 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               onClick={() => onDislike(item.id)}
               className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                 item.userReaction === 'dislike'
-                  ? 'bg-rose-500 text-white shadow-sm'
-                  : 'text-slate-300 hover:text-rose-400 hover:bg-slate-750'
+                  ? 'gc-reaction-dislike-active'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-750'
               }`}
               title="نپسندیدم (دیس‌لایک)"
             >
-              <ThumbsDown className={`w-3.5 h-3.5 ${item.userReaction === 'dislike' ? 'fill-white' : ''}`} />
+              <ThumbsDown className={`w-3.5 h-3.5 ${item.userReaction === 'dislike' ? 'fill-white text-white' : ''}`} />
               <span className="font-mono">{item.dislikesCount}</span>
             </button>
           </div>

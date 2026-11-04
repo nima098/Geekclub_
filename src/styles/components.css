@@ -120,3 +120,85 @@ html:not(.light) .gc-admin-portal-footer {
   background-color: #0e1217;
   border-color: #22272f;
 }
+
+/* ==========================================================================
+   GeekClub Platform Chips & High Contrast Badges (No Colored Text)
+   ========================================================================== */
+.gc-chip-platform-youtube {
+  background-color: #dc2626 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: 1px solid #ef4444 !important;
+}
+
+.gc-chip-platform-instagram {
+  background-color: #db2777 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: 1px solid #ec4899 !important;
+}
+
+.gc-chip-platform-aparat {
+  background-color: #e11d48 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: 1px solid #f43f5e !important;
+}
+
+.gc-chip-platform-article {
+  background-color: #059669 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: 1px solid #10b981 !important;
+}
+
+/* Action & Reaction Buttons with Solid Background Fills */
+.gc-reaction-like-active {
+  background-color: #10b981 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35) !important;
+}
+
+.gc-reaction-dislike-active {
+  background-color: #ef4444 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35) !important;
+}
+
+.gc-tag-item {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+  transition: all 0.15s ease-in-out !important;
+}
+
+.gc-tag-item:hover {
+  background-color: #0077d9 !important;
+  color: #ffffff !important;
+  border-color: #0077d9 !important;
+}
+
+html.light .gc-tag-item {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+html.light .gc-tag-item:hover {
+  background-color: #0077d9 !important;
+  color: #ffffff !important;
+}
+
+/* Focus Mode: Specific Element Selector Rule */
+html:not(.light) div#root:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1),
+html:not(.light) div#root:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) strong,
+html:not(.light) div#root:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) span:not(.bg-\[\#0077d9\]) {
+  color: #ffffff !important;
+}
+
+html.light div#root:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1),
+html.light div#root:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) strong,
+html.light div#root:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) span:not(.bg-\[\#0077d9\]) {
+  color: #0f172a !important;
+}
+

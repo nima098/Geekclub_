@@ -823,15 +823,15 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 <h3 className="text-sm sm:text-lg font-black text-slate-100">
                   پنل مدیریت و نظارت کل گیک کلاب
                 </h3>
-                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
-                  <Crown className="w-3 h-3 text-amber-400" />
+                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500 text-slate-950 flex items-center gap-1 shadow-sm">
+                  <Crown className="w-3 h-3 text-slate-950" />
                   مدیر سیستم (فول اسکرین)
                 </span>
-                <span className="text-[10px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded-md hidden md:inline">
+                <span className="text-[10px] font-mono text-slate-200 bg-slate-800 px-2 py-0.5 rounded-md hidden md:inline border border-slate-700">
                   3dsaz1990@gmail.com
                 </span>
               </div>
-              <p className="text-xs text-slate-400 hidden sm:block">
+              <p className="text-xs text-slate-300 hidden sm:block">
                 مدیریت انتشار، نظارت بر پست‌های معلق، سطوح دسترسی کاربران، تنظیمات و سطل بازیافت
               </p>
             </div>
@@ -842,17 +842,17 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             <button
               type="button"
               onClick={toggleBrowserFullscreen}
-              className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+              className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-100 hover:text-white border border-slate-700/60 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
               title={isBrowserFullscreen ? 'خروج از حالت تمام‌صفحه مرورگر' : 'ورود به حالت تمام‌صفحه مرورگر'}
             >
               {isBrowserFullscreen ? (
                 <>
-                  <Minimize2 className="w-4 h-4 text-amber-400" />
+                  <Minimize2 className="w-4 h-4 text-white" />
                   <span className="hidden md:inline">کوچک‌نمایی</span>
                 </>
               ) : (
                 <>
-                  <Maximize2 className="w-4 h-4 text-amber-400" />
+                  <Maximize2 className="w-4 h-4 text-white" />
                   <span className="hidden md:inline">تمام‌صفحه مرورگر</span>
                 </>
               )}
@@ -862,7 +862,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-indigo-600/25 transition cursor-pointer active:scale-95"
+              className="px-3.5 py-2 rounded-xl bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs flex items-center gap-2 shadow-md transition cursor-pointer active:scale-95"
               title="بستن پنل و بازگشت به صفحه اصلی سایت"
             >
               <Home className="w-4 h-4" />
@@ -879,11 +879,11 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               onClick={() => setActiveTab('dashboard')}
               className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
                 activeTab === 'dashboard'
-                ? 'border-indigo-500 text-indigo-400 font-bold'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
+                : 'border-transparent text-slate-300 hover:text-white'
             }`}
           >
-            <LayoutDashboard className="w-4 h-4" />
+            <LayoutDashboard className="w-4 h-4 text-white" />
             داشبورد و وضعیت
           </button>
 
@@ -891,19 +891,19 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             onClick={() => setActiveTab('contents')}
             className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
               activeTab === 'contents'
-                ? 'border-indigo-500 text-indigo-400 font-bold'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
+                : 'border-transparent text-slate-300 hover:text-white'
             }`}
           >
-            <Layers className="w-4 h-4" />
+            <Layers className="w-4 h-4 text-white" />
             مدیریت محتوا
             {pendingCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px] animate-pulse">
+              <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px] animate-pulse">
                 {pendingCount} در انتظار تایید
               </span>
             )}
             {trashCount > 0 && (
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-600 text-white font-bold">
                 {trashCount} سطل
               </span>
             )}
@@ -913,13 +913,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             onClick={() => setActiveTab('users')}
             className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
               activeTab === 'users'
-                ? 'border-indigo-500 text-indigo-400 font-bold'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
+                : 'border-transparent text-slate-300 hover:text-white'
             }`}
           >
-            <Users className="w-4 h-4" />
+            <Users className="w-4 h-4 text-white" />
             مدیریت کاربران و انتشار مستقیم
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 font-mono">
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-mono font-bold">
               {usersList.length}
             </span>
           </button>
@@ -928,13 +928,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             onClick={() => setActiveTab('database')}
             className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
               activeTab === 'database'
-                ? 'border-indigo-500 text-indigo-400 font-bold'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
+                : 'border-transparent text-slate-300 hover:text-white'
             }`}
           >
-            <Database className="w-4 h-4 text-cyan-400" />
+            <Database className="w-4 h-4 text-white" />
             پایداری داده‌ها و پشتیبان‌گیری
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-cyan-500/20 text-cyan-300 font-mono">
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-600 text-white font-mono font-bold">
               JSON + Firestore
             </span>
           </button>
@@ -943,13 +943,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             onClick={() => setActiveTab('diagnostic')}
             className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
               activeTab === 'diagnostic'
-                ? 'border-indigo-500 text-indigo-400 font-bold'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
+                : 'border-transparent text-slate-300 hover:text-white'
             }`}
           >
-            <ShieldAlert className="w-4 h-4 text-emerald-400 animate-pulse" />
+            <ShieldAlert className="w-4 h-4 text-white animate-pulse" />
             تست جامع دیتابیس و همگام‌سازی
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 font-mono">
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-mono font-bold">
               Live Ping
             </span>
           </button>
@@ -958,24 +958,24 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             onClick={() => setActiveTab('settings')}
             className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
               activeTab === 'settings'
-                ? 'border-indigo-500 text-indigo-400 font-bold'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
+                : 'border-transparent text-slate-300 hover:text-white'
             }`}
           >
-            <Settings className="w-4 h-4" />
+            <Settings className="w-4 h-4 text-white" />
             تنظیمات تایید محتوا
-            <span className={`w-2 h-2 rounded-full ${siteSettings.requireContentApproval ? 'bg-amber-400' : 'bg-slate-500'}`} />
+            <span className={`w-2.5 h-2.5 rounded-full ${siteSettings.requireContentApproval ? 'bg-amber-500' : 'bg-slate-500'}`} />
           </button>
 
           <button
             onClick={() => setActiveTab('feedback')}
             className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
               activeTab === 'feedback'
-                ? 'border-indigo-500 text-indigo-400 font-bold'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
+                : 'border-transparent text-slate-300 hover:text-white'
             }`}
           >
-            <MessageSquarePlus className="w-4 h-4" />
+            <MessageSquarePlus className="w-4 h-4 text-white" />
             انتقادات و پیشنهادات
             {pendingFeedbackCount > 0 && (
               <span className="w-4 h-4 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px] flex items-center justify-center">
@@ -988,11 +988,11 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             onClick={() => setActiveTab('broadcast')}
             className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
               activeTab === 'broadcast'
-                ? 'border-indigo-500 text-indigo-400 font-bold'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
+                : 'border-transparent text-slate-300 hover:text-white'
             }`}
           >
-            <Send className="w-4 h-4" />
+            <Send className="w-4 h-4 text-white" />
             پیام همگانی
           </button>
         </div>
@@ -1006,10 +1006,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             <div className="space-y-6">
               {/* Metric Cards Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-1">
-                  <span className="text-xs text-indigo-300 font-medium">محتواهای فعال و منتشرشده</span>
+                <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-2">
+                  <span className="text-xs px-2.5 py-1 rounded-lg bg-[#0077d9] text-white font-bold inline-block">محتواهای فعال و منتشرشده</span>
                   <div className="text-2xl sm:text-3xl font-black text-white">{activeCount}</div>
-                  <span className="text-[10px] text-emerald-400 font-medium">نمایش عمومی در سایت</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-600 text-white font-bold inline-block">نمایش عمومی در سایت</span>
                 </div>
 
                 <div 
@@ -1017,26 +1017,26 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     setActiveTab('contents');
                     setContentFilter('pending');
                   }}
-                  className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-1 cursor-pointer hover:bg-slate-750 transition"
+                  className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-2 cursor-pointer hover:bg-slate-750 transition"
                 >
-                  <span className="text-xs text-amber-300 font-medium">در انتظار تایید ادمین</span>
-                  <div className="text-2xl sm:text-3xl font-black text-amber-300">{pendingCount}</div>
-                  <span className="text-[10px] text-amber-400 font-medium underline">بررسی و تایید انتشار ←</span>
+                  <span className="text-xs px-2.5 py-1 rounded-lg bg-amber-600 text-slate-950 font-bold inline-block">در انتظار تایید ادمین</span>
+                  <div className="text-2xl sm:text-3xl font-black text-white">{pendingCount}</div>
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500 text-slate-950 font-bold inline-block">بررسی و تایید انتشار ←</span>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-1">
-                  <span className="text-xs text-rose-300 font-medium">سطل بازیافت (حذف نرم)</span>
-                  <div className="text-2xl sm:text-3xl font-black text-rose-200">{trashCount}</div>
-                  <span className="text-[10px] text-rose-400 font-medium">قابل بازگردانی مجدد</span>
+                <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-2">
+                  <span className="text-xs px-2.5 py-1 rounded-lg bg-rose-600 text-white font-bold inline-block">سطل بازیافت (حذف نرم)</span>
+                  <div className="text-2xl sm:text-3xl font-black text-white">{trashCount}</div>
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-rose-600 text-white font-bold inline-block">قابل بازگردانی مجدد</span>
                 </div>
 
                 <div 
                   onClick={() => setActiveTab('users')}
-                  className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-1 cursor-pointer hover:bg-slate-750 transition"
+                  className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-2 cursor-pointer hover:bg-slate-750 transition"
                 >
-                  <span className="text-xs text-emerald-300 font-medium">کاربران ثبت‌نام شده</span>
-                  <div className="text-2xl sm:text-3xl font-black text-emerald-200">{usersList.length}</div>
-                  <span className="text-[10px] text-emerald-400 font-medium">
+                  <span className="text-xs px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-bold inline-block">کاربران ثبت‌نام شده</span>
+                  <div className="text-2xl sm:text-3xl font-black text-white">{usersList.length}</div>
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-600 text-white font-bold inline-block">
                     {autoApprovedUsersCount} کاربر با انتشار مستقیم
                   </span>
                 </div>
@@ -1044,16 +1044,16 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
               {/* Main Quick Toggle: Content Approval Mode */}
               <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <ShieldAlert className="w-5 h-5 text-amber-400" />
+                    <ShieldAlert className="w-5 h-5 text-white" />
                     <h4 className="text-sm font-bold text-slate-100">
                       وضعیت تأیید محتوا قبل از انتشار در سایت
                     </h4>
                     <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
                       siteSettings.requireContentApproval 
-                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                        : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        ? 'bg-amber-500 text-slate-950'
+                        : 'bg-emerald-600 text-white'
                     }`}>
                       {siteSettings.requireContentApproval ? 'تایید دستی فعال است' : 'انتشار مستقیم و آزاد'}
                     </span>
@@ -1073,18 +1073,18 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   })}
                   className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition active:scale-95 cursor-pointer shrink-0 ${
                     siteSettings.requireContentApproval
-                      ? 'bg-amber-500 text-slate-950 hover:bg-amber-400 shadow-md shadow-amber-500/20'
+                      ? 'bg-amber-500 text-slate-950 hover:bg-amber-400 shadow-md'
                       : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
                   }`}
                 >
                   {siteSettings.requireContentApproval ? (
                     <>
-                      <ToggleRight className="w-5 h-5" />
+                      <ToggleRight className="w-5 h-5 text-slate-950" />
                       تایید محتوا: فعال
                     </>
                   ) : (
                     <>
-                      <ToggleLeft className="w-5 h-5" />
+                      <ToggleLeft className="w-5 h-5 text-slate-300" />
                       تایید محتوا: غیرفعال
                     </>
                   )}
@@ -1094,17 +1094,17 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               {/* Quick Actions & Guidelines */}
               <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-3">
                 <h4 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-indigo-400" />
+                  <ShieldCheck className="w-4 h-4 text-white" />
                   راهنمای مدیریت دسترسی‌ها و محتوا
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-300 leading-relaxed">
                   <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-750 space-y-1">
-                    <strong className="text-amber-300 block font-bold">⚡ کاربران با انتشار مستقیم:</strong>
-                    <span className="text-slate-200">شما می‌توانید در تب <strong className="text-white">«مدیریت کاربران»</strong>، به نویسندگان معتمد، تیم تحریریه یا کاربران ویژه، دسترسی <em className="text-emerald-300">انتشار مستقیم بدون تایید</em> اعطا کنید تا حتی در زمان فعال بودن تایید محتوا، پست‌هایشان فوراً پخش شود.</span>
+                    <span className="bg-amber-500 text-slate-950 px-2 py-0.5 rounded-md font-bold text-xs inline-block mb-1">⚡ کاربران با انتشار مستقیم</span>
+                    <p className="text-slate-200">شما می‌توانید در تب <strong className="text-white">«مدیریت کاربران»</strong>، به نویسندگان معتمد، تیم تحریریه یا کاربران ویژه، دسترسی <span className="bg-emerald-600 text-white px-1.5 py-0.2 rounded font-bold text-[10px]">انتشار مستقیم بدون تایید</span> اعطا کنید تا حتی در زمان فعال بودن تایید محتوا، پست‌هایشان فوراً پخش شود.</p>
                   </div>
                   <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-750 space-y-1">
-                    <strong className="text-emerald-300 block font-bold">♻️ سطل بازیافت محتوا:</strong>
-                    <span className="text-slate-200">هر محتوایی که توسط مدیر یا منتشرکننده حذف شود، در حافظه سیستم باقی می‌ماند و در تب <strong className="text-white">«مدیریت محتوا»</strong> قابل بازیابی است.</span>
+                    <span className="bg-emerald-600 text-white px-2 py-0.5 rounded-md font-bold text-xs inline-block mb-1">♻️ سطل بازیافت محتوا</span>
+                    <p className="text-slate-200">هر محتوایی که توسط مدیر یا منتشرکننده حذف شود، در حافظه سیستم باقی می‌ماند و در تب <strong className="text-white">«مدیریت محتوا»</strong> قابل بازیابی است.</p>
                   </div>
                 </div>
               </div>
@@ -1121,7 +1121,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     onClick={() => setContentFilter('all')}
                     className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
                       contentFilter === 'all'
-                        ? 'bg-indigo-600 text-white shadow-sm'
+                        ? 'bg-[#0077d9] text-white shadow-sm font-bold'
                         : 'bg-slate-800 text-slate-300 hover:text-white'
                     }`}
                   >
@@ -1131,7 +1131,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     onClick={() => setContentFilter('active')}
                     className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
                       contentFilter === 'active'
-                        ? 'bg-emerald-600 text-white shadow-sm'
+                        ? 'bg-emerald-600 text-white shadow-sm font-bold'
                         : 'bg-slate-800 text-slate-300 hover:text-white'
                     }`}
                   >
@@ -1142,17 +1142,17 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
                       contentFilter === 'pending'
                         ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
-                        : 'bg-slate-800 text-amber-300 hover:text-amber-200'
+                        : 'bg-slate-800 text-slate-200 hover:text-white'
                     }`}
                   >
-                    <Clock className="w-3.5 h-3.5" />
+                    <Clock className="w-3.5 h-3.5 text-white" />
                     در انتظار تایید ({pendingCount})
                   </button>
                   <button
                     onClick={() => setContentFilter('trash')}
                     className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
                       contentFilter === 'trash'
-                        ? 'bg-rose-600 text-white shadow-sm'
+                        ? 'bg-rose-600 text-white shadow-sm font-bold'
                         : 'bg-slate-800 text-slate-300 hover:text-white'
                     }`}
                   >
@@ -1163,10 +1163,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     type="button"
                     onClick={fetchPanelContents}
                     disabled={isRefreshingContents}
-                    className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer shrink-0"
+                    className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white transition cursor-pointer shrink-0"
                     title="تازه‌سازی فوری لیست محتواها و سطل زباله از سرور"
                   >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingContents ? 'animate-spin text-indigo-400' : ''}`} />
+                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingContents ? 'animate-spin text-white' : 'text-white'}`} />
                   </button>
                 </div>
 
@@ -1186,10 +1186,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
               {/* Trash Quick Restore Banner */}
               {contentFilter === 'trash' && trashCount > 0 && (
-                <div className="p-3.5 rounded-2xl bg-rose-950/40 border border-rose-800/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-md">
-                  <div className="flex items-center gap-2.5 text-rose-200">
-                    <Trash2 className="w-4 h-4 text-rose-400 shrink-0" />
-                    <span>تعداد <strong className="text-white font-mono">{trashCount}</strong> محتوا در سطل بازیافت قرار دارد.</span>
+                <div className="p-3.5 rounded-2xl bg-slate-900 border border-rose-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-md">
+                  <div className="flex items-center gap-2.5 text-white">
+                    <Trash2 className="w-4 h-4 text-white shrink-0" />
+                    <span>تعداد <strong className="text-white font-mono bg-rose-600 px-2 py-0.5 rounded">{trashCount}</strong> محتوا در سطل بازیافت قرار دارد.</span>
                   </div>
                   <button
                     type="button"
@@ -1205,7 +1205,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     }}
                     className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-sm active:scale-95 shrink-0"
                   >
-                    <RotateCcw className="w-3.5 h-3.5" />
+                    <RotateCcw className="w-3.5 h-3.5 text-white" />
                     بازگردانی تمامی محتواها به فید
                   </button>
                 </div>
@@ -1223,9 +1223,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       key={item.id}
                       className={`p-4 rounded-2xl border shadow-md transition flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
                         item.approvalStatus === 'pending'
-                          ? 'bg-amber-950/30 border-amber-500/50 ring-1 ring-amber-500/30'
+                          ? 'bg-slate-900 border-amber-500/80 ring-1 ring-amber-500/50'
                           : (item.isDeleted || item.isArchived)
-                          ? 'bg-rose-950/30 border-rose-800/50 opacity-80'
+                          ? 'bg-slate-900 border-rose-800/80 opacity-90'
                           : 'bg-slate-800/80 border-slate-700/80'
                       }`}
                     >
@@ -1242,27 +1242,27 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                               {item.title}
                             </span>
                             {item.approvalStatus === 'pending' && (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1">
-                                <Clock className="w-3 h-3 text-amber-400" />
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-slate-950" />
                                 نیازمند بررسی و تأیید مدیر
                               </span>
                             )}
                             {(item.isDeleted || item.isArchived) && (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-600 text-white">
                                 در سطل بازیافت
                               </span>
                             )}
                             {!(item.isDeleted || item.isArchived) && item.approvalStatus !== 'pending' && (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-600 text-white">
                                 فعال در فید
                               </span>
                             )}
                           </div>
 
-                          <div className="flex items-center gap-3 text-[11px] text-slate-400 flex-wrap">
-                            <span>منتشرکننده: <strong className="text-slate-200">{item.author.name}</strong></span>
-                            <span>پلتفرم: <strong className="text-slate-300">{item.platform}</strong></span>
-                            <span>دسته‌بندی: <strong className="text-indigo-300">{item.category}</strong></span>
+                          <div className="flex items-center gap-3 text-[11px] text-slate-300 flex-wrap">
+                            <span>منتشرکننده: <strong className="text-white">{item.author.name}</strong></span>
+                            <span>پلتفرم: <strong className="text-white">{item.platform}</strong></span>
+                            <span>دسته‌بندی: <strong className="bg-[#0077d9] text-white px-1.5 py-0.2 rounded">{item.category}</strong></span>
                             <span>{item.publishedAt}</span>
                           </div>
                         </div>
@@ -1278,15 +1278,15 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                               className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-sm cursor-pointer"
                               title="تأیید و انتشار عمومی در سایت"
                             >
-                              <Check className="w-4 h-4" />
+                              <Check className="w-4 h-4 text-white" />
                               تأیید و انتشار
                             </button>
                             <button
                               onClick={() => onRejectContent(item.id)}
-                              className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-rose-600/30 text-rose-400 hover:text-rose-200 border border-rose-500/30 font-medium text-xs flex items-center gap-1.5 transition cursor-pointer"
+                              className="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
                               title="عدم تأیید محتوا"
                             >
-                              <X className="w-4 h-4" />
+                              <X className="w-4 h-4 text-white" />
                               رد محتوا
                             </button>
                           </>
@@ -1300,15 +1300,15 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                               className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer active:scale-95"
                               title="بازگردانی به فید عمومی سایت"
                             >
-                              <RotateCcw className="w-3.5 h-3.5" />
+                              <RotateCcw className="w-3.5 h-3.5 text-white" />
                               بازگردانی به فید
                             </button>
                             <button
                               onClick={() => handlePermDeleteItem(item.id)}
-                              className="p-2 rounded-xl bg-slate-800 hover:bg-rose-600/30 text-rose-400 hover:text-rose-200 transition cursor-pointer active:scale-95"
+                              className="p-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white transition cursor-pointer active:scale-95"
                               title="حذف کامل از دیتابیس"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-4 h-4 text-white" />
                             </button>
                           </>
                         )}
@@ -1317,10 +1317,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         {!(item.isDeleted || item.isArchived) && item.approvalStatus !== 'pending' && (
                           <button
                             onClick={() => onToggleSoftDelete(item.id, true)}
-                            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-rose-600/20 text-rose-400 hover:text-rose-300 border border-rose-500/30 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                            className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
                             title="پنهان‌سازی از فید و انتقال به سطل بازیافت"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-3.5 h-3.5 text-white" />
                             انتقال به سطل بازیافت
                           </button>
                         )}
@@ -1330,10 +1330,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                           href={item.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
+                          className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition"
                           title="مشاهده لینک اصلی"
                         >
-                          <ExternalLink className="w-4 h-4" />
+                          <ExternalLink className="w-4 h-4 text-white" />
                         </a>
                       </div>
                     </div>
@@ -1352,7 +1352,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     onClick={() => setUserFilter('all')}
                     className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
                       userFilter === 'all'
-                        ? 'bg-indigo-600 text-white shadow-sm'
+                        ? 'bg-[#0077d9] text-white shadow-sm font-bold'
                         : 'bg-slate-800 text-slate-300 hover:text-white'
                     }`}
                   >
@@ -1362,11 +1362,11 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     onClick={() => setUserFilter('auto_approved')}
                     className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
                       userFilter === 'auto_approved'
-                        ? 'bg-emerald-600 text-white shadow-sm'
-                        : 'bg-slate-800 text-emerald-400 hover:text-white'
+                        ? 'bg-emerald-600 text-white shadow-sm font-bold'
+                        : 'bg-slate-800 text-slate-200 hover:text-white'
                     }`}
                   >
-                    <UserCheck className="w-3.5 h-3.5" />
+                    <UserCheck className="w-3.5 h-3.5 text-white" />
                     انتشار مستقیم ({autoApprovedUsersCount})
                   </button>
                   <button
@@ -1374,7 +1374,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
                       userFilter === 'need_approval'
                         ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
-                        : 'bg-slate-800 text-amber-300 hover:text-white'
+                        : 'bg-slate-800 text-slate-200 hover:text-white'
                     }`}
                   >
                     نیازمند تایید ({needApprovalUsersCount})
@@ -1383,7 +1383,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     onClick={() => setUserFilter('admins')}
                     className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
                       userFilter === 'admins'
-                        ? 'bg-amber-600 text-white shadow-sm'
+                        ? 'bg-amber-600 text-slate-950 font-bold shadow-sm'
                         : 'bg-slate-800 text-slate-300 hover:text-white'
                     }`}
                   >
@@ -1407,7 +1407,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
               {/* Informative banner about direct publishing permission */}
               <div className="p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md flex items-center gap-3 text-xs text-slate-200">
-                <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                <Sparkles className="w-4 h-4 text-white shrink-0" />
                 <span>
                   <strong>نکته مهم:</strong> کاربرانی که سوییچ <em>«انتشار مستقیم (بدون تایید)»</em> برای آن‌ها فعال باشد، محتوای اشتراک‌گذاری‌شده‌شان بلافاصله و بدون نیاز به تایید ادمین روی سایت قرار می‌گیرد.
                 </span>
@@ -1438,21 +1438,21 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                               <h5 className="text-sm font-bold text-slate-100">
                                 {u.displayName}
                               </h5>
-                              <span className="text-[11px] font-mono text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md dir-ltr">
+                              <span className="text-[11px] font-mono text-white bg-[#0077d9] px-2 py-0.5 rounded-md dir-ltr font-bold">
                                 @{u.username}
                               </span>
                               {u.isAdmin && (
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
-                                  <Crown className="w-3 h-3 text-amber-400" />
+                                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500 text-slate-950 flex items-center gap-1">
+                                  <Crown className="w-3 h-3 text-slate-950" />
                                   مدیر ارشد
                                 </span>
                               )}
                             </div>
 
-                            <div className="flex items-center gap-3 text-xs text-slate-400 flex-wrap">
+                            <div className="flex items-center gap-3 text-xs text-slate-300 flex-wrap">
                               <span className="font-mono dir-ltr">{u.email}</span>
                               <span>• عضویت: {u.joinedAt || 'عضو جدید'}</span>
-                              {u.role && <span className="text-slate-300">({u.role})</span>}
+                              {u.role && <span className="text-white">({u.role})</span>}
                             </div>
                           </div>
                         </div>
@@ -1463,8 +1463,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                             <span className="text-[11px] block font-bold text-slate-200">
                               وضعیت تایید محتوا:
                             </span>
-                            <span className={`text-[10px] font-semibold ${
-                              isDirectPublishing ? 'text-emerald-400' : 'text-amber-400'
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md inline-block ${
+                              isDirectPublishing ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-slate-950'
                             }`}>
                               {isDirectPublishing ? '✓ انتشار مستقیم و آزاد' : '⏳ نیازمند بررسی ادمین'}
                             </span>
@@ -1479,8 +1479,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                             }}
                             className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-sm ${
                               u.autoApproveContent
-                                ? 'bg-emerald-600/25 hover:bg-emerald-600/35 text-emerald-300 border border-emerald-500/40'
-                                : 'bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-slate-200 border border-slate-700'
+                                ? 'bg-emerald-600 text-white hover:bg-emerald-500'
+                                : 'bg-slate-700 hover:bg-slate-600 text-white border border-slate-600'
                             }`}
                             title={
                               u.autoApproveContent
@@ -1490,12 +1490,12 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                           >
                             {u.autoApproveContent ? (
                               <>
-                                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                                <CheckCircle2 className="w-4 h-4 text-white" />
                                 <span>بدون نیاز به تایید</span>
                               </>
                             ) : (
                               <>
-                                <Clock className="w-4 h-4 text-slate-400" />
+                                <Clock className="w-4 h-4 text-white" />
                                 <span>نیاز به تایید</span>
                               </>
                             )}
@@ -1516,13 +1516,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
                 <div className="flex items-center justify-between border-b border-slate-700 pb-3">
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-cyan-500/20 text-cyan-400">
-                      <Database className="w-6 h-6" />
+                    <div className="p-2.5 rounded-xl bg-[#0077d9] text-white">
+                      <Database className="w-6 h-6 text-white" />
                     </div>
                     <div>
                       <h4 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
                         وضعیت پایداری دیتابیس و همگام‌سازی دوگانه
-                        <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                        <span className="text-[10px] bg-emerald-600 text-white px-2.5 py-0.5 rounded-full font-bold">
                           Firestore + Disk JSON
                         </span>
                       </h4>
@@ -1536,7 +1536,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                   <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
                     <span className="text-[11px] text-slate-400 block mb-1">حجم فایل دیتابیس</span>
-                    <span className="text-lg font-mono font-bold text-cyan-300">
+                    <span className="text-lg font-mono font-bold text-white">
                       {dbStats?.fileSizeFormatted || 'محاسبه...'}
                     </span>
                     <span className="text-[10px] text-slate-400 block mt-0.5">data/database.json</span>
@@ -1548,15 +1548,15 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   </div>
                   <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
                     <span className="text-[11px] text-slate-400 block mb-1">فایل‌های پشتیبان محلی</span>
-                    <span className="text-xl font-mono font-bold text-indigo-300">
+                    <span className="text-xl font-mono font-bold text-white">
                       {dbStats?.backupFilesCount ?? 0} نسخه
                     </span>
-                    <span className="text-[10px] text-emerald-400 block mt-0.5">پشتیبان‌گیری ۱۲ ساعته</span>
+                    <span className="text-[10px] bg-emerald-600 text-white px-1.5 py-0.2 rounded font-bold block mt-0.5">پشتیبان‌گیری ۱۲ ساعته</span>
                   </div>
                   <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
                     <span className="text-[11px] text-slate-400 block mb-1">حفاظت خودکار هنگام بازیابی</span>
-                    <span className="text-xs font-bold text-emerald-400 flex items-center justify-center gap-1 mt-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span className="text-xs font-bold text-white bg-emerald-600 px-2 py-0.5 rounded-md flex items-center justify-center gap-1 mt-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-white" />
                       پیش‌پشتیبان اضطراری
                     </span>
                   </div>
@@ -1567,16 +1567,16 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
                 <div className="flex items-center justify-between border-b border-slate-700 pb-3">
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-sky-500/20 text-sky-400">
-                      <Database className="w-6 h-6" />
+                    <div className="p-2.5 rounded-xl bg-[#0077d9] text-white">
+                      <Database className="w-6 h-6 text-white" />
                     </div>
                     <div>
                       <h4 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
                         پایگاه داده رابطه‌ای PostgreSQL (موتور اختصاصی سرور مجازی)
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                        <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold ${
                           diagnosticReport?.postgres?.connected
-                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                            : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-amber-500 text-slate-950'
                         }`}>
                           {diagnosticReport?.postgres?.connected ? 'PostgreSQL متصل و فعال' : 'در حال اجرا با JSON Store'}
                         </span>
@@ -1593,13 +1593,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-slate-200">وضعیت اتصال پایگاه داده:</span>
                       {diagnosticReport?.postgres?.connected ? (
-                        <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
-                          <CheckCircle2 className="w-4 h-4" />
+                        <span className="text-xs font-bold text-white bg-emerald-600 px-2 py-0.5 rounded-md flex items-center gap-1">
+                          <CheckCircle2 className="w-4 h-4 text-white" />
                           متصل به PostgreSQL ({diagnosticReport.postgres.tableCounts?.contents || contents.length} محتوا ثبت‌شده)
                         </span>
                       ) : (
-                        <span className="text-xs font-bold text-amber-300 flex items-center gap-1">
-                          <AlertTriangle className="w-4 h-4 text-amber-400" />
+                        <span className="text-xs font-bold text-slate-950 bg-amber-500 px-2 py-0.5 rounded-md flex items-center gap-1">
+                          <AlertTriangle className="w-4 h-4 text-slate-950" />
                           آماده فعال‌سازی با تنظیم متغیر DATABASE_URL در سرور مجازی
                         </span>
                       )}
@@ -1616,9 +1616,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       type="button"
                       onClick={handleMigrateToPostgres}
                       disabled={isMigratingPostgres}
-                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-md shadow-sky-600/20 cursor-pointer disabled:opacity-50"
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-md cursor-pointer disabled:opacity-50"
                     >
-                      <RefreshCw className={`w-4 h-4 ${isMigratingPostgres ? 'animate-spin' : ''}`} />
+                      <RefreshCw className={`w-4 h-4 text-white ${isMigratingPostgres ? 'animate-spin' : ''}`} />
                       {isMigratingPostgres ? 'در حال مهاجرت داده‌ها...' : 'همگام‌سازی و مهاجرت به PostgreSQL'}
                     </button>
                   </div>
@@ -1628,22 +1628,22 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   <div
                     className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${
                       postgresMigrationMessage.success
-                        ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                        : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-rose-600 text-white'
                     }`}
                   >
-                    {postgresMigrationMessage.success ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <AlertTriangle className="w-4 h-4 text-rose-400" />}
+                    {postgresMigrationMessage.success ? <CheckCircle2 className="w-4 h-4 text-white" /> : <AlertTriangle className="w-4 h-4 text-white" />}
                     <span>{postgresMigrationMessage.text}</span>
                   </div>
                 )}
 
                 {/* CloudPanel Quick Setup Instructions */}
                 <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 text-[11px] text-slate-300 space-y-1.5">
-                  <span className="font-bold text-sky-400 block">راهنمای راه‌اندازی PostgreSQL در CloudPanel سرور مجازی (OVH):</span>
-                  <ol className="list-decimal list-inside space-y-1 text-slate-400 pr-1">
-                    <li>در پنل مدیریت <span className="text-slate-200 font-mono">CloudPanel</span> وارد منوی <span className="text-slate-200">Databases</span> شوید.</li>
-                    <li>یک دیتابیس با نوع <span className="text-sky-300 font-mono">PostgreSQL</span>، نام <span className="text-sky-300 font-mono">geekclub_db</span> و کاربر بسازید.</li>
-                    <li>در فایل <span className="text-amber-300 font-mono">.env</span> سرور، متغیر اتصال را وارد کنید: <span className="text-emerald-400 font-mono text-[10px]">DATABASE_URL="postgresql://user:password@127.0.0.1:5432/geekclub_db"</span></li>
+                  <span className="font-bold bg-[#0077d9] text-white px-2 py-0.5 rounded inline-block">راهنمای راه‌اندازی PostgreSQL در CloudPanel سرور مجازی (OVH):</span>
+                  <ol className="list-decimal list-inside space-y-1 text-slate-300 pr-1">
+                    <li>در پنل مدیریت <span className="text-slate-100 font-mono">CloudPanel</span> وارد منوی <span className="text-slate-100">Databases</span> شوید.</li>
+                    <li>یک دیتابیس با نوع <span className="text-white font-mono bg-slate-800 px-1 rounded">PostgreSQL</span>، نام <span className="text-white font-mono bg-slate-800 px-1 rounded">geekclub_db</span> و کاربر بسازید.</li>
+                    <li>در فایل <span className="text-slate-950 font-mono bg-amber-500 px-1 rounded">.env</span> سرور، متغیر اتصال را وارد کنید: <span className="text-white font-mono text-[10px] bg-slate-800 px-1 rounded">DATABASE_URL="postgresql://user:password@127.0.0.1:5432/geekclub_db"</span></li>
                     <li>سرویس نود را در CloudPanel ریستارت کنید؛ تمامی جداول و ایندکس‌ها خودکار ساخته و با اطلاعات فعلی همگام می‌شوند.</li>
                   </ol>
                 </div>
@@ -1653,13 +1653,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
                 <div className="flex items-center justify-between border-b border-slate-700 pb-3">
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-blue-500/20 text-blue-400">
-                      <Cloud className="w-6 h-6" />
+                    <div className="p-2.5 rounded-xl bg-[#0077d9] text-white">
+                      <Cloud className="w-6 h-6 text-white" />
                     </div>
                     <div>
                       <h4 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
                         پشتیبان‌گیری خودکار ۱۲ ساعته روی Google Drive
-                        <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/30">
+                        <span className="text-[10px] bg-[#0077d9] text-white px-2.5 py-0.5 rounded-full font-bold">
                           Google Workspace OAuth
                         </span>
                       </h4>
@@ -1675,13 +1675,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-slate-200">وضعیت اتصال گوگل درایو:</span>
                       {driveUser ? (
-                        <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
-                          <CheckCircle2 className="w-4 h-4" />
+                        <span className="text-xs font-bold text-white bg-emerald-600 px-2 py-0.5 rounded-md flex items-center gap-1">
+                          <CheckCircle2 className="w-4 h-4 text-white" />
                           متصل به {driveUser.email}
                         </span>
                       ) : (
-                        <span className="text-xs font-bold text-amber-400 flex items-center gap-1">
-                          <AlertTriangle className="w-4 h-4" />
+                        <span className="text-xs font-bold text-slate-950 bg-amber-500 px-2 py-0.5 rounded-md flex items-center gap-1">
+                          <AlertTriangle className="w-4 h-4 text-slate-950" />
                           عدم اتصال به گوگل درایو
                         </span>
                       )}
@@ -1699,9 +1699,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         type="button"
                         onClick={handleConnectDrive}
                         disabled={isConnectingDrive}
-                        className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-md shadow-blue-600/20 cursor-pointer disabled:opacity-50"
+                        className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-md cursor-pointer disabled:opacity-50"
                       >
-                        <Cloud className="w-4 h-4" />
+                        <Cloud className="w-4 h-4 text-white" />
                         {isConnectingDrive ? 'در حال اتصال...' : 'اتصال به اکانت Google Drive'}
                       </button>
                     ) : (
@@ -1709,9 +1709,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         type="button"
                         onClick={handleUploadDriveNow}
                         disabled={isUploadingDrive}
-                        className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-md shadow-emerald-600/20 cursor-pointer disabled:opacity-50"
+                        className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-md cursor-pointer disabled:opacity-50"
                       >
-                        <CloudUpload className={`w-4 h-4 ${isUploadingDrive ? 'animate-bounce' : ''}`} />
+                        <CloudUpload className={`w-4 h-4 text-white ${isUploadingDrive ? 'animate-bounce' : ''}`} />
                         {isUploadingDrive ? 'در حال ارسال پشتیبان به درایو...' : 'ارسال آنی دیتابیس به گوگل درایو'}
                       </button>
                     )}
@@ -1722,12 +1722,12 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   <div
                     className={`p-3 rounded-xl text-xs font-bold flex items-center justify-between gap-2 ${
                       driveSyncMessage.success
-                        ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                        : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-rose-600 text-white'
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      {driveSyncMessage.success ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <AlertTriangle className="w-4 h-4 text-rose-400" />}
+                      {driveSyncMessage.success ? <CheckCircle2 className="w-4 h-4 text-white" /> : <AlertTriangle className="w-4 h-4 text-white" />}
                       <span>{driveSyncMessage.text}</span>
                     </div>
                     {driveSyncMessage.link && (
@@ -1735,9 +1735,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         href={driveSyncMessage.link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-400 hover:underline font-mono text-[11px] flex items-center gap-1 shrink-0"
+                        className="bg-[#0077d9] hover:bg-[#0062b3] text-white font-mono text-[11px] px-2.5 py-1 rounded-lg flex items-center gap-1 shrink-0 font-bold"
                       >
-                        <ExternalLink className="w-3.5 h-3.5" />
+                        <ExternalLink className="w-3.5 h-3.5 text-white" />
                         مشاهده در گوگل درایو
                       </a>
                     )}
@@ -1748,8 +1748,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               {/* Full Backup Download & Restore Section */}
               <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
                 <div className="flex items-center gap-3 border-b border-slate-700 pb-3">
-                  <div className="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-400">
-                    <HardDrive className="w-6 h-6" />
+                  <div className="p-2.5 rounded-xl bg-[#0077d9] text-white">
+                    <HardDrive className="w-6 h-6 text-white" />
                   </div>
                   <div>
                     <h4 className="text-sm sm:text-base font-bold text-slate-100">
@@ -1766,7 +1766,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-750 flex flex-col justify-between space-y-3">
                     <div>
                       <h5 className="text-xs font-bold text-slate-200 flex items-center gap-1.5 mb-1">
-                        <Download className="w-4 h-4 text-indigo-400" />
+                        <Download className="w-4 h-4 text-white" />
                         دانلود نسخه کامل فایل پشتیبان
                       </h5>
                       <p className="text-[11px] text-slate-400 leading-relaxed">
@@ -1778,9 +1778,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       type="button"
                       onClick={handleExportBackup}
                       disabled={isExportingDb}
-                      className="w-full px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-md shadow-indigo-600/20 cursor-pointer disabled:opacity-50"
+                      className="w-full px-4 py-2.5 rounded-xl bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-md cursor-pointer disabled:opacity-50"
                     >
-                      <Download className={`w-4 h-4 ${isExportingDb ? 'animate-bounce' : ''}`} />
+                      <Download className={`w-4 h-4 text-white ${isExportingDb ? 'animate-bounce' : ''}`} />
                       {isExportingDb ? 'در حال دریافت فایل...' : 'دانلود فایل پشتیبان (JSON)'}
                     </button>
                   </div>
@@ -1789,7 +1789,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-750 flex flex-col justify-between space-y-3">
                     <div>
                       <h5 className="text-xs font-bold text-slate-200 flex items-center gap-1.5 mb-1">
-                        <Upload className="w-4 h-4 text-cyan-400" />
+                        <Upload className="w-4 h-4 text-white" />
                         بازیابی اطلاعات از فایل پشتیبان
                       </h5>
                       <p className="text-[11px] text-slate-400 leading-relaxed">
@@ -1808,9 +1808,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       />
                       <label
                         htmlFor="backupFileInput"
-                        className="w-full px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-cyan-300 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer border border-cyan-500/30"
+                        className="btn-restore-json-backup w-full px-4 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
                       >
-                        <Upload className={`w-4 h-4 ${isImportingDb ? 'animate-spin' : ''}`} />
+                        <Upload className={`w-4 h-4 text-white ${isImportingDb ? 'animate-spin' : ''}`} />
                         {isImportingDb ? 'در حال پردازش و بازیابی...' : 'انتخاب و آپلود فایل JSON'}
                       </label>
                     </div>
@@ -1821,11 +1821,11 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   <div
                     className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${
                       importMessage.success
-                        ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                        : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-rose-600 text-white'
                     }`}
                   >
-                    {importMessage.success ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <AlertTriangle className="w-4 h-4 text-rose-400" />}
+                    {importMessage.success ? <CheckCircle2 className="w-4 h-4 text-white" /> : <AlertTriangle className="w-4 h-4 text-white" />}
                     {importMessage.text}
                   </div>
                 )}
@@ -1835,8 +1835,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
                 <div className="flex items-center justify-between border-b border-slate-700 pb-3">
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400">
-                      <RotateCcw className="w-6 h-6" />
+                    <div className="p-2.5 rounded-xl bg-amber-500 text-slate-950">
+                      <RotateCcw className="w-6 h-6 text-slate-950" />
                     </div>
                     <div>
                       <h4 className="text-sm sm:text-base font-bold text-slate-100">
@@ -1852,9 +1852,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     type="button"
                     onClick={handleMergeSeeds}
                     disabled={isMergingSeeds}
-                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-md shadow-amber-500/20 disabled:opacity-50"
+                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-md disabled:opacity-50"
                   >
-                    <RotateCcw className={`w-3.5 h-3.5 ${isMergingSeeds ? 'animate-spin' : ''}`} />
+                    <RotateCcw className={`w-3.5 h-3.5 text-slate-950 ${isMergingSeeds ? 'animate-spin' : ''}`} />
                     {isMergingSeeds ? 'در حال ادغام...' : 'ادغام داده‌های اولیه'}
                   </button>
                 </div>
@@ -1863,11 +1863,11 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   <div
                     className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${
                       mergeMessage.success
-                        ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                        : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-rose-600 text-white'
                     }`}
                   >
-                    {mergeMessage.success ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <AlertTriangle className="w-4 h-4 text-rose-400" />}
+                    {mergeMessage.success ? <CheckCircle2 className="w-4 h-4 text-white" /> : <AlertTriangle className="w-4 h-4 text-white" />}
                     {mergeMessage.text}
                   </div>
                 )}
@@ -1882,13 +1882,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               <div className="p-6 rounded-2xl bg-slate-800/90 border border-slate-700/80 shadow-xl space-y-6">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-700 pb-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-2xl bg-indigo-500/20 text-indigo-400 ring-2 ring-indigo-500/30">
-                      <ShieldCheck className="w-7 h-7" />
+                    <div className="p-3 rounded-2xl bg-[#0077d9] text-white">
+                      <ShieldCheck className="w-7 h-7 text-white" />
                     </div>
                     <div>
                       <h4 className="text-base sm:text-lg font-black text-slate-100 flex items-center gap-2">
                         موتور هوشمند عیب‌یابی و پایش خودکار سیستم
-                        <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2.5 py-0.5 rounded-full border border-indigo-500/30">
+                        <span className="text-[10px] bg-[#0077d9] text-white px-2.5 py-0.5 rounded-full font-bold">
                           System Diagnostic Engine
                         </span>
                       </h4>
@@ -1902,9 +1902,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     type="button"
                     onClick={handleRunFullSystemCheck}
                     disabled={isCheckingDiagnostic}
-                    className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-2 transition active:scale-95 shadow-lg shadow-indigo-600/30 cursor-pointer disabled:opacity-50"
+                    className="px-5 py-2.5 rounded-xl bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs flex items-center gap-2 transition active:scale-95 shadow-lg cursor-pointer disabled:opacity-50"
                   >
-                    <RefreshCw className={`w-4 h-4 ${isCheckingDiagnostic ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`w-4 h-4 text-white ${isCheckingDiagnostic ? 'animate-spin' : ''}`} />
                     {isCheckingDiagnostic ? 'در حال پایش و چک‌آپ...' : 'اجرای چک‌آپ کامل سیستم'}
                   </button>
                 </div>
@@ -1914,18 +1914,16 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     {/* Overall Health Score & Status Badge */}
                     <div className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
                       fullDiagReport.status === 'ok'
-                        ? 'bg-emerald-500/15 text-emerald-200 border-emerald-500/40'
+                        ? 'bg-emerald-600 text-white'
                         : fullDiagReport.status === 'warn'
-                        ? 'bg-amber-500/15 text-amber-200 border-amber-500/40'
-                        : 'bg-rose-500/15 text-rose-200 border-rose-500/40'
+                        ? 'bg-amber-500 text-slate-950 font-bold'
+                        : 'bg-rose-600 text-white'
                     }`}>
                       <div className="flex items-center gap-3">
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 font-mono font-black text-lg ${
                           fullDiagReport.healthScore >= 90
-                            ? 'bg-emerald-500/20 text-emerald-400'
-                            : fullDiagReport.healthScore >= 70
-                            ? 'bg-amber-500/20 text-amber-400'
-                            : 'bg-rose-500/20 text-rose-400'
+                            ? 'bg-white text-slate-900'
+                            : 'bg-slate-900 text-white'
                         }`}>
                           {fullDiagReport.healthScore ?? 100}%
                         </div>
@@ -1944,7 +1942,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       </div>
 
                       {fullDiagReport.system && (
-                        <div className="flex items-center gap-2 font-mono text-[11px] dir-ltr text-slate-300 bg-slate-900/60 p-2 rounded-lg border border-slate-800">
+                        <div className="flex items-center gap-2 font-mono text-[11px] dir-ltr text-white bg-slate-900/80 p-2 rounded-lg border border-slate-700">
                           <span>Node: {fullDiagReport.system.nodeVersion}</span>
                           <span>|</span>
                           <span>Uptime: {fullDiagReport.system.uptimeSeconds}s</span>
@@ -1956,12 +1954,12 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
                     {/* Recommendations Box if any */}
                     {fullDiagReport.recommendations && fullDiagReport.recommendations.length > 0 && (
-                      <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 space-y-2 text-xs">
-                        <h6 className="font-bold flex items-center gap-2 text-amber-300">
-                          <AlertTriangle className="w-4 h-4 text-amber-400" />
+                      <div className="p-4 rounded-xl bg-slate-900 border border-amber-500 text-white space-y-2 text-xs">
+                        <h6 className="font-bold flex items-center gap-2 bg-amber-500 text-slate-950 px-2 py-0.5 rounded-md inline-block">
+                          <AlertTriangle className="w-4 h-4 text-slate-950" />
                           پیشنهادات هوشمند جهت رفع باگ‌ها و بهینه‌سازی:
                         </h6>
-                        <ul className="list-disc list-inside space-y-1 text-[11px] opacity-95">
+                        <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-200">
                           {fullDiagReport.recommendations.map((rec: string, idx: number) => (
                             <li key={idx}>{rec}</li>
                           ))}
@@ -1975,10 +1973,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                               disabled={isFixingTrash}
                               className="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
                             >
-                              <RotateCcw className={`w-3.5 h-3.5 ${isFixingTrash ? 'animate-spin' : ''}`} />
+                              <RotateCcw className={`w-3.5 h-3.5 text-slate-950 ${isFixingTrash ? 'animate-spin' : ''}`} />
                               {isFixingTrash ? 'در حال اصلاح سطل زباله...' : 'اصلاح خودکار ناهمخوانی سطل زباله'}
                             </button>
-                            {fixTrashMsg && <p className="text-[11px] text-emerald-400 mt-1 font-bold">{fixTrashMsg}</p>}
+                            {fixTrashMsg && <p className="text-[11px] bg-emerald-600 text-white px-2 py-0.5 rounded mt-1 font-bold inline-block">{fixTrashMsg}</p>}
                           </div>
                         )}
                       </div>
@@ -1988,7 +1986,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     {fullDiagReport.checks && Array.isArray(fullDiagReport.checks) && (
                       <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
                         <h5 className="text-xs font-bold text-slate-200 flex items-center gap-2 border-b border-slate-800 pb-2">
-                          <Database className="w-4 h-4 text-indigo-400" />
+                          <Database className="w-4 h-4 text-white" />
                           نتایج چک‌آپ ماژول‌های حیاتی وبسایت
                         </h5>
 
@@ -1997,21 +1995,21 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                             <div key={idx} className="p-3 rounded-xl bg-slate-800/60 border border-slate-750 space-y-1">
                               <div className="flex items-center justify-between font-bold">
                                 <span className="text-slate-200">{check.name}</span>
-                                <span className={`flex items-center gap-1 text-[11px] ${
+                                <span className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded font-bold ${
                                   check.status === 'pass'
-                                    ? 'text-emerald-400'
+                                    ? 'bg-emerald-600 text-white'
                                     : check.status === 'warn'
-                                    ? 'text-amber-400'
+                                    ? 'bg-amber-500 text-slate-950'
                                     : check.status === 'info'
-                                    ? 'text-cyan-400'
-                                    : 'text-rose-400'
+                                    ? 'bg-[#0077d9] text-white'
+                                    : 'bg-rose-600 text-white'
                                 }`}>
-                                  {check.status === 'pass' && <CheckCircle2 className="w-3.5 h-3.5" />}
-                                  {check.status === 'warn' && <AlertTriangle className="w-3.5 h-3.5" />}
+                                  {check.status === 'pass' && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                                  {check.status === 'warn' && <AlertTriangle className="w-3.5 h-3.5 text-slate-950" />}
                                   {check.status === 'pass' ? 'موفق' : check.status === 'warn' ? 'هشدار' : check.status === 'info' ? 'اطلاعیه' : 'خطا'}
                                 </span>
                               </div>
-                              <p className="text-[11px] text-slate-400 leading-relaxed">{check.details}</p>
+                              <p className="text-[11px] text-slate-300 leading-relaxed">{check.details}</p>
                             </div>
                           ))}
                         </div>
@@ -2019,9 +2017,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     )}
 
                     {/* Action Bar */}
-                    <div className="p-4 rounded-xl bg-indigo-600/10 border border-indigo-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="p-4 rounded-xl bg-slate-900 border border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-4">
                       <div>
-                        <h6 className="text-xs font-bold text-indigo-300">همگام‌سازی فوری و بازنشانی کش مرورگر</h6>
+                        <h6 className="text-xs font-bold text-white">همگام‌سازی فوری و بازنشانی کش مرورگر</h6>
                         <p className="text-[11px] text-slate-300 mt-0.5">
                           تخلیه کش localStorage و دریافت آخرین وضعیت فید و سطل زباله از سرور
                         </p>
@@ -2036,15 +2034,15 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                           }
                           handleRunFullSystemCheck();
                         }}
-                        className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-600/30 transition cursor-pointer shrink-0 active:scale-95"
+                        className="px-4 py-2.5 rounded-xl bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs shadow-md transition cursor-pointer shrink-0 active:scale-95"
                       >
                         همگام‌سازی و بروزرسانی فید
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-12 text-slate-400 space-y-3">
-                    <RefreshCw className="w-8 h-8 animate-spin mx-auto text-indigo-400" />
+                  <div className="text-center py-12 text-slate-300 space-y-3">
+                    <RefreshCw className="w-8 h-8 animate-spin mx-auto text-white" />
                     <p className="text-xs">در حال پایش خودکار دیتابیس، فایل‌ها و خطاهای سیستم...</p>
                   </div>
                 )}
@@ -2054,13 +2052,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               <div className="p-6 rounded-2xl bg-slate-800/90 border border-slate-700/80 shadow-xl space-y-4">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-700 pb-3">
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-rose-500/20 text-rose-400">
-                      <Inbox className="w-6 h-6" />
+                    <div className="p-2.5 rounded-xl bg-rose-600 text-white">
+                      <Inbox className="w-6 h-6 text-white" />
                     </div>
                     <div>
                       <h4 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
                         گزارش لاگ‌های زنده خطا و استثناها (System Error Logs)
-                        <span className="text-[10px] bg-rose-500/20 text-rose-300 px-2.5 py-0.5 rounded-full border border-rose-500/30">
+                        <span className="text-[10px] bg-rose-600 text-white px-2.5 py-0.5 rounded-full font-bold">
                           {systemLogsList.length} لاگ ثبت‌شده
                         </span>
                       </h4>
@@ -2082,9 +2080,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         a.click();
                       }}
                       disabled={systemLogsList.length === 0}
-                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-750 text-slate-200 border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-750 text-white border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
                     >
-                      <Download className="w-3.5 h-3.5 text-cyan-400" />
+                      <Download className="w-3.5 h-3.5 text-white" />
                       دانلود گزارش JSON
                     </button>
 
@@ -2092,9 +2090,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       type="button"
                       onClick={handleClearLogs}
                       disabled={systemLogsList.length === 0}
-                      className="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                      className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white border border-rose-500 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-3.5 h-3.5 text-white" />
                       پاکسازی لاگ‌ها
                     </button>
                   </div>
