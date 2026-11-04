@@ -1,7 +1,0 @@
-{
-  "name": "MediaHub - اشتراک و مرور محتوا",
-  "description": "پلتفرم اشتراک‌گذاری و امبد محتوای یوتیوب، اینستاگرام و مقالات وبسایت‌ها با جستجو، فیلتر، سیستم لایک/دیس‌لایک و نظرات همراه با ورود گوگل.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
-

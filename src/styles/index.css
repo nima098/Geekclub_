@@ -4,11 +4,10 @@
    ========================================================================== */
 
 @import "tailwindcss";
-
-@custom-variant dark (&:where(.dark, .dark *));
-
 @import "./variables.css";
 @import "./base.css";
 @import "./components.css";
 @import "./admin.css";
 @import "./light-mode.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
