@@ -7,7 +7,20 @@ import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import dns from 'dns';
 import net from 'net';
-import sharp from 'sharp';
+
+let sharpModule: any = null;
+async function getSharp() {
+  if (sharpModule !== null) return sharpModule;
+  try {
+    const mod = await import('sharp');
+    sharpModule = mod.default || mod;
+    return sharpModule;
+  } catch {
+    sharpModule = false;
+    return false;
+  }
+}
+
 import { INITIAL_CONTENT, INITIAL_COMMENTS, SUPER_ADMIN_EMAIL } from './src/data/initialData';
 import {
   initPostgres,
@@ -664,15 +677,18 @@ app.get('/api/proxy-image', rateLimit('proxy-image', 120, 60_000), async (req: R
 
     // Process non-SVG images with sharp for lightning fast card rendering (max width 800, quality 80 WebP)
     try {
-      const optimizedBuffer = await sharp(buffer)
-        .resize(800, 600, { fit: 'inside', withoutEnlargement: true })
-        .webp({ quality: 80, effort: 4 })
-        .toBuffer();
+      const sharpInstance = await getSharp();
+      if (sharpInstance) {
+        const optimizedBuffer = await sharpInstance(buffer)
+          .resize(800, 600, { fit: 'inside', withoutEnlargement: true })
+          .webp({ quality: 80, effort: 4 })
+          .toBuffer();
 
-      res.setHeader('Content-Type', 'image/webp');
-      res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.setHeader('Cache-Control', 'public, max-age=86400');
-      return res.status(200).send(optimizedBuffer);
+        res.setHeader('Content-Type', 'image/webp');
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        return res.status(200).send(optimizedBuffer);
+      }
     } catch {
       res.setHeader('Content-Type', contentType);
       res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -752,14 +768,17 @@ async function downloadAndCacheImage(
     let mimeType = 'image/webp';
 
     try {
-      finalBuffer = await sharp(originalBuffer)
-        .resize(800, 600, {
-          fit: 'inside',
-          withoutEnlargement: true
-        })
-        .webp({ quality: 80, effort: 4 })
-        .toBuffer();
-      console.log(`[Image Optimization SUCCESS] Resized cover ${filenamePrefix} from ${Math.round(originalBuffer.length / 1024)}KB to ${Math.round(finalBuffer.length / 1024)}KB (WebP)`);
+      const sharpInstance = await getSharp();
+      if (sharpInstance) {
+        finalBuffer = await sharpInstance(originalBuffer)
+          .resize(800, 600, {
+            fit: 'inside',
+            withoutEnlargement: true
+          })
+          .webp({ quality: 80, effort: 4 })
+          .toBuffer();
+        console.log(`[Image Optimization SUCCESS] Resized cover ${filenamePrefix} from ${Math.round(originalBuffer.length / 1024)}KB to ${Math.round(finalBuffer.length / 1024)}KB (WebP)`);
+      }
     } catch (sharpErr: any) {
       console.warn(`[Sharp Warning] Image optimization failed for ${filenamePrefix}, using original buffer:`, sharpErr.message);
       finalBuffer = originalBuffer;
@@ -3085,7 +3104,7 @@ app.get('/api/diagnostics/run', async (req: Request, res: Response) => {
     const isUploadsWritable = fs.existsSync(UPLOADS_DIR);
     let sharpAvailable = false;
     try {
-      sharpAvailable = Boolean(sharp);
+      sharpAvailable = Boolean(await getSharp());
     } catch {}
 
     const db = loadDatabase();
