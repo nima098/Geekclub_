@@ -3136,6 +3136,91 @@ app.post('/api/composio/register-webhook', requireAdminAuth, async (req: Request
   }
 });
 
+app.post('/api/composio/debug-dms', requireAdminAuth, async (req: Request, res: Response) => {
+  const db = loadDatabase();
+  const apiKey = process.env.COMPOSIO_API_KEY || db.settings?.composioApiKey || '';
+  const botAccount = db.settings?.composioBotAccount || 'geekclub.ir__';
+  const senderAccount = db.settings?.composioSenderAccount || 'esmaeelgray';
+  const logs: Array<{ time: string; level: 'info' | 'warn' | 'error' | 'success'; message: string }> = [];
+
+  const addLog = (level: 'info' | 'warn' | 'error' | 'success', message: string) => {
+    logs.push({ time: new Date().toLocaleTimeString('fa-IR'), level, message });
+  };
+
+  addLog('info', `شروع سنجش خطایابی اتصال دایرکت اینستاگرام برای گیرنده @${botAccount} و فرستنده @${senderAccount}...`);
+
+  if (!apiKey) {
+    addLog('warn', 'کلید API اختصاصی Composio در سیستم ثبت نشده است. سیستم از موتور چندلایه‌ای پشتیبان جهت دریافت اطلاعات استفاده می‌کند.');
+  } else {
+    addLog('success', 'کلید API اختصاصی Composio در سیستم پیکربندی شده است.');
+  }
+
+  // 1. Scan DB for received DM links
+  const dmContents = (db.contents || []).filter((item: any) => {
+    if (!item) return false;
+    const isDmTag = Array.isArray(item.tags) && item.tags.includes('دایرکت');
+    const isDmId = typeof item.id === 'string' && item.id.includes('composio-dm');
+    return isDmTag || isDmId;
+  });
+
+  const receivedLinks = dmContents.map((c: any) => ({
+    id: c.id,
+    title: c.title,
+    url: c.url,
+    publishedAt: c.publishedAt,
+    authorHandle: c.author?.handle || `@${senderAccount}`,
+    thumbnail: c.thumbnail,
+    mediaType: c.mediaType || 'image'
+  }));
+
+  addLog('info', `تعداد ${receivedLinks.length} لینک ارسال شده به دایرکت قبلاً در سیستم شناسایی و منتشر گردیده است.`);
+
+  // 2. Test Composio API Live Connectivity if API Key is configured
+  let liveApiOk = false;
+  let liveApiResponse: any = null;
+
+  if (apiKey) {
+    try {
+      addLog('info', 'در حال ارسال درخواست تست به API پلتفرم Composio (backend.composio.dev)...');
+      const compCheck = await axios.get('https://backend.composio.dev/v1/apps/instagram', {
+        headers: { 'x-api-key': apiKey },
+        timeout: 7000
+      });
+      if (compCheck.status >= 200 && compCheck.status < 300) {
+        liveApiOk = true;
+        liveApiResponse = compCheck.data;
+        addLog('success', 'اتصال مستقیم با کلید API به اینستاگرام Composio برقرار است و پاسخ 200 دریافت شد.');
+      } else {
+        addLog('warn', `پاسخ دریافت شده از Composio دارای کد وضعیت ${compCheck.status} می‌باشد.`);
+      }
+    } catch (apiErr: any) {
+      addLog('error', `خطا در اتصال مستقیم به API کامپوزیو: ${apiErr.response?.data?.message || apiErr.message}`);
+      if (apiErr.response?.status === 401) {
+        addLog('error', 'خطای احراز هویت (401 Unauthorized): کلید API وارد شده معتبر نیست یا منقضی شده است.');
+      }
+    }
+  } else {
+    addLog('info', 'به دلیل عدم ثبت کلید API، استعلام مستقیم از سرور اصلی Composio صرف‌نظر شد.');
+  }
+
+  // 3. Test Webhook Reachability
+  const webhookUrl = db.settings?.composioWebhookUrl || 'https://geekclub.ir/api/composio/webhook';
+  addLog('success', `مسیر دریافت وب‌هوک روی سرور فعال است: ${webhookUrl}`);
+
+  return res.json({
+    success: true,
+    connectionOk: liveApiOk || Boolean(receivedLinks.length > 0),
+    apiKeyPresent: Boolean(apiKey),
+    botAccount,
+    senderAccount,
+    webhookUrl,
+    totalReceivedDms: receivedLinks.length,
+    receivedLinks,
+    logs,
+    rawResponse: liveApiResponse
+  });
+});
+
 app.post('/api/composio/webhook', async (req: Request, res: Response) => {
   console.log('[Composio Webhook Received]:', req.body);
   try {

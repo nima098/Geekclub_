@@ -821,6 +821,19 @@ export const api = {
     } catch (err: any) {
       return { success: false, message: err.message || 'خطا در ثبت برنامه وب‌هوک Composio' };
     }
+  },
+
+  // 35. Test Composio DM Connection & Diagnostic Debugger
+  async testComposioDMDebug(): Promise<any> {
+    try {
+      const res = await fetch('/api/composio/debug-dms', {
+        method: 'POST',
+        headers: await getAdminHeaders()
+      });
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, message: err.message || 'خطا در اجرای تست عیب‌یابی دایرکت‌ها' };
+    }
   }
 };
 

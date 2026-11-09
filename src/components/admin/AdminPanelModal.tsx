@@ -44,7 +44,9 @@ import {
   CloudUpload,
   RefreshCw,
   Zap,
-  Copy
+  Copy,
+  Bug,
+  Terminal
 } from 'lucide-react';
 import { 
   signInWithGoogleDrive, 
@@ -267,6 +269,24 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       setWebhookRegisterMsg({ success: false, text: err.message || 'خطا در ثبت برنامه وب‌هوک Composio' });
     } finally {
       setIsRegisteringWebhook(false);
+    }
+  };
+
+  const [isRunningComposioDebug, setIsRunningComposioDebug] = useState(false);
+  const [composioDebugData, setComposioDebugData] = useState<any>(null);
+
+  const handleRunComposioDebug = async () => {
+    setIsRunningComposioDebug(true);
+    try {
+      const data = await api.testComposioDMDebug();
+      setComposioDebugData(data);
+    } catch (err: any) {
+      setComposioDebugData({
+        success: false,
+        logs: [{ time: new Date().toLocaleTimeString('fa-IR'), level: 'error', message: err.message || 'خطا در ارتباط با سرور دیباگ' }]
+      });
+    } finally {
+      setIsRunningComposioDebug(false);
     }
   };
 
@@ -2385,6 +2405,139 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                           <li>تریگر <strong>New Direct Message</strong> را انتخاب کرده و آدرس <strong>Webhook URL</strong> فوق را جای‌گذاری کنید.</li>
                         </ol>
                       </div>
+                    </div>
+
+                    {/* Composio Instagram Direct DM Debugger Card */}
+                    <div id="composio-debug-card" className="composio-debug-card p-6 rounded-2xl bg-slate-950/95 border border-amber-500/40 shadow-2xl space-y-5">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0">
+                            <Bug className="w-5 h-5 text-amber-400" />
+                          </div>
+                          <div>
+                            <h5 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                              بخش عیب‌یابی موقت و تست دسترسی دایرکت‌ها (Composio Debugger)
+                            </h5>
+                            <p className="text-[11px] text-slate-400 mt-0.5">
+                              ارزیابی زنده اتصال API، استعلام سلامت وب‌هوک و نمایش آخرین لینک‌های استخراج‌شده از دایرکت
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            id="composio-clear-debug-logs-btn"
+                            onClick={() => setComposioDebugData(null)}
+                            disabled={!composioDebugData}
+                            className="composio-clear-debug-logs-btn px-3 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-300 font-bold text-xs rounded-xl transition active:scale-95 cursor-pointer"
+                          >
+                            پاکسازی گزارش
+                          </button>
+
+                          <button
+                            type="button"
+                            id="composio-debug-test-btn"
+                            onClick={handleRunComposioDebug}
+                            disabled={isRunningComposioDebug}
+                            className="composio-debug-test-btn px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 disabled:opacity-50 text-slate-950 font-black text-xs rounded-xl flex items-center gap-2 shadow-lg transition active:scale-95 cursor-pointer"
+                          >
+                            <RefreshCw className={`w-3.5 h-3.5 ${isRunningComposioDebug ? 'animate-spin' : ''}`} />
+                            <span>{isRunningComposioDebug ? 'در حال تست اتصال...' : 'تست هوشمند اتصال و دریافت دایرکت‌ها'}</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Debug Status Badges */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="composio-debug-status-badge p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between">
+                          <span className="text-xs text-slate-400 font-medium">کلید API کامپوزیو:</span>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                            composioApiKey ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                          }`}>
+                            {composioApiKey ? 'تنظیم شده' : 'ثبت نشده'}
+                          </span>
+                        </div>
+
+                        <div className="composio-debug-status-badge p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between">
+                          <span className="text-xs text-slate-400 font-medium">لینک‌های دایرکت دریافت‌شده:</span>
+                          <span className="text-xs font-bold font-mono text-amber-400 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30">
+                            {composioDebugData ? composioDebugData.totalReceivedDms : (contents.filter(c => Array.isArray(c.tags) && c.tags.includes('دایرکت')).length)} لینک
+                          </span>
+                        </div>
+
+                        <div className="composio-debug-status-badge p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between">
+                          <span className="text-xs text-slate-400 font-medium">آدرس Callback وب‌هوک:</span>
+                          <span className="text-[11px] font-mono text-emerald-400 truncate max-w-[140px]" title="https://geekclub.ir/api/composio/webhook">
+                            /api/composio/webhook
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Received Instagram DM Links List */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                            <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
+                            فهرست لینک‌های استخراج و ثبت شده اخیر از دایرکت:
+                          </span>
+                          <span className="text-[11px] text-slate-400">
+                            فرستنده: <strong className="text-rose-400 font-mono">@{composioSenderAccount}</strong> → گیرنده: <strong className="text-amber-400 font-mono">@{composioBotAccount}</strong>
+                          </span>
+                        </div>
+
+                        <div id="composio-debug-links-list" className="composio-debug-links-list max-h-48 overflow-y-auto space-y-2 p-3 rounded-xl bg-slate-900 border border-slate-800">
+                          {(() => {
+                            const list = composioDebugData?.receivedLinks || (contents.filter(c => (Array.isArray(c.tags) && c.tags.includes('دایرکت')) || (typeof c.id === 'string' && c.id.includes('composio-dm'))));
+                            if (!list || list.length === 0) {
+                              return (
+                                <div className="text-center py-6 text-xs text-slate-400">
+                                  هنوز هیچ پیامی حاوی لینک اینستاگرام به دایرکت ارسال یا استخراج نشده است.
+                                </div>
+                              );
+                            }
+                            return list.map((item: any) => (
+                              <div key={item.id} className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between gap-3 text-xs">
+                                <div className="flex items-center gap-2.5 overflow-hidden">
+                                  {item.thumbnail && (
+                                    <img src={item.thumbnail} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0 bg-slate-800" />
+                                  )}
+                                  <div className="truncate">
+                                    <h6 className="font-bold text-slate-200 truncate">{item.title}</h6>
+                                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-amber-400 hover:underline font-mono truncate block dir-ltr">
+                                      {item.url}
+                                    </a>
+                                  </div>
+                                </div>
+                                <div className="text-[10px] text-slate-400 shrink-0 text-left">
+                                  <div>{item.publishedAt || 'ثبت شده'}</div>
+                                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">تایید شده</span>
+                                </div>
+                              </div>
+                            ));
+                          })()}
+                        </div>
+                      </div>
+
+                      {/* Debugger Diagnostic Logs Viewer */}
+                      {composioDebugData?.logs && (
+                        <div className="space-y-2 pt-1">
+                          <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                            <Terminal className="w-3.5 h-3.5 text-amber-400" />
+                            گزارش زنده عیب‌یابی و پاسخ سرور (Diagnostic Terminal Logs):
+                          </span>
+                          <div id="composio-debug-logs-viewer" className="composio-debug-logs-viewer p-3.5 rounded-xl bg-slate-950 border border-slate-800 font-mono text-[11px] max-h-40 overflow-y-auto space-y-1.5">
+                            {composioDebugData.logs.map((log: any, idx: number) => (
+                              <div key={idx} className={`flex items-start gap-2 ${
+                                log.level === 'error' ? 'text-rose-400' : log.level === 'warn' ? 'text-amber-300' : log.level === 'success' ? 'text-emerald-400' : 'text-slate-300'
+                              }`}>
+                                <span className="text-slate-400 shrink-0">[{log.time}]</span>
+                                <span>{log.message}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center justify-between pt-2">
