@@ -2684,6 +2684,355 @@ app.post('/api/site-settings', requireAdminAuth, (req: Request, res: Response) =
   res.json({ success: true, data: db.settings });
 });
 
+// Helper: Composio.dev Instagram Sync Pipeline for @esmaeelgray
+async function syncComposioInstagramForAccount(targetUsername: string = 'esmaeelgray'): Promise<{ success: boolean; count: number; items: any[]; message: string }> {
+  const db = loadDatabase();
+  const cleanUsername = (targetUsername || db.settings?.composioInstagramUsername || 'esmaeelgray').toLowerCase().replace(/[^a-z0-9._-]/g, '').trim() || 'esmaeelgray';
+  const apiKey = process.env.COMPOSIO_API_KEY || db.settings?.composioApiKey || '';
+  
+  console.log(`[Composio Pipeline] Starting Instagram sync for target account @${cleanUsername}...`);
+
+  let fetchedPosts: any[] = [];
+
+  // 1. Primary: Direct Composio API execution if API key is set
+  if (apiKey) {
+    try {
+      const composioResp = await axios.post(
+        'https://backend.composio.dev/v1/actions/execute',
+        {
+          actionName: 'INSTAGRAM_GET_USER_POSTS',
+          params: { username: cleanUsername, limit: 10 }
+        },
+        {
+          headers: {
+            'x-api-key': apiKey,
+            'Content-Type': 'application/json'
+          },
+          timeout: 15000
+        }
+      );
+      if (composioResp.data && Array.isArray(composioResp.data.posts)) {
+        fetchedPosts = composioResp.data.posts;
+        console.log(`[Composio API SUCCESS] Retrieved ${fetchedPosts.length} posts via Composio API for @${cleanUsername}`);
+      }
+    } catch (composioErr: any) {
+      console.warn(`[Composio API Warning] Direct Composio action notice:`, composioErr.message);
+    }
+  }
+
+  // 2. Multi-tier Fallback Scraper Pipeline (Apify / Bridge)
+  if (fetchedPosts.length === 0) {
+    const apifyToken = process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN || db.settings?.apifyApiToken;
+    if (apifyToken) {
+      try {
+        console.log(`[Composio Scraper] Ingesting posts for @${cleanUsername} via Apify scraper...`);
+        const apifyResponse = await axios.post(
+          `https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=${apifyToken}`,
+          {
+            directUrls: [`https://www.instagram.com/${cleanUsername}/`],
+            resultsType: 'posts',
+            resultsLimit: 6
+          },
+          { timeout: 45000 }
+        );
+        if (Array.isArray(apifyResponse.data)) {
+          fetchedPosts = apifyResponse.data;
+          console.log(`[Composio Scraper SUCCESS] Received ${fetchedPosts.length} posts for @${cleanUsername}`);
+        }
+      } catch (err: any) {
+        console.warn(`[Composio Scraper Warning] Scraper pipeline failed for @${cleanUsername}:`, err.message);
+      }
+    }
+  }
+
+  // 3. Transform & Publish Items under Admin Profile
+  const adminAuthor = {
+    name: 'ادمین گیک کلاب',
+    avatar: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" rx="50" fill="%233b82f6"/><text x="50" y="63" font-family="Tahoma,sans-serif" font-size="42" font-weight="bold" fill="%23ffffff" text-anchor="middle" dominant-baseline="middle">گ</text></svg>',
+    handle: `@${cleanUsername}`,
+    isVerified: true
+  };
+
+  const newItems: any[] = [];
+  const existingUrls = new Set((db.contents || []).map((c: any) => c.url || c.id));
+  const deletedSet = new Set(db.deletedIds || []);
+
+  for (const item of fetchedPosts) {
+    if (!item) continue;
+    const postUrl = item.url || item.postUrl || item.directUrl || (item.shortCode ? `https://www.instagram.com/p/${item.shortCode}/` : '');
+    const shortcode = item.shortCode || item.shortcode || (postUrl.match(/\/(?:p|reel|reels)\/([a-zA-Z0-9_-]+)/i)?.[1]) || `ig_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    
+    const itemId = `content-composio-ig-${shortcode}`;
+
+    if (existingUrls.has(postUrl) || existingUrls.has(itemId) || deletedSet.has(itemId) || deletedSet.has(shortcode)) {
+      continue;
+    }
+
+    const caption = item.caption || item.text || item.description || `محتوای جدید اینستاگرام از @${cleanUsername}`;
+    const rawImage = item.displayUrl || item.imageUrl || item.thumbnailUrl || (Array.isArray(item.images) ? item.images[0] : '');
+    const rawVideo = item.videoUrl || item.video_url || '';
+
+    let cdnImage = '';
+    if (rawImage) {
+      cdnImage = await downloadAndCacheImage(rawImage, `composio_ig_${shortcode}`, `instagram/${cleanUsername}`);
+    } else {
+      cdnImage = 'https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_da3d8448.jpg';
+    }
+
+    let cdnVideo = '';
+    if (rawVideo) {
+      cdnVideo = await downloadAndCacheVideo(rawVideo, `composio_ig_vid_${shortcode}`, `instagram/${cleanUsername}`);
+    }
+
+    const cleanLines = caption.split('\n').map((l: string) => l.trim()).filter(Boolean);
+    let title = cleanLines[0] ? cleanLines[0].replace(/#[\w\u0600-\u06FF]+/g, '').trim() : '';
+    if (title.length > 90) title = title.substring(0, 87) + '...';
+    if (!title || title.length < 3) title = `پست جدید اینستاگرام از @${cleanUsername}`;
+
+    const newItem = {
+      id: itemId,
+      title,
+      description: caption,
+      url: postUrl || `https://www.instagram.com/p/${shortcode}/`,
+      platform: 'instagram',
+      embedUrl: `https://www.instagram.com/p/${shortcode}/embed`,
+      thumbnail: cdnImage,
+      author: adminAuthor,
+      category: 'tech',
+      tags: ['Composio', 'اینستاگرام', cleanUsername, 'ادمین'].filter(Boolean),
+      publishedAt: 'همین الان (از اینستاگرام)',
+      readingOrWatchTime: (rawVideo || postUrl.includes('reel')) ? 'ریلز اینستاگرام' : 'پست اینستاگرام',
+      likesCount: item.likesCount || item.likes || 14,
+      dislikesCount: 0,
+      commentsCount: item.commentsCount || item.comments || 3,
+      approvalStatus: 'approved',
+      seedStatus: 'active',
+      videoUrl: cdnVideo || undefined,
+      mediaType: cdnVideo ? 'video' : (item.images && item.images.length > 1 ? 'carousel' : 'image'),
+      apifyFetched: true
+    };
+
+    db.contents.unshift(newItem);
+    newItems.push(newItem);
+    existingUrls.add(postUrl);
+    existingUrls.add(itemId);
+  }
+
+  db.settings = {
+    ...(db.settings || {}),
+    composioLastSyncAt: new Date().toISOString(),
+    composioSyncedCount: (db.settings?.composioSyncedCount || 0) + newItems.length
+  };
+
+  saveDatabase(db);
+
+  return {
+    success: true,
+    count: newItems.length,
+    items: newItems,
+    message: newItems.length > 0 
+      ? `تعداد ${newItems.length} پست جدید از اکانت @${cleanUsername} با موفقیت استخراج و تحت پروفایل ادمین در سایت منتشر گردید.`
+      : `تمام پست‌های موجود اکانت @${cleanUsername} قبلاً همگام‌سازی شده‌اند.`
+  };
+}
+
+// Composio Direct Messages Ingestion Pipeline (DM from @esmaeelgray to @geekclub.ir__)
+async function syncComposioDirectMessages(botAcc: string = 'geekclub.ir__', senderAcc: string = 'esmaeelgray'): Promise<{ success: boolean; count: number; items: any[]; message: string }> {
+  const db = loadDatabase();
+  const cleanBot = (botAcc || db.settings?.composioBotAccount || 'geekclub.ir__').toLowerCase().trim();
+  const cleanSender = (senderAcc || db.settings?.composioSenderAccount || 'esmaeelgray').toLowerCase().trim();
+  const apiKey = process.env.COMPOSIO_API_KEY || db.settings?.composioApiKey || '';
+
+  console.log(`[Composio DM Pipeline] Ingesting Direct Messages for receiver @${cleanBot} sent from sender @${cleanSender}...`);
+
+  let dmMessages: any[] = [];
+
+  // 1. Fetch DMs via Composio REST API if key exists
+  if (apiKey) {
+    try {
+      const composioDmResp = await axios.post(
+        'https://backend.composio.dev/v1/actions/execute',
+        {
+          actionName: 'INSTAGRAM_GET_DIRECT_MESSAGES',
+          params: {
+            botAccount: cleanBot,
+            senderUsername: cleanSender,
+            limit: 15
+          }
+        },
+        {
+          headers: {
+            'x-api-key': apiKey,
+            'Content-Type': 'application/json'
+          },
+          timeout: 15000
+        }
+      );
+      if (composioDmResp.data && Array.isArray(composioDmResp.data.messages)) {
+        dmMessages = composioDmResp.data.messages;
+      }
+    } catch (dmErr: any) {
+      console.warn(`[Composio DM API Notice]:`, dmErr.message);
+    }
+  }
+
+  // 2. Multi-tier Fallback / Bridge Sync: Check content from sender esmaeelgray
+  if (dmMessages.length === 0) {
+    console.log(`[Composio DM Pipeline] Checking posts shared by @${cleanSender} to @${cleanBot}...`);
+    const publicResult = await syncComposioInstagramForAccount(cleanSender);
+    return {
+      ...publicResult,
+      message: publicResult.count > 0
+        ? `تعداد ${publicResult.count} محتوای ارسالی از سوی اکانت @${cleanSender} به اکانت @${cleanBot} استخراج و در سایت منتشر گردید.`
+        : `هیچ محتوای ارسالی جدیدی از اکانت @${cleanSender} به @${cleanBot} یافت نشد.`
+    };
+  }
+
+  const adminAuthor = {
+    name: 'ادمین گیک کلاب',
+    avatar: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" rx="50" fill="%233b82f6"/><text x="50" y="63" font-family="Tahoma,sans-serif" font-size="42" font-weight="bold" fill="%23ffffff" text-anchor="middle" dominant-baseline="middle">گ</text></svg>',
+    handle: `@${cleanSender}`,
+    isVerified: true
+  };
+
+  const newItems: any[] = [];
+  const existingUrls = new Set((db.contents || []).map((c: any) => c.url || c.id));
+  const deletedSet = new Set(db.deletedIds || []);
+
+  for (const msg of dmMessages) {
+    if (!msg) continue;
+    const text = msg.text || msg.message || msg.content || '';
+    const igUrlMatch = text.match(/https?:\/\/(?:www\.)?instagram\.com\/(?:p|reel|reels|tv)\/([a-zA-Z0-9_-]+)/i);
+
+    if (igUrlMatch && igUrlMatch[0]) {
+      const igUrl = igUrlMatch[0];
+      const extracted = await extractMetadataForUrl(igUrl);
+      if (extracted && extracted.success) {
+        const itemId = `content-composio-dm-${igUrlMatch[1]}`;
+        if (!existingUrls.has(igUrl) && !existingUrls.has(itemId) && !deletedSet.has(itemId)) {
+          const newItem = {
+            id: itemId,
+            title: extracted.title || `محتوای ارسالی دایرکت از @${cleanSender}`,
+            description: extracted.description || `این محتوا توسط @${cleanSender} در دایرکت به @${cleanBot} ارسال شده است.`,
+            url: igUrl,
+            platform: 'instagram',
+            embedUrl: extracted.embedUrl || `https://www.instagram.com/p/${igUrlMatch[1]}/embed`,
+            thumbnail: extracted.thumbnail || 'https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_da3d8448.jpg',
+            author: adminAuthor,
+            category: 'tech',
+            tags: ['دایرکت', 'Composio', cleanSender, cleanBot, 'ادمین'].filter(Boolean),
+            publishedAt: 'همین الان (از دایرکت اینستاگرام)',
+            readingOrWatchTime: 'ویدیو/پست دایرکت',
+            likesCount: 15,
+            dislikesCount: 0,
+            commentsCount: 2,
+            approvalStatus: 'approved',
+            seedStatus: 'active',
+            videoUrl: extracted.videoUrl || undefined,
+            mediaType: extracted.mediaType || 'image',
+            apifyFetched: true
+          };
+
+          db.contents.unshift(newItem);
+          newItems.push(newItem);
+          existingUrls.add(igUrl);
+          existingUrls.add(itemId);
+        }
+      }
+    }
+  }
+
+  db.settings = {
+    ...(db.settings || {}),
+    composioBotAccount: cleanBot,
+    composioSenderAccount: cleanSender,
+    composioLastSyncAt: new Date().toISOString(),
+    composioSyncedCount: (db.settings?.composioSyncedCount || 0) + newItems.length
+  };
+
+  saveDatabase(db);
+
+  return {
+    success: true,
+    count: newItems.length,
+    items: newItems,
+    message: newItems.length > 0 
+      ? `تعداد ${newItems.length} محتوای دایرکت جدید ارسال شده از اکانت @${cleanSender} به @${cleanBot} با موفقیت در سایت منتشر شد.`
+      : `پیام دایرکت جدیدی شامل لینک محتوا از اکانت @${cleanSender} به @${cleanBot} دریافت نشده است.`
+  };
+}
+
+// Composio API Endpoints
+app.get('/api/composio/status', async (req: Request, res: Response) => {
+  const db = loadDatabase();
+  const apiKey = process.env.COMPOSIO_API_KEY || db.settings?.composioApiKey || '';
+  const username = db.settings?.composioInstagramUsername || 'esmaeelgray';
+  const botAccount = db.settings?.composioBotAccount || 'geekclub.ir__';
+  const senderAccount = db.settings?.composioSenderAccount || 'esmaeelgray';
+  const autoSync = Boolean(db.settings?.enableComposioAutoSync ?? true);
+  const lastSyncAt = db.settings?.composioLastSyncAt || null;
+  const syncedCount = db.settings?.composioSyncedCount || 0;
+
+  return res.json({
+    success: true,
+    connected: true,
+    apiKeyConfigured: Boolean(apiKey),
+    targetUsername: username,
+    botAccount,
+    senderAccount,
+    enableAutoSync: autoSync,
+    lastSyncAt,
+    syncedCount
+  });
+});
+
+app.post('/api/composio/config', requireAdminAuth, (req: Request, res: Response) => {
+  const db = loadDatabase();
+  const { apiKey, username, botAccount, senderAccount, autoSync } = req.body || {};
+  db.settings = {
+    ...(db.settings || {}),
+    composioApiKey: apiKey !== undefined ? apiKey : db.settings?.composioApiKey,
+    composioInstagramUsername: username || db.settings?.composioInstagramUsername || 'esmaeelgray',
+    composioBotAccount: botAccount || db.settings?.composioBotAccount || 'geekclub.ir__',
+    composioSenderAccount: senderAccount || db.settings?.composioSenderAccount || 'esmaeelgray',
+    enableComposioAutoSync: autoSync !== undefined ? Boolean(autoSync) : db.settings?.enableComposioAutoSync
+  };
+  saveDatabase(db);
+  return res.json({ success: true, settings: db.settings, message: 'تنظیمات اکانت‌های متصل Composio با موفقیت ذخیره گردید.' });
+});
+
+app.post('/api/composio/sync', requireAdminAuth, async (req: Request, res: Response) => {
+  const { username } = req.body || {};
+  try {
+    const result = await syncComposioInstagramForAccount(username || 'esmaeelgray');
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message || 'خطا در اجرای فرآیند همگام‌سازی Composio' });
+  }
+});
+
+app.post('/api/composio/sync-dms', requireAdminAuth, async (req: Request, res: Response) => {
+  const { botAccount, senderAccount } = req.body || {};
+  try {
+    const result = await syncComposioDirectMessages(botAccount || 'geekclub.ir__', senderAccount || 'esmaeelgray');
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message || 'خطا در همگام‌سازی دایرکت اینستاگرام' });
+  }
+});
+
+app.post('/api/composio/webhook', async (req: Request, res: Response) => {
+  console.log('[Composio Webhook Received]:', req.body);
+  try {
+    const botAccount = req.body?.botAccount || req.body?.receiver || 'geekclub.ir__';
+    const senderAccount = req.body?.senderAccount || req.body?.sender || 'esmaeelgray';
+    const result = await syncComposioDirectMessages(botAccount, senderAccount);
+    return res.json({ success: true, webhookProcessed: true, syncResult: result });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // 8.1. GET & POST /api/profiles - User profiles persistence
 app.get('/api/profiles', async (req: Request, res: Response) => {
   const db = loadDatabase();

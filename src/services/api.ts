@@ -748,6 +748,62 @@ export const api = {
     } catch (err: any) {
       return { success: false, message: err.message || 'خطا در اصلاح سطل زباله' };
     }
+  },
+
+  // 30. Save Composio.dev settings
+  async saveComposioConfig(config: { apiKey?: string; username?: string; botAccount?: string; senderAccount?: string; autoSync?: boolean }): Promise<any> {
+    try {
+      const res = await fetch('/api/composio/config', {
+        method: 'POST',
+        headers: await getAdminHeaders(),
+        body: JSON.stringify(config)
+      });
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, message: err.message || 'خطا در ذخیره تنظیمات Composio' };
+    }
+  },
+
+  // 31. Get Composio connection & sync status
+  async getComposioStatus(): Promise<any> {
+    try {
+      const res = await fetch('/api/composio/status', {
+        headers: await getAdminHeaders()
+      });
+      if (res.ok) return await res.json();
+    } catch {}
+    return { success: false, connected: false };
+  },
+
+  // 32. Trigger Composio Instagram sync for specified account (default: esmaeelgray)
+  async triggerComposioSync(targetUsername?: string): Promise<{ success: boolean; message?: string; count?: number; items?: any[] }> {
+    try {
+      const res = await fetch('/api/composio/sync', {
+        method: 'POST',
+        headers: await getAdminHeaders(),
+        body: JSON.stringify({ username: targetUsername || 'esmaeelgray' })
+      });
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, message: err.message || 'خطا در همگام‌سازی با Composio' };
+    }
+  },
+
+  // 33. Trigger Composio Direct Messages sync (dms received from esmaeelgray to geekclub.ir__)
+  async triggerComposioDMSync(botAccount?: string, senderAccount?: string): Promise<{ success: boolean; message?: string; count?: number; items?: any[] }> {
+    try {
+      const res = await fetch('/api/composio/sync-dms', {
+        method: 'POST',
+        headers: await getAdminHeaders(),
+        body: JSON.stringify({
+          botAccount: botAccount || 'geekclub.ir__',
+          senderAccount: senderAccount || 'esmaeelgray'
+        })
+      });
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, message: err.message || 'خطا در همگام‌سازی پیام‌های دایرکت Composio' };
+    }
   }
 };
 

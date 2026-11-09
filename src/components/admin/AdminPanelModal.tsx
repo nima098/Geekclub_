@@ -111,8 +111,107 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   onUpdateContents
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'dashboard' | 'contents' | 'users' | 'database' | 'diagnostic' | 'feedback' | 'broadcast' | 'settings'
+    'dashboard' | 'contents' | 'users' | 'database' | 'diagnostic' | 'feedback' | 'broadcast' | 'settings' | 'composio'
   >('dashboard');
+
+  // Composio Instagram Connection & Sync State
+  const [composioApiKey, setComposioApiKey] = useState(() => siteSettings.composioApiKey || '');
+  const [composioUsername, setComposioUsername] = useState(() => siteSettings.composioInstagramUsername || 'esmaeelgray');
+  const [composioBotAccount, setComposioBotAccount] = useState(() => siteSettings.composioBotAccount || 'geekclub.ir__');
+  const [composioSenderAccount, setComposioSenderAccount] = useState(() => siteSettings.composioSenderAccount || 'esmaeelgray');
+  const [composioAutoSync, setComposioAutoSync] = useState(() => siteSettings.enableComposioAutoSync ?? true);
+  const [isSavingComposio, setIsSavingComposio] = useState(false);
+  const [composioSaveMsg, setComposioSaveMsg] = useState<{ success: boolean; text: string } | null>(null);
+  const [isRunningComposioSync, setIsRunningComposioSync] = useState(false);
+  const [isRunningDMSync, setIsRunningDMSync] = useState(false);
+  const [composioSyncResult, setComposioSyncResult] = useState<{ success: boolean; message: string; count?: number } | null>(null);
+  const [composioStatus, setComposioStatus] = useState<any>(null);
+
+  const fetchComposioStatus = async () => {
+    try {
+      const status = await api.getComposioStatus();
+      setComposioStatus(status);
+    } catch {}
+  };
+
+  const handleSaveComposioSettings = async () => {
+    setIsSavingComposio(true);
+    setComposioSaveMsg(null);
+    try {
+      const res = await api.saveComposioConfig({
+        apiKey: composioApiKey,
+        username: composioUsername,
+        botAccount: composioBotAccount,
+        senderAccount: composioSenderAccount,
+        autoSync: composioAutoSync
+      });
+      onUpdateSiteSettings({
+        ...siteSettings,
+        composioApiKey,
+        composioInstagramUsername: composioUsername,
+        composioBotAccount,
+        composioSenderAccount,
+        enableComposioAutoSync: composioAutoSync
+      });
+      setComposioSaveMsg({
+        success: res.success !== false,
+        text: res.message || 'تنظیمات اکانت‌های Composio با موفقیت ذخیره گردید.'
+      });
+      fetchComposioStatus();
+    } catch (err: any) {
+      setComposioSaveMsg({ success: false, text: err.message || 'خطا در ذخیره تنظیمات' });
+    } finally {
+      setIsSavingComposio(false);
+    }
+  };
+
+  const handleRunComposioSyncNow = async () => {
+    setIsRunningComposioSync(true);
+    setComposioSyncResult(null);
+    try {
+      const res = await api.triggerComposioSync(composioUsername || 'esmaeelgray');
+      setComposioSyncResult({
+        success: res.success,
+        message: res.message || (res.success ? 'همگام‌سازی با موفقیت انجام گردید.' : 'خطا در همگام‌سازی'),
+        count: res.count
+      });
+      if (res.success) {
+        fetchPanelContents();
+        fetchComposioStatus();
+      }
+    } catch (err: any) {
+      setComposioSyncResult({
+        success: false,
+        message: err.message || 'خطا در برقراری ارتباط با سرور'
+      });
+    } finally {
+      setIsRunningComposioSync(false);
+    }
+  };
+
+  const handleRunComposioDMSyncNow = async () => {
+    setIsRunningDMSync(true);
+    setComposioSyncResult(null);
+    try {
+      const res = await api.triggerComposioDMSync(composioBotAccount || 'geekclub.ir__', composioSenderAccount || 'esmaeelgray');
+      setComposioSyncResult({
+        success: res.success,
+        message: res.message || (res.success ? 'استخراج پیام‌های دایرکت انجام شد.' : 'خطا در دریافت دایرکت'),
+        count: res.count
+      });
+      if (res.success) {
+        fetchPanelContents();
+        fetchComposioStatus();
+      }
+    } catch (err: any) {
+      setComposioSyncResult({
+        success: false,
+        message: err.message || 'خطا در برقراری ارتباط با سرور'
+      });
+    } finally {
+      setIsRunningDMSync(false);
+    }
+  };
 
   // Database Backup & Restore States
   const [isExportingDb, setIsExportingDb] = useState(false);
@@ -308,6 +407,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     } else if (activeTab === 'database') {
       if (!diagnosticReport) handleRunDiagnostic();
       fetchDbStats();
+    } else if (activeTab === 'composio') {
+      fetchComposioStatus();
     }
   }, [isOpen, activeTab, logFilterLevel]);
 
@@ -909,6 +1010,22 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             </button>
 
             <button
+              id="composio-tab-btn"
+              onClick={() => setActiveTab('composio')}
+              className={`composio-tab-btn pb-3 px-3.5 border-b-2 flex items-center gap-2 transition whitespace-nowrap cursor-pointer ring-1 ring-amber-500/30 ${
+                activeTab === 'composio'
+                  ? 'border-amber-500 bg-amber-500 text-slate-950 font-black rounded-t-xl shadow-lg'
+                  : 'border-transparent text-amber-400 hover:text-white bg-slate-800/80 rounded-t-lg'
+              }`}
+            >
+              <Instagram className="w-4 h-4 text-rose-400" />
+              <span>اتصال اینستاگرام (Composio)</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-600 text-white font-mono font-bold">
+                @esmaeelgray
+              </span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('users')}
               className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
                 activeTab === 'users'
@@ -964,6 +1081,22 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               <Settings className="w-4 h-4 text-white" />
               تنظیمات تایید محتوا
               <span className={`w-2.5 h-2.5 rounded-full ${siteSettings.requireContentApproval ? 'bg-amber-500' : 'bg-slate-500'}`} />
+            </button>
+
+            <button
+              id="composio-tab-btn"
+              onClick={() => setActiveTab('composio')}
+              className={`composio-tab-btn pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'composio'
+                  ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
+                  : 'border-transparent text-slate-300 hover:text-white'
+              }`}
+            >
+              <Instagram className="w-4 h-4 text-amber-400" />
+              اتصال اینستاگرام (Composio)
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-mono font-bold">
+                @esmaeelgray
+              </span>
             </button>
 
             <button
@@ -1089,6 +1222,51 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       </>
                     )}
                   </button>
+                </div>
+
+                {/* Composio Instagram Quick Access Banner Card */}
+                <div className="p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border border-amber-500/30 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 p-0.5 shadow-lg shadow-rose-500/20 shrink-0">
+                      <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
+                        <Instagram className="w-6 h-6 text-rose-400" />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-sm sm:text-base font-black text-slate-100">
+                          همگام‌سازی و اتصال اینستاگرام Composio.dev
+                        </h4>
+                        <span className="text-[10px] font-mono text-amber-400 font-bold px-2.5 py-0.5 rounded-md bg-slate-950 border border-amber-500/40">
+                          @esmaeelgray
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-300 mt-0.5">
+                        استخراج خودکار پست‌ها و ریلزهای اکانت esmaeelgray و انتشار فوری با اکانت ادمین
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleRunComposioSyncNow}
+                      disabled={isRunningComposioSync}
+                      className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 disabled:opacity-50 text-slate-950 font-black text-xs rounded-xl flex items-center gap-1.5 shadow-md transition active:scale-95 cursor-pointer"
+                    >
+                      <RefreshCw className={`w-4 h-4 text-slate-950 ${isRunningComposioSync ? 'animate-spin' : ''}`} />
+                      <span>{isRunningComposioSync ? 'در حال دریافت...' : 'انتشار فوری پست‌های جدید'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('composio')}
+                      className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition cursor-pointer"
+                    >
+                      <Settings className="w-4 h-4 text-slate-300" />
+                      <span>تنظیمات Composio</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Quick Actions & Guidelines */}
@@ -1796,6 +1974,264 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     >
                       {siteSettings.requireContentApproval ? <ToggleRight className="w-9 h-9" /> : <ToggleLeft className="w-9 h-9" />}
                     </button>
+                  </div>
+                </div>
+
+                {/* Composio Settings Card inside Settings Tab */}
+                <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-700 pb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-600 text-slate-950 shadow-md">
+                        <Instagram className="w-6 h-6 text-slate-950" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
+                          اتصال و تنظیمات Composio.dev اینستاگرام
+                        </h4>
+                        <p className="text-xs text-slate-300">مدیریت کلید API و همگام‌سازی پست‌های اکانت @esmaeelgray</p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('composio')}
+                      className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl flex items-center gap-1.5 transition shadow cursor-pointer"
+                    >
+                      <span>مدیریت کامل Composio ←</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-200 block">کلید API پلتفرم Composio:</label>
+                      <input
+                        type="password"
+                        value={composioApiKey}
+                        onChange={(e) => setComposioApiKey(e.target.value)}
+                        placeholder="Composio API Key"
+                        className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3.5 py-2 text-xs font-mono outline-none"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-xs font-bold text-slate-300">اکانت هدف: <span className="text-amber-400 font-mono">@esmaeelgray</span></span>
+                      <button
+                        type="button"
+                        onClick={handleSaveComposioSettings}
+                        disabled={isSavingComposio}
+                        className="px-4 py-2 bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs rounded-xl transition cursor-pointer"
+                      >
+                        {isSavingComposio ? 'در حال ذخیره...' : 'ذخیره کلید API'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Composio Instagram Tab */}
+            {activeTab === 'composio' && (
+              <div className="max-w-4xl mx-auto space-y-6">
+                <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-750 shadow-xl space-y-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 p-0.5 shadow-lg shadow-rose-500/20 shrink-0">
+                        <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
+                          <Instagram className="w-6 h-6 text-rose-400" />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="text-base sm:text-lg font-black text-slate-100">
+                            اتصال اینستاگرام به وب‌سایت با Composio.dev
+                          </h4>
+                          <span id="composio-status-badge" className="composio-status-badge text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                            اتصال فعال
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-300 mt-1">
+                          استخراج خودکار پُست‌ها، ویدیوها و ریلزهای اکانت <strong className="text-amber-400 dir-ltr font-mono">@esmaeelgray</strong> و انتشار مستقیم تحت پروفایل ادمین سایت
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      id="composio-sync-now-btn"
+                      onClick={handleRunComposioSyncNow}
+                      disabled={isRunningComposioSync}
+                      className="composio-sync-now-btn px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 disabled:opacity-50 text-slate-950 font-black text-xs rounded-xl flex items-center gap-2 shadow-lg transition active:scale-95 cursor-pointer shrink-0"
+                    >
+                      <RefreshCw className={`w-4 h-4 text-slate-950 ${isRunningComposioSync ? 'animate-spin' : ''}`} />
+                      <span>{isRunningComposioSync ? 'در حال همگام‌سازی...' : 'همگام‌سازی و انتشار فوری'}</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                    <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-1">
+                      <span className="text-[11px] text-slate-400">حساب هدف اینستاگرام</span>
+                      <div className="text-sm font-bold text-amber-400 font-mono">@esmaeelgray</div>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-1">
+                      <span className="text-[11px] text-slate-400">تعداد مطالب همگام‌شده</span>
+                      <div className="text-sm font-bold text-emerald-400 font-mono">
+                        {composioStatus?.syncedCount || siteSettings.composioSyncedCount || 0} پست
+                      </div>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-1">
+                      <span className="text-[11px] text-slate-400">آخرین همگام‌سازی</span>
+                      <div className="text-xs font-bold text-slate-200">
+                        {composioStatus?.lastSyncAt || siteSettings.composioLastSyncAt ? new Date(composioStatus?.lastSyncAt || siteSettings.composioLastSyncAt).toLocaleTimeString('fa-IR') : 'به زودی'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {composioSyncResult && (
+                    <div className={`composio-result-box p-4 rounded-xl border text-xs font-bold flex items-center justify-between gap-3 ${
+                      composioSyncResult.success
+                        ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                        : 'bg-rose-950/40 border-rose-500/40 text-rose-300'
+                    }`}>
+                      <span>{composioSyncResult.message}</span>
+                      {composioSyncResult.count !== undefined && composioSyncResult.count > 0 && (
+                        <span className="px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 font-black">
+                          +{composioSyncResult.count} پست جدید منتشر شد
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-6 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-5">
+                  <div className="flex items-center gap-2.5 border-b border-slate-700/80 pb-3">
+                    <Settings className="w-5 h-5 text-[#0077d9]" />
+                    <h5 className="text-sm font-bold text-slate-100">تنظیمات کلید API و اتصال Composio.dev</h5>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-200 block">
+                        کلید API اختصاصی Composio (Composio API Key):
+                      </label>
+                      <input
+                        type="password"
+                        id="composio-api-key-input"
+                        value={composioApiKey}
+                        onChange={(e) => setComposioApiKey(e.target.value)}
+                        placeholder="اختیاری - کلید API پلتفرم composio.dev را وارد کنید"
+                        className="composio-api-key-input w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3.5 py-2.5 text-xs font-mono focus:ring-2 focus:ring-[#0077d9] outline-none"
+                      />
+                      <p className="text-[11px] text-slate-400">
+                        در صورت پر بودن، اکشن‌های پلتفرم Composio مستقیم فراخوانی می‌شوند. سرور از موتور چندلایه‌ای پشتیبان نیز جهت تضمین استخراج محتوای اینستاگرام استفاده می‌کند.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-700/80">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-200 block">
+                          اکانت دریافت‌کننده دایرکت متصل به پروژه (گیرنده):
+                        </label>
+                        <div className="flex items-center dir-ltr">
+                          <span className="px-3 py-2.5 bg-slate-900 border border-r-0 border-slate-700 text-amber-400 rounded-l-xl text-xs font-mono font-bold">
+                            @
+                          </span>
+                          <input
+                            type="text"
+                            id="composio-bot-account-input"
+                            value={composioBotAccount}
+                            onChange={(e) => setComposioBotAccount(e.target.value)}
+                            placeholder="geekclub.ir__"
+                            className="composio-bot-account-input w-full bg-slate-900 border border-slate-700 text-amber-400 font-bold rounded-r-xl px-3.5 py-2.5 text-xs font-mono focus:ring-2 focus:ring-[#0077d9] outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-200 block">
+                          اکانت ارسال‌کننده مجاز محتوا (فرستنده دایرکت):
+                        </label>
+                        <div className="flex items-center dir-ltr">
+                          <span className="px-3 py-2.5 bg-slate-900 border border-r-0 border-slate-700 text-rose-400 rounded-l-xl text-xs font-mono font-bold">
+                            @
+                          </span>
+                          <input
+                            type="text"
+                            id="composio-sender-account-input"
+                            value={composioSenderAccount}
+                            onChange={(e) => setComposioSenderAccount(e.target.value)}
+                            placeholder="esmaeelgray"
+                            className="composio-sender-account-input w-full bg-slate-900 border border-slate-700 text-rose-400 font-bold rounded-r-xl px-3.5 py-2.5 text-xs font-mono focus:ring-2 focus:ring-[#0077d9] outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-slate-950/80 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                      <div>
+                        <span className="text-xs font-bold text-slate-100 flex items-center gap-1.5">
+                          <MessageSquare className="w-4 h-4 text-rose-400" />
+                          پردازش و انتشار مستقیم پیام‌های دایرکت
+                        </span>
+                        <p className="text-[11px] text-slate-300 mt-0.5">
+                          هر زمان با اکانت <strong className="text-amber-400 font-mono">@{composioSenderAccount}</strong> محتوایی را به دایرکت اکانت <strong className="text-amber-400 font-mono">@{composioBotAccount}</strong> ارسال کردید، با کلیک بر روی این دکمه یا از طریق وب‌هوک لحظه‌ای، در سایت منتشر می‌شود.
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        id="composio-sync-dms-btn"
+                        onClick={handleRunComposioDMSyncNow}
+                        disabled={isRunningDMSync}
+                        className="composio-sync-dms-btn px-4 py-2.5 bg-gradient-to-r from-rose-500 to-purple-600 hover:from-rose-600 hover:to-purple-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow transition active:scale-95 cursor-pointer shrink-0"
+                      >
+                        <RefreshCw className={`w-4 h-4 ${isRunningDMSync ? 'animate-spin' : ''}`} />
+                        <span>{isRunningDMSync ? 'در حال بررسی دایرکت...' : 'استخراج دایرکت‌های جدید'}</span>
+                      </button>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-750 flex items-center justify-between gap-4">
+                      <div>
+                        <span className="text-xs font-bold text-slate-100 block">
+                          فعال‌سازی همگام‌سازی خودکار و پس‌زمینه
+                        </span>
+                        <p className="text-[11px] text-slate-300 mt-0.5">
+                          بررسی دوره‌ای سرور برای استخراج و انتشار پست‌های جدید اکانت @{composioSenderAccount} به محض ارسال دایرکت
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        id="composio-sync-toggle"
+                        onClick={() => setComposioAutoSync(!composioAutoSync)}
+                        className={`composio-sync-toggle p-1 text-2xl transition cursor-pointer ${
+                          composioAutoSync ? 'text-amber-500' : 'text-slate-500'
+                        }`}
+                      >
+                        {composioAutoSync ? <ToggleRight className="w-9 h-9" /> : <ToggleLeft className="w-9 h-9" />}
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2">
+                      <button
+                        type="button"
+                        id="composio-connect-btn"
+                        onClick={handleSaveComposioSettings}
+                        disabled={isSavingComposio}
+                        className="composio-connect-btn px-5 py-2.5 bg-[#0077d9] hover:bg-[#0062b3] disabled:opacity-50 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-md transition active:scale-95 cursor-pointer"
+                      >
+                        <Check className="w-4 h-4 text-white" />
+                        <span>{isSavingComposio ? 'در حال ذخیره...' : 'ذخیره تنظیمات Composio'}</span>
+                      </button>
+
+                      {composioSaveMsg && (
+                        <span className={`text-xs font-bold px-3 py-1.5 rounded-lg ${
+                          composioSaveMsg.success ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                        }`}>
+                          {composioSaveMsg.text}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

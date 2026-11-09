@@ -135,6 +135,13 @@ export interface SiteAdminSettings {
   apifyApiToken?: string;
   apifyActorId?: string;
   enableApifyInstagram?: boolean;
+  composioApiKey?: string;
+  composioInstagramUsername?: string;
+  composioBotAccount?: string;
+  composioSenderAccount?: string;
+  enableComposioAutoSync?: boolean;
+  composioLastSyncAt?: string;
+  composioSyncedCount?: number;
   autoBackup12h?: boolean;
   lastBackupAt?: string;
   backupDriveFolder?: string;
