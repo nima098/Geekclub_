@@ -1084,7 +1084,8 @@ export default function App() {
       if (err?.message?.includes('popup_closed') || err?.code === 'auth/popup-closed-by-user') {
         addToast('info', 'فرآیند ورود لغو شد.');
       } else {
-        addToast('error', err?.message || 'خطا در ارتباط با سرویس ورود مستقیم گوگل.');
+        addToast('error', 'خطا در تایید دامنه گوگل (origin_mismatch). راهنمای ثبت دامنه یا ورود با ایمیل باز شد.');
+        setIsDomainHelpModalOpen(true);
       }
     } finally {
       setIsLoggingInWithGoogle(false);
