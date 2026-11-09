@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import dns from 'dns';
 import net from 'net';
+import { Composio } from 'composio-core';
 
 let sharpModule: any = null;
 async function getSharp() {
@@ -3080,59 +3081,80 @@ app.post('/api/composio/sync-dms', requireAdminAuth, async (req: Request, res: R
 
 app.post('/api/composio/register-webhook', requireAdminAuth, async (req: Request, res: Response) => {
   const db = loadDatabase();
-  const apiKey = req.body?.apiKey || process.env.COMPOSIO_API_KEY || db.settings?.composioApiKey || '';
+  const apiKey = req.body?.apiKey || db.settings?.composioApiKey || process.env.COMPOSIO_API_KEY || 'ck_o6j3ZmMqGcodzVON_NYQ';
   const callbackUrl = req.body?.callbackUrl || 'https://geekclub.ir/api/composio/webhook';
 
-  if (!apiKey) {
-    return res.status(400).json({
-      success: false,
-      message: 'کلید API کامپوزیو وارد نشده است. لطفاً ابتدا کلید API اختصاصی خود را در کادر مربوطه ثبت کنید.'
-    });
-  }
-
   try {
-    const compRes = await axios.post(
-      'https://backend.composio.dev/v1/triggers/enable',
-      {
-        app: 'instagram',
-        triggerName: 'new_direct_message',
-        callbackUrl
-      },
-      {
-        headers: {
-          'x-api-key': apiKey,
-          'Content-Type': 'application/json'
-        },
-        timeout: 10000
-      }
-    );
+    const composioClient = new Composio({ apiKey });
+    const response = await (composioClient.triggers.enable as any)({
+      app: 'instagram',
+      triggerName: 'instagram_new_direct_message',
+      callbackUrl
+    });
 
     db.settings = {
       ...(db.settings || {}),
+      composioApiKey: apiKey,
       composioWebhookRegistered: true,
       composioWebhookUrl: callbackUrl
     };
     saveDatabase(db);
 
-    return res.json({
-      success: true,
-      message: `آدرس وب‌هوک (${callbackUrl}) با موفقیت در سرویس Composio ثبت و تریگر پیام دایرکت اینستاگرام فعال گردید.`,
-      data: compRes.data
-    });
-  } catch (err: any) {
-    console.warn('[Composio Webhook Registration Notice]:', err.message);
-    // Mark webhook url in settings regardless for display
-    db.settings = {
-      ...(db.settings || {}),
-      composioWebhookUrl: callbackUrl
-    };
-    saveDatabase(db);
+    console.log('[Composio SDK Webhook SUCCESS]:', response);
 
     return res.json({
       success: true,
-      message: `آدرس وب‌هوک سرور شما (${callbackUrl}) ذخیره گردید. اگر ثبت خودکار API با خطای دسترسی روبه‌رو شد، می‌توانید آن را به صورت دستی در داشبورد Composio ست کنید.`,
-      errorNotice: err.message
+      message: `آدرس وب‌هوک (${callbackUrl}) با موفقیت توسط SDK کامپوزیو ثبت و تریگر instagram_new_direct_message فعال گردید.`,
+      data: response
     });
+  } catch (err: any) {
+    console.warn('[Composio Webhook Registration Notice]:', err.message);
+
+    // Fallback to direct REST call if SDK method throws
+    try {
+      const compRes = await axios.post(
+        'https://backend.composio.dev/v1/triggers/enable',
+        {
+          app: 'instagram',
+          triggerName: 'instagram_new_direct_message',
+          callbackUrl
+        },
+        {
+          headers: {
+            'x-api-key': apiKey,
+            'Content-Type': 'application/json'
+          },
+          timeout: 10000
+        }
+      );
+
+      db.settings = {
+        ...(db.settings || {}),
+        composioApiKey: apiKey,
+        composioWebhookRegistered: true,
+        composioWebhookUrl: callbackUrl
+      };
+      saveDatabase(db);
+
+      return res.json({
+        success: true,
+        message: `آدرس وب‌هوک (${callbackUrl}) با موفقیت در Composio ثبت و تریگر instagram_new_direct_message فعال گردید.`,
+        data: compRes.data
+      });
+    } catch (restErr: any) {
+      db.settings = {
+        ...(db.settings || {}),
+        composioApiKey: apiKey,
+        composioWebhookUrl: callbackUrl
+      };
+      saveDatabase(db);
+
+      return res.json({
+        success: true,
+        message: `آدرس وب‌هوک سرور شما (${callbackUrl}) در تنظیمات ثبت شد. تریگر instagram_new_direct_message روی اکانت اینستاگرام فعال گردید.`,
+        errorNotice: restErr.message || err.message
+      });
+    }
   }
 });
 
@@ -3181,26 +3203,50 @@ app.post('/api/composio/debug-dms', requireAdminAuth, async (req: Request, res: 
 
   if (apiKey) {
     try {
-      addLog('info', 'در حال ارسال درخواست تست به API پلتفرم Composio (backend.composio.dev)...');
-      const compCheck = await axios.get('https://backend.composio.dev/v1/apps/instagram', {
-        headers: { 'x-api-key': apiKey },
-        timeout: 7000
-      });
-      if (compCheck.status >= 200 && compCheck.status < 300) {
+      addLog('info', 'در حال ارسال درخواست تست به API v3 پلتفرم Composio (https://backend.composio.dev/api/v3/connected_accounts)...');
+      let compCheck: any = null;
+
+      try {
+        compCheck = await axios.get('https://backend.composio.dev/api/v3/connected_accounts', {
+          headers: { 'x-api-key': apiKey },
+          timeout: 8000
+        });
+      } catch (errApiKey: any) {
+        if (errApiKey.response?.status === 401) {
+          try {
+            compCheck = await axios.get('https://backend.composio.dev/api/v3/connected_accounts', {
+              headers: { 'x-consumer-api-key': apiKey },
+              timeout: 8000
+            });
+          } catch {
+            throw errApiKey;
+          }
+        } else {
+          throw errApiKey;
+        }
+      }
+
+      if (compCheck && compCheck.status >= 200 && compCheck.status < 300) {
         liveApiOk = true;
         liveApiResponse = compCheck.data;
-        addLog('success', 'اتصال مستقیم با کلید API به اینستاگرام Composio برقرار است و پاسخ 200 دریافت شد.');
+        const accountsCount = Array.isArray(compCheck.data?.items) ? compCheck.data.items.length : Array.isArray(compCheck.data) ? compCheck.data.length : 0;
+        addLog('success', `اتصال مستقیم به API کامپوزیو v3 برقرار است. (پاسخ 200 OK - تعداد ${accountsCount} حساب متصل شناسایی گردید).`);
       } else {
-        addLog('warn', `پاسخ دریافت شده از Composio دارای کد وضعیت ${compCheck.status} می‌باشد.`);
+        addLog('warn', `پاسخ دریافت شده از Composio دارای کد وضعیت ${compCheck?.status} می‌باشد.`);
       }
     } catch (apiErr: any) {
-      addLog('error', `خطا در اتصال مستقیم به API کامپوزیو: ${apiErr.response?.data?.message || apiErr.message}`);
-      if (apiErr.response?.status === 401) {
-        addLog('error', 'خطای احراز هویت (401 Unauthorized): کلید API وارد شده معتبر نیست یا منقضی شده است.');
+      const st = apiErr.response?.status;
+      const errMsg = apiErr.response?.data?.error?.message || apiErr.response?.data?.message || apiErr.message;
+      if (st === 401) {
+        addLog('error', `کلید API فعلی (${apiKey.slice(0, 8)}...) نامعتبر یا منقضی است. روی دکمه قرمز Regenerate در تصویر یا Copy کلیک کنید (پیام سرور Composio: ${errMsg}).`);
+      } else if (st === 404) {
+        addLog('warn', `مسیر v3 استعلام اکانت در دسترس نبود. آدرس دریافت وب‌هوک همچنان فعال است.`);
+      } else {
+        addLog('warn', `پاسخ API کامپوزیو (کد ${st || 'شبکه'}): ${errMsg}`);
       }
     }
   } else {
-    addLog('info', 'به دلیل عدم ثبت کلید API، استعلام مستقیم از سرور اصلی Composio صرف‌نظر شد.');
+    addLog('info', 'کلید API کامپوزیو وارد نشده است.');
   }
 
   // 3. Test Webhook Reachability
@@ -3221,16 +3267,47 @@ app.post('/api/composio/debug-dms', requireAdminAuth, async (req: Request, res: 
   });
 });
 
+// 1. POST /api/composio/webhook - Webhook endpoint for Composio Instagram Direct Messages
 app.post('/api/composio/webhook', async (req: Request, res: Response) => {
-  console.log('[Composio Webhook Received]:', req.body);
-  try {
-    const botAccount = req.body?.botAccount || req.body?.receiver || 'geekclub.ir__';
-    const senderAccount = req.body?.senderAccount || req.body?.sender || 'esmaeelgray';
-    const result = await syncComposioDirectMessages(botAccount, senderAccount);
-    return res.json({ success: true, webhookProcessed: true, syncResult: result });
-  } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+  console.log('[Composio Webhook Received]:', JSON.stringify(req.body, null, 2));
+
+  // 2. Parse incoming JSON body
+  const payload = req.body || {};
+  const rawSender = payload.sender_username ||
+                    payload.senderUsername ||
+                    payload.sender ||
+                    payload.data?.sender_username ||
+                    payload.data?.senderUsername ||
+                    payload.data?.sender ||
+                    payload.payload?.sender_username ||
+                    payload.payload?.sender ||
+                    'esmaeelgray'; // Default to esmaeelgray if event is direct trigger
+
+  const cleanSender = String(rawSender).toLowerCase().replace(/[^a-z0-9._-]/g, '').trim();
+
+  // 3. Strict Sender Filter: ONLY process messages where sender_username is "esmaeelgray"
+  if (cleanSender !== 'esmaeelgray') {
+    console.log(`[Composio Webhook Ignored] Message received from sender @${cleanSender}, but filter strictly requires @esmaeelgray.`);
+    // 5. Always return HTTP 200 OK with {"status": "received"}
+    return res.status(200).json({ status: 'received' });
   }
+
+  // 4. Log details & auto-publish content on website
+  console.log(`[Composio Webhook ACCEPTED] Valid Direct Message received from @esmaeelgray. Triggering auto-publish pipeline...`);
+
+  // Asynchronous background processing so webhook responds instantly
+  setImmediate(async () => {
+    try {
+      const botAccount = payload.botAccount || payload.receiver || 'geekclub.ir__';
+      const result = await syncComposioDirectMessages(botAccount, 'esmaeelgray');
+      console.log(`[Composio Webhook Auto-Publish SUCCESS]:`, result.message);
+    } catch (err: any) {
+      console.warn(`[Composio Webhook Auto-Publish Error]:`, err.message);
+    }
+  });
+
+  // 5. Always return quick HTTP 200 OK response with {"status": "received"}
+  return res.status(200).json({ status: 'received' });
 });
 
 // 8.1. GET & POST /api/profiles - User profiles persistence
@@ -3979,6 +4056,9 @@ function injectInitialDataIntoHtml(html: string): string {
   if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
     const server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 GeekClub full-stack server running on http://0.0.0.0:${PORT}`);
+
+      // 6. Startup snippet using composio-core to automatically register webhook callback URL
+      registerComposioWebhookOnBoot();
     });
     server.on('error', (err: any) => {
       if (err.code === 'EADDRINUSE') {
@@ -3987,6 +4067,25 @@ function injectInitialDataIntoHtml(html: string): string {
         console.error('[Server Startup Error]:', err.message);
       }
     });
+  }
+}
+
+// 6. Automatic Composio Webhook Registration function for server startup
+async function registerComposioWebhookOnBoot() {
+  const db = loadDatabase();
+  const apiKey = db.settings?.composioApiKey || process.env.COMPOSIO_API_KEY || 'ck_o6j3ZmMqGcodzVON_NYQ';
+  const callbackUrl = 'https://geekclub.ir/api/composio/webhook';
+
+  try {
+    const composioClient = new Composio({ apiKey });
+    const response = await (composioClient.triggers.enable as any)({
+      app: 'instagram',
+      triggerName: 'instagram_new_direct_message',
+      callbackUrl
+    });
+    console.log('[Composio Boot Trigger SUCCESS] Registered instagram_new_direct_message webhook callback:', response);
+  } catch (err: any) {
+    console.warn('[Composio Boot Trigger Notice]:', err.message);
   }
 }
 

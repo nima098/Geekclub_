@@ -118,7 +118,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   >('dashboard');
 
   // Composio Instagram Connection & Sync State
-  const [composioApiKey, setComposioApiKey] = useState(() => siteSettings.composioApiKey || '');
+  const [composioApiKey, setComposioApiKey] = useState(() => siteSettings.composioApiKey || 'ck_o6j3ZmMqGcodzVON_NYQ');
   const [composioUsername, setComposioUsername] = useState(() => siteSettings.composioInstagramUsername || 'esmaeelgray');
   const [composioBotAccount, setComposioBotAccount] = useState(() => siteSettings.composioBotAccount || 'geekclub.ir__');
   const [composioSenderAccount, setComposioSenderAccount] = useState(() => siteSettings.composioSenderAccount || 'esmaeelgray');

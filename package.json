@@ -18,6 +18,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "axios": "^1.7.0",
     "basic-ftp": "^5.0.5",
+    "composio-core": "^0.5.39",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "firebase": "^13.0.0",

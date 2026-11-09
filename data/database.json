@@ -36,7 +36,8 @@
       "apifyFetched": false,
       "isDeleted": true,
       "isArchived": true,
-      "deletedAt": "2026-10-25T05:46:58.932Z"
+      "deletedAt": "2026-10-25T05:46:58.932Z",
+      "seedStatus": "active"
     },
     {
       "id": "ig-da7z2zvjklL",
@@ -82,7 +83,8 @@
       "approvalStatus": "approved",
       "sourceDomain": "instagram.com",
       "isDeleted": true,
-      "isArchived": true
+      "isArchived": true,
+      "seedStatus": "active"
     },
     {
       "id": "content-1792527808872",
@@ -117,7 +119,8 @@
       "sourceDomain": "web",
       "isDeleted": true,
       "deletedAt": "2026-10-22T22:31:54.126Z",
-      "isArchived": true
+      "isArchived": true,
+      "seedStatus": "active"
     },
     {
       "id": "yt-pending-1",
@@ -150,7 +153,8 @@
       "authorUid": "usr-sara",
       "isDeleted": true,
       "isArchived": true,
-      "deletedAt": "2026-10-25T05:38:15.977Z"
+      "deletedAt": "2026-10-25T05:38:15.977Z",
+      "seedStatus": "active"
     },
     {
       "id": "yt-1",
@@ -182,7 +186,8 @@
       "sourceDomain": "youtube.com",
       "isDeleted": true,
       "deletedAt": null,
-      "isArchived": true
+      "isArchived": true,
+      "seedStatus": "active"
     },
     {
       "id": "art-1",
@@ -215,7 +220,8 @@
       "articleContent": "در چند سال اخیر شاهد دوره‌ای بودیم که همه اپلیکیشن‌ها به سمت خاکستری‌های بی‌روح و دکمه‌های هم‌شکل حرکت کردند. اما اکنون کاربران به دنبال شخصیت و هویت بصری هستند.\n\nاصول کلیدی که امروزه برای هر محصول حیاتی است:\n۱. سلسله‌مراتب تایپوگرافی قدرتمند با فونت‌های رسا و خوانا\n۲. کنتراست رنگی هدفمند که مسیر چشم مخاطب را هدایت می‌کند\n۳. میکروانیمیشن‌هایی که بازخورد فوری از کنش‌های کاربر ارائه می‌دهند\n۴. طراحی واکنش‌گرا و دسترس‌پذیری برای تمامی نمایشگرها\n\nتوصیه مهم برای طراحان این است که همیشه پیش از شروع ساخت کامپوننت‌ها، سیستم طراحی (Design System) یکپارچه و مقیاس‌پذیر بسازند تا تجربه تعاملی کاربران در تمام مراحل پیوسته باقی بماند.",
       "isDeleted": true,
       "isArchived": true,
-      "deletedAt": "2026-10-22T22:39:29.417Z"
+      "deletedAt": "2026-10-22T22:39:29.417Z",
+      "seedStatus": "active"
     },
     {
       "id": "ig-new-dzf",
@@ -248,7 +254,8 @@
       "approvalStatus": "approved",
       "mediaType": "image",
       "isDeleted": true,
-      "isArchived": true
+      "isArchived": true,
+      "seedStatus": "active"
     },
     {
       "id": "aparat-1",
@@ -281,16 +288,17 @@
       "approvalStatus": "approved",
       "isDeleted": true,
       "deletedAt": "2026-10-22T22:32:18.245Z",
-      "isArchived": true
+      "isArchived": true,
+      "seedStatus": "active"
     },
     {
       "id": "ig-1",
-      "title": "پست منتخب در اینستاگرام",
+      "title": "ریلز اینستاگرام (C8kP2qXyZa1)",
       "description": "ترفندهای کاربردی ES2024 و میانبرهای آرایه‌ها و آبجکت‌ها که خوانایی و عملکرد کدهای جاوااسکریپت و تایپ‌اسکریپت شما را بالا می‌برد.",
       "url": "https://www.instagram.com/reel/C8kP2qXyZa1/",
       "platform": "instagram",
       "embedUrl": "https://www.instagram.com/reel/C8kP2qXyZa1/embed",
-      "thumbnail": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"800\" height=\"450\" viewBox=\"0 0 800 450\"><rect width=\"800\" height=\"450\" fill=\"%230f172a\"/><rect x=\"340\" y=\"130\" width=\"120\" height=\"120\" rx=\"30\" fill=\"none\" stroke=\"%23fd1d1d\" stroke-width=\"9\"/><circle cx=\"400\" cy=\"190\" r=\"35\" fill=\"none\" stroke=\"%23fd1d1d\" stroke-width=\"9\"/><text x=\"400\" y=\"310\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"22\" font-weight=\"bold\" fill=\"%23f8fafc\" text-anchor=\"middle\">ترفندهای جاوااسکریپت</text></svg>",
+      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_da3d8448.jpg",
       "author": {
         "name": "کد با سارا",
         "avatar": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" rx=\"50\" fill=\"%23f59e0b\"/><text x=\"50\" y=\"63\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"42\" font-weight=\"bold\" fill=\"%23ffffff\" text-anchor=\"middle\" dominant-baseline=\"middle\">ک</text></svg>",
@@ -311,9 +319,10 @@
       "commentsCount": 45,
       "userReaction": null,
       "sourceDomain": "instagram.com",
-      "mediaType": "image",
+      "mediaType": "video",
       "isDeleted": false,
-      "isArchived": false
+      "isArchived": false,
+      "seedStatus": "active"
     },
     {
       "id": "yt-2",
@@ -342,7 +351,8 @@
       "dislikesCount": 5,
       "commentsCount": 28,
       "userReaction": null,
-      "sourceDomain": "youtube.com"
+      "sourceDomain": "youtube.com",
+      "seedStatus": "active"
     },
     {
       "id": "art-2",
@@ -372,16 +382,17 @@
       "commentsCount": 14,
       "userReaction": null,
       "sourceDomain": "medium.com",
-      "articleContent": "وقتی تعداد درخواست‌های همزمان به هزاران کوئری در ثانیه می‌رسد، دیتابیس‌های سنتی اولین نقطه‌ای هستند که دچار گلوگاه می‌شوند.\n\nراهکارهای اساسی برای حفظ پایداری:\n۱. استفاده از لایه Cache-Aside با Redis جهت کاهش کوئری‌های تکراری\n۲. بازبینی و حذف ایندکس‌های بلااستفاده و بهینه‌سازی کلاسترد ایندکس‌ها\n۳. جداسازی کوئری‌های خواندن و نوشتن از طریق Read Replicas\n۴. استفاده از Connection Pool کارآمد به جای ایجاد کانکشن در هر درخواست\n\nبا اعمال این روش‌ها می‌توانید تا ۷۰ درصد بار روی دیتابیس اصلی را کاهش داده و زمان پاسخگویی (Latency) را به کمتر از ۲۰ میلی‌ثانیه برسانید."
+      "articleContent": "وقتی تعداد درخواست‌های همزمان به هزاران کوئری در ثانیه می‌رسد، دیتابیس‌های سنتی اولین نقطه‌ای هستند که دچار گلوگاه می‌شوند.\n\nراهکارهای اساسی برای حفظ پایداری:\n۱. استفاده از لایه Cache-Aside با Redis جهت کاهش کوئری‌های تکراری\n۲. بازبینی و حذف ایندکس‌های بلااستفاده و بهینه‌سازی کلاسترد ایندکس‌ها\n۳. جداسازی کوئری‌های خواندن و نوشتن از طریق Read Replicas\n۴. استفاده از Connection Pool کارآمد به جای ایجاد کانکشن در هر درخواست\n\nبا اعمال این روش‌ها می‌توانید تا ۷۰ درصد بار روی دیتابیس اصلی را کاهش داده و زمان پاسخگویی (Latency) را به کمتر از ۲۰ میلی‌ثانیه برسانید.",
+      "seedStatus": "active"
     },
     {
       "id": "ig-2",
-      "title": "پست منتخب در اینستاگرام",
+      "title": "پست اینستاگرام (C9ab12cdEFg)",
       "description": "بررسی میکروفون استودیویی و کارت صدای بی‌سیم جدید با فناوری حذف نویز هوشمند مبتنی بر هوش مصنوعی سخت‌افزاری.",
       "url": "https://www.instagram.com/p/C9ab12cdEFg/",
       "platform": "instagram",
       "embedUrl": "https://www.instagram.com/p/C9ab12cdEFg/embed",
-      "thumbnail": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"800\" height=\"450\" viewBox=\"0 0 800 450\"><rect width=\"800\" height=\"450\" fill=\"%230f172a\"/><circle cx=\"400\" cy=\"190\" r=\"110\" fill=\"%23833ab4\" fill-opacity=\"0.2\"/><text x=\"400\" y=\"310\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"22\" font-weight=\"bold\" fill=\"%23f8fafc\" text-anchor=\"middle\">آنباکس ابزار تولید محتوا</text></svg>",
+      "thumbnail": "https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_da3d8448.jpg",
       "author": {
         "name": "استودیو پادکس",
         "avatar": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" rx=\"50\" fill=\"%238b5cf6\"/><text x=\"50\" y=\"63\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"42\" font-weight=\"bold\" fill=\"%23ffffff\" text-anchor=\"middle\" dominant-baseline=\"middle\">ا</text></svg>",
@@ -402,7 +413,8 @@
       "commentsCount": 52,
       "userReaction": null,
       "sourceDomain": "instagram.com",
-      "mediaType": "image"
+      "mediaType": "image",
+      "seedStatus": "active"
     },
     {
       "id": "yt-3",
@@ -434,7 +446,8 @@
       "sourceDomain": "youtube.com",
       "isDeleted": true,
       "isArchived": true,
-      "deletedAt": "2026-10-25T05:35:38.139Z"
+      "deletedAt": "2026-10-25T05:35:38.139Z",
+      "seedStatus": "active"
     },
     {
       "id": "art-3",
@@ -466,13 +479,49 @@
       "sourceDomain": "techcrunch.ir",
       "articleContent": "بزرگ‌ترین اشتباه بنیان‌گذاران، غرق شدن در ساخت بی‌نقص محصول قبل از صحبت با مشتریان واقعی است.\n\nچرخه ساخت - سنجش - یادگیری (Build - Measure - Learn):\n۱. فرضیه‌های اصلی خود را مشخص کنید: مشتریان چه مشکلی دارند و آیا حاضرند برای حل آن پول پرداخت کنند؟\n۲. کمینه‌محصول‌پذیرفتنی (MVP) را در سریع‌ترین زمان ممکن به دست کاربر برسانید.\n۳. داده‌های رفتاری را با معیارهای عملیاتی بسنجید نه معیارهای کاذب.\n۴. در صورت لزوم چرخش استراتژیک (Pivot) انجام دهید یا با اطمینان مقیاس کار را افزایش دهید.",
       "isDeleted": false,
-      "isArchived": false
+      "isArchived": false,
+      "seedStatus": "active"
     }
   ],
   "comments": {},
-  "deletedIds": [],
+  "deletedIds": [
+    "ig-da7z2zvjklL",
+    "post-ig-da7z2zvjklL",
+    "content-ig-da7z2zvjklL",
+    "content-1792527808872",
+    "1792527808872",
+    "post-1792527808872",
+    "yt-pending-1",
+    "post-yt-pending-1",
+    "content-yt-pending-1",
+    "yt-1",
+    "post-yt-1",
+    "content-yt-1",
+    "art-1",
+    "post-art-1",
+    "content-art-1",
+    "ig-new-dzf",
+    "post-ig-new-dzf",
+    "content-ig-new-dzf",
+    "aparat-1",
+    "post-aparat-1",
+    "content-aparat-1",
+    "yt-3",
+    "post-yt-3",
+    "content-yt-3",
+    "custom-1792907218925",
+    "post-custom-1792907218925",
+    "content-custom-1792907218925"
+  ],
   "profiles": {},
   "settings": {
+    "composioApiKey": "ck_o6j3ZmMqGcodzVON_NYQ",
+    "composioInstagramUsername": "esmaeelgray",
+    "composioBotAccount": "geekclub.ir__",
+    "composioSenderAccount": "esmaeelgray",
+    "enableComposioAutoSync": true,
+    "composioWebhookRegistered": true,
+    "composioWebhookUrl": "https://geekclub.ir/api/composio/webhook",
     "diag_test_1792703494610": "2026-10-22T21:11:34.610Z",
     "diag_test_1792709437127": "2026-10-22T22:50:37.127Z"
   },
