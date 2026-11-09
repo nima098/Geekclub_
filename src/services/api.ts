@@ -804,6 +804,23 @@ export const api = {
     } catch (err: any) {
       return { success: false, message: err.message || 'خطا در همگام‌سازی پیام‌های دایرکت Composio' };
     }
+  },
+
+  // 34. Register Composio Webhook programmatically
+  async registerComposioWebhook(apiKey?: string, callbackUrl?: string): Promise<{ success: boolean; message?: string; data?: any }> {
+    try {
+      const res = await fetch('/api/composio/register-webhook', {
+        method: 'POST',
+        headers: await getAdminHeaders(),
+        body: JSON.stringify({
+          apiKey,
+          callbackUrl: callbackUrl || 'https://geekclub.ir/api/composio/webhook'
+        })
+      });
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, message: err.message || 'خطا در ثبت برنامه وب‌هوک Composio' };
+    }
   }
 };
 

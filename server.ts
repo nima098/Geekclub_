@@ -3012,12 +3012,127 @@ app.post('/api/composio/sync', requireAdminAuth, async (req: Request, res: Respo
 });
 
 app.post('/api/composio/sync-dms', requireAdminAuth, async (req: Request, res: Response) => {
-  const { botAccount, senderAccount } = req.body || {};
+  const { botAccount, senderAccount, directUrl } = req.body || {};
   try {
+    if (directUrl && typeof directUrl === 'string' && directUrl.includes('instagram.com')) {
+      const extracted = await extractMetadataForUrl(directUrl);
+      if (extracted && extracted.success) {
+        const db = loadDatabase();
+        const shortcode = (directUrl.match(/\/(?:p|reel|reels)\/([a-zA-Z0-9_-]+)/i)?.[1]) || `dm_${Date.now()}`;
+        const itemId = `content-composio-dm-${shortcode}`;
+        const existingUrls = new Set((db.contents || []).map((c: any) => c.url || c.id));
+        const deletedSet = new Set(db.deletedIds || []);
+
+        if (!existingUrls.has(directUrl) && !existingUrls.has(itemId) && !deletedSet.has(itemId)) {
+          const newItem = {
+            id: itemId,
+            title: extracted.title || `محتوای ارسالی دایرکت از @${senderAccount || 'esmaeelgray'}`,
+            description: extracted.description || `این محتوا توسط @${senderAccount || 'esmaeelgray'} در دایرکت به @${botAccount || 'geekclub.ir__'} ارسال شده است.`,
+            url: directUrl,
+            platform: 'instagram',
+            embedUrl: extracted.embedUrl || `https://www.instagram.com/p/${shortcode}/embed`,
+            thumbnail: extracted.thumbnail || 'https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_da3d8448.jpg',
+            author: {
+              name: 'ادمین گیک کلاب',
+              avatar: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" rx="50" fill="%233b82f6"/><text x="50" y="63" font-family="Tahoma,sans-serif" font-size="42" font-weight="bold" fill="%23ffffff" text-anchor="middle" dominant-baseline="middle">گ</text></svg>',
+              handle: `@${senderAccount || 'esmaeelgray'}`,
+              isVerified: true
+            },
+            category: 'tech',
+            tags: ['دایرکت', 'Composio', senderAccount || 'esmaeelgray', botAccount || 'geekclub.ir__', 'ادمین'].filter(Boolean),
+            publishedAt: 'همین الان (از دایرکت اینستاگرام)',
+            readingOrWatchTime: 'ویدیو/پست دایرکت',
+            likesCount: 18,
+            dislikesCount: 0,
+            commentsCount: 4,
+            approvalStatus: 'approved',
+            seedStatus: 'active',
+            videoUrl: extracted.videoUrl || undefined,
+            mediaType: extracted.mediaType || 'image',
+            apifyFetched: true
+          };
+
+          db.contents.unshift(newItem);
+          saveDatabase(db);
+
+          return res.json({
+            success: true,
+            count: 1,
+            items: [newItem],
+            message: `محتوای ارسالی دایرکت با موفقیت استخراج و تحت پروفایل ادمین در سایت منتشر گردید.`
+          });
+        } else {
+          return res.json({
+            success: true,
+            count: 0,
+            message: `این محتوای ارسالی قبلاً در سایت منتشر شده است.`
+          });
+        }
+      }
+    }
+
     const result = await syncComposioDirectMessages(botAccount || 'geekclub.ir__', senderAccount || 'esmaeelgray');
     return res.json(result);
   } catch (err: any) {
     return res.status(500).json({ success: false, message: err.message || 'خطا در همگام‌سازی دایرکت اینستاگرام' });
+  }
+});
+
+app.post('/api/composio/register-webhook', requireAdminAuth, async (req: Request, res: Response) => {
+  const db = loadDatabase();
+  const apiKey = req.body?.apiKey || process.env.COMPOSIO_API_KEY || db.settings?.composioApiKey || '';
+  const callbackUrl = req.body?.callbackUrl || 'https://geekclub.ir/api/composio/webhook';
+
+  if (!apiKey) {
+    return res.status(400).json({
+      success: false,
+      message: 'کلید API کامپوزیو وارد نشده است. لطفاً ابتدا کلید API اختصاصی خود را در کادر مربوطه ثبت کنید.'
+    });
+  }
+
+  try {
+    const compRes = await axios.post(
+      'https://backend.composio.dev/v1/triggers/enable',
+      {
+        app: 'instagram',
+        triggerName: 'new_direct_message',
+        callbackUrl
+      },
+      {
+        headers: {
+          'x-api-key': apiKey,
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000
+      }
+    );
+
+    db.settings = {
+      ...(db.settings || {}),
+      composioWebhookRegistered: true,
+      composioWebhookUrl: callbackUrl
+    };
+    saveDatabase(db);
+
+    return res.json({
+      success: true,
+      message: `آدرس وب‌هوک (${callbackUrl}) با موفقیت در سرویس Composio ثبت و تریگر پیام دایرکت اینستاگرام فعال گردید.`,
+      data: compRes.data
+    });
+  } catch (err: any) {
+    console.warn('[Composio Webhook Registration Notice]:', err.message);
+    // Mark webhook url in settings regardless for display
+    db.settings = {
+      ...(db.settings || {}),
+      composioWebhookUrl: callbackUrl
+    };
+    saveDatabase(db);
+
+    return res.json({
+      success: true,
+      message: `آدرس وب‌هوک سرور شما (${callbackUrl}) ذخیره گردید. اگر ثبت خودکار API با خطای دسترسی روبه‌رو شد، می‌توانید آن را به صورت دستی در داشبورد Composio ست کنید.`,
+      errorNotice: err.message
+    });
   }
 });
 

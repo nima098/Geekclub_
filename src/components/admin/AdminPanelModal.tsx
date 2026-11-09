@@ -43,7 +43,8 @@ import {
   Cloud,
   CloudUpload,
   RefreshCw,
-  Zap
+  Zap,
+  Copy
 } from 'lucide-react';
 import { 
   signInWithGoogleDrive, 
@@ -210,6 +211,62 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       });
     } finally {
       setIsRunningDMSync(false);
+    }
+  };
+
+  const [composioDirectUrl, setComposioDirectUrl] = useState('');
+  const [isPublishingDirect, setIsPublishingDirect] = useState(false);
+
+  const handlePublishDirectUrl = async () => {
+    if (!composioDirectUrl.trim()) return;
+    setIsPublishingDirect(true);
+    setComposioSyncResult(null);
+    try {
+      const res = await fetch('/api/composio/sync-dms', {
+        method: 'POST',
+        headers: await getAdminHeaders(),
+        body: JSON.stringify({
+          botAccount: composioBotAccount || 'geekclub.ir__',
+          senderAccount: composioSenderAccount || 'esmaeelgray',
+          directUrl: composioDirectUrl.trim()
+        })
+      });
+      const data = await res.json();
+      setComposioSyncResult({
+        success: data.success,
+        message: data.message || (data.success ? 'محتوا با موفقیت در سایت منتشر شد.' : 'خطا در انتشار لینک'),
+        count: data.count
+      });
+      if (data.success) {
+        setComposioDirectUrl('');
+        fetchPanelContents();
+        fetchComposioStatus();
+      }
+    } catch (err: any) {
+      setComposioSyncResult({ success: false, message: err.message || 'خطا در ارتباط با سرور' });
+    } finally {
+      setIsPublishingDirect(false);
+    }
+  };
+
+  const [isRegisteringWebhook, setIsRegisteringWebhook] = useState(false);
+  const [webhookRegisterMsg, setWebhookRegisterMsg] = useState<{ success: boolean; text: string } | null>(null);
+  const [copiedWebhookUrl, setCopiedWebhookUrl] = useState(false);
+
+  const handleRegisterComposioWebhook = async () => {
+    setIsRegisteringWebhook(true);
+    setWebhookRegisterMsg(null);
+    try {
+      const res = await api.registerComposioWebhook(composioApiKey, 'https://geekclub.ir/api/composio/webhook');
+      setWebhookRegisterMsg({
+        success: res.success,
+        text: res.message || 'ثبت وب‌هوک با موفقیت انجام شد.'
+      });
+      fetchComposioStatus();
+    } catch (err: any) {
+      setWebhookRegisterMsg({ success: false, text: err.message || 'خطا در ثبت برنامه وب‌هوک Composio' });
+    } finally {
+      setIsRegisteringWebhook(false);
     }
   };
 
@@ -2056,16 +2113,30 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      id="composio-sync-now-btn"
-                      onClick={handleRunComposioSyncNow}
-                      disabled={isRunningComposioSync}
-                      className="composio-sync-now-btn px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 disabled:opacity-50 text-slate-950 font-black text-xs rounded-xl flex items-center gap-2 shadow-lg transition active:scale-95 cursor-pointer shrink-0"
-                    >
-                      <RefreshCw className={`w-4 h-4 text-slate-950 ${isRunningComposioSync ? 'animate-spin' : ''}`} />
-                      <span>{isRunningComposioSync ? 'در حال همگام‌سازی...' : 'همگام‌سازی و انتشار فوری'}</span>
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <a
+                        href="https://app.composio.dev/apps/instagram"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        id="composio-oauth-link-btn"
+                        className="composio-oauth-link-btn px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-lg transition active:scale-95 shrink-0"
+                        title="باز کردن صفحه اتصال اکانت اینستاگرام در پنل کاربری Composio"
+                      >
+                        <ExternalLink className="w-4 h-4 text-white" />
+                        <span>ورود به پنل Composio جهت اتصال حساب ←</span>
+                      </a>
+
+                      <button
+                        type="button"
+                        id="composio-sync-now-btn"
+                        onClick={handleRunComposioSyncNow}
+                        disabled={isRunningComposioSync}
+                        className="composio-sync-now-btn px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 disabled:opacity-50 text-slate-950 font-black text-xs rounded-xl flex items-center gap-2 shadow-lg transition active:scale-95 cursor-pointer shrink-0"
+                      >
+                        <RefreshCw className={`w-4 h-4 text-slate-950 ${isRunningComposioSync ? 'animate-spin' : ''}`} />
+                        <span>{isRunningComposioSync ? 'در حال همگام‌سازی...' : 'همگام‌سازی و انتشار فوری'}</span>
+                      </button>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
@@ -2190,6 +2261,33 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       </button>
                     </div>
 
+                    {/* Direct URL Input for instant DM link publishing */}
+                    <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-750 space-y-2">
+                      <label className="text-xs font-bold text-slate-200 block">
+                        ثبت و انتشار فوری لینک پست/ریلز ارسال‌شده در دایرکت:
+                      </label>
+                      <div className="flex flex-col sm:flex-row items-center gap-2">
+                        <input
+                          type="text"
+                          id="composio-direct-url-input"
+                          value={composioDirectUrl}
+                          onChange={(e) => setComposioDirectUrl(e.target.value)}
+                          placeholder="https://www.instagram.com/reel/... یا https://www.instagram.com/p/..."
+                          className="composio-direct-url-input flex-1 w-full bg-slate-950 border border-slate-700 text-amber-300 rounded-xl px-3.5 py-2 text-xs font-mono outline-none focus:ring-2 focus:ring-[#0077d9]"
+                        />
+                        <button
+                          type="button"
+                          id="composio-publish-direct-btn"
+                          onClick={handlePublishDirectUrl}
+                          disabled={isPublishingDirect || !composioDirectUrl.trim()}
+                          className="composio-publish-direct-btn px-4 py-2 bg-[#0077d9] hover:bg-[#0062b3] disabled:opacity-50 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition active:scale-95 cursor-pointer whitespace-nowrap"
+                        >
+                          <Send className="w-3.5 h-3.5 text-white" />
+                          <span>{isPublishingDirect ? 'در حال انتشار...' : 'انتشار مستقیم در سایت'}</span>
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-750 flex items-center justify-between gap-4">
                       <div>
                         <span className="text-xs font-bold text-slate-100 block">
@@ -2210,6 +2308,83 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       >
                         {composioAutoSync ? <ToggleRight className="w-9 h-9" /> : <ToggleLeft className="w-9 h-9" />}
                       </button>
+                    </div>
+
+                    {/* Webhook Configuration & Auto-Registration Card */}
+                    <div id="composio-webhook-card" className="composio-webhook-card p-5 rounded-xl bg-slate-950/90 border border-slate-750 space-y-3.5">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h6 className="text-xs font-bold text-slate-100 flex items-center gap-1.5">
+                              <Zap className="w-4 h-4 text-amber-400" />
+                              آدرس وب‌هوک اختصاصی دریافت پیام‌های دایرکت (Webhook Callback URL)
+                            </h6>
+                          </div>
+                          <p className="text-[11px] text-slate-300 mt-0.5">
+                            ارسال لحظه‌ای رویدادهای دایرکت از Composio به سرور سایت جهت انتشار فوری
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          id="composio-register-webhook-btn"
+                          onClick={handleRegisterComposioWebhook}
+                          disabled={isRegisteringWebhook}
+                          className="composio-register-webhook-btn px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow transition active:scale-95 cursor-pointer shrink-0"
+                          title="ثبت خودکار وب‌هوک در API پلتفرم Composio"
+                        >
+                          <Zap className={`w-3.5 h-3.5 text-white ${isRegisteringWebhook ? 'animate-bounce' : ''}`} />
+                          <span>{isRegisteringWebhook ? 'در حال ثبت در API...' : 'ثبت و فعال‌سازی خودکار وب‌هوک'}</span>
+                        </button>
+                      </div>
+
+                      <div id="composio-callback-url-box" className="composio-callback-url-box flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                        <code className="text-xs font-mono text-emerald-400 font-bold dir-ltr break-all px-2">
+                          https://geekclub.ir/api/composio/webhook
+                        </code>
+
+                        <button
+                          type="button"
+                          id="composio-copy-webhook-url-btn"
+                          onClick={() => {
+                            navigator.clipboard.writeText('https://geekclub.ir/api/composio/webhook');
+                            setCopiedWebhookUrl(true);
+                            setTimeout(() => setCopiedWebhookUrl(false), 2000);
+                          }}
+                          className="composio-copy-webhook-url-btn px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition active:scale-95 shrink-0"
+                        >
+                          {copiedWebhookUrl ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <span className="text-emerald-400">کپی شد</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5 text-slate-300" />
+                              <span>کپی آدرس وب‌هوک</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {webhookRegisterMsg && (
+                        <div className={`p-3 rounded-xl border text-xs font-bold ${
+                          webhookRegisterMsg.success
+                            ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                            : 'bg-rose-950/40 border-rose-500/40 text-rose-300'
+                        }`}>
+                          {webhookRegisterMsg.text}
+                        </div>
+                      )}
+
+                      <div className="text-[11px] text-slate-400 space-y-1 pt-1">
+                        <p>💡 <strong>راهنمای ثبت دستی در داشبورد Composio:</strong></p>
+                        <ol className="list-decimal list-inside space-y-0.5 text-slate-300 pr-1">
+                          <li>وارد داشبورد Composio شده و به بخش <strong>Triggers</strong> بروید.</li>
+                          <li>اپلیکیشن <strong>Instagram</strong> و اکانت متصل <strong className="text-amber-400 font-mono">@{composioBotAccount}</strong> را انتخاب کنید.</li>
+                          <li>تریگر <strong>New Direct Message</strong> را انتخاب کرده و آدرس <strong>Webhook URL</strong> فوق را جای‌گذاری کنید.</li>
+                        </ol>
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-between pt-2">
