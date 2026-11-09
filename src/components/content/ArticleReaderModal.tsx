@@ -53,23 +53,43 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
 
   if (!item) return null;
 
-  const getExternalSourceLabel = () => {
-    if (!item) return 'دیدن محتوا در وبسایت مبدا';
-    if (item.platform === 'youtube') return 'دیدن محتوا در یوتیوب';
-    if (item.platform === 'instagram') return 'دیدن محتوا در اینستاگرام';
-    if (item.platform === 'aparat') return 'دیدن محتوا در آپارات';
+  const getSourceButtonLabel = (): string => {
+    if (!item) return 'بازکردن در منبع خبر';
 
-    if (item.sourceDomain) {
-      const domain = item.sourceDomain.toLowerCase().replace(/^www\./, '');
-      if (domain.includes('virgool')) return 'دیدن محتوا در ویرگول';
-      if (domain.includes('zoomit')) return 'دیدن محتوا در زومیت';
-      if (domain.includes('digiato')) return 'دیدن محتوا در دیجیاتو';
-      if (domain.includes('medium')) return 'دیدن محتوا در مدیوم';
-      if (domain.includes('github')) return 'دیدن محتوا در گیت‌هاب';
-      return `دیدن محتوا در ${domain}`;
+    const urlLower = (item.url || '').toLowerCase();
+    const domainLower = (item.sourceDomain || '').toLowerCase().replace(/^www\./, '');
+
+    if (item.platform === 'instagram' || urlLower.includes('instagram.com') || domainLower.includes('instagram')) {
+      return 'بازکردن در اینستاگرام';
+    }
+    if (item.platform === 'youtube' || urlLower.includes('youtube.com') || urlLower.includes('youtu.be') || domainLower.includes('youtube')) {
+      return 'بازکردن در یوتیوب';
+    }
+    if (item.platform === 'aparat' || urlLower.includes('aparat.com') || domainLower.includes('aparat')) {
+      return 'بازکردن در آپارات';
+    }
+    if (urlLower.includes('t.me') || urlLower.includes('telegram.me') || urlLower.includes('telegram.org') || domainLower.includes('telegram')) {
+      return 'بازکردن در تلگرام';
     }
 
-    return 'دیدن محتوا در وبسایت مبدا';
+    if (domainLower) {
+      if (domainLower.includes('zoomit')) return 'بازکردن در زومیت';
+      if (domainLower.includes('digiato')) return 'بازکردن در دیجیاتو';
+      if (domainLower.includes('virgool')) return 'بازکردن در ویرگول';
+      if (domainLower.includes('zoomg')) return 'بازکردن در زومجی';
+      if (domainLower.includes('gadgetnews')) return 'بازکردن در گجت نیوز';
+      if (domainLower.includes('sarzamindownload')) return 'بازکردن در سرزمین دانلود';
+      if (domainLower.includes('medium')) return 'بازکردن در مدیوم';
+      if (domainLower.includes('github')) return 'بازکردن در گیت‌هاب';
+      if (domainLower.includes('dev.to')) return 'بازکردن در Dev.to';
+      if (domainLower.includes('p30download')) return 'بازکردن در پی‌سی دانلود';
+      
+      const siteName = domainLower.split('.')[0];
+      const formattedName = siteName ? siteName.charAt(0).toUpperCase() + siteName.slice(1) : domainLower;
+      return `بازکردن در ${formattedName}`;
+    }
+
+    return 'بازکردن در منبع خبر';
   };
 
   const handleShareClick = () => {
@@ -383,7 +403,19 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Open Source Link Button */}
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3.5 py-2 rounded-xl bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-[#0077d9]/20 transition cursor-pointer active:scale-95"
+              title={getSourceButtonLabel()}
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span>{getSourceButtonLabel()}</span>
+            </a>
+
             <button
               onClick={() => onToggleSave(item.id)}
               className={`p-2.5 rounded-xl border transition cursor-pointer ${
