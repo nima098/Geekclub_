@@ -66,7 +66,7 @@ export async function initPostgres(): Promise<boolean> {
           ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : undefined
         });
 
-    pool.on('error', (err) => {
+    pool.on('error', (err: Error) => {
       console.warn('[PostgreSQL Pool Warning] Unexpected error on idle client:', err.message);
     });
 
@@ -234,7 +234,7 @@ export async function loadDatabaseFromPostgres(): Promise<{
 
   try {
     const contentsRes = await pool.query('SELECT raw_data FROM geekclub_contents ORDER BY created_at DESC');
-    const contents = contentsRes.rows.map((r) => r.raw_data);
+    const contents = contentsRes.rows.map((r: any) => r.raw_data);
 
     const commentsRes = await pool.query('SELECT content_id, raw_data FROM geekclub_comments ORDER BY created_at ASC');
     const comments: Record<string, any[]> = {};
@@ -256,7 +256,7 @@ export async function loadDatabaseFromPostgres(): Promise<{
     }
 
     const deletedRes = await pool.query('SELECT id FROM geekclub_deleted_records');
-    const deletedIds = deletedRes.rows.map((r) => r.id);
+    const deletedIds = deletedRes.rows.map((r: any) => r.id);
     const deletedSet = new Set<string>();
     for (const dId of deletedIds) {
       if (!dId) continue;

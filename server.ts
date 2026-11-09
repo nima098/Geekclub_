@@ -12,6 +12,7 @@ let sharpModule: any = null;
 async function getSharp() {
   if (sharpModule !== null) return sharpModule;
   try {
+    // @ts-ignore
     const mod = await import('sharp');
     sharpModule = mod.default || mod;
     return sharpModule;
@@ -30,7 +31,6 @@ import {
   saveDatabaseToPostgres,
   recordPostgresBackup
 } from './src/db/postgres';
-
 const getDirname = (): string => {
   try {
     if (typeof import.meta !== 'undefined' && import.meta && import.meta.url) {

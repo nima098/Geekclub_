@@ -1660,32 +1660,6 @@ export default function App() {
               انتقادات و پیشنهادات
             </button>
 
-            {isAdmin && (
-              <button
-                onClick={() => setIsRSSModalOpen(true)}
-                className="flex items-center gap-1.5 text-slate-400 hover:text-amber-300 transition cursor-pointer"
-                title="مشاهده و دریافت آدرس فید خبرخوان RSS"
-              >
-                <Rss className="w-3.5 h-3.5 text-amber-400" />
-                فید RSS (خبرخوان)
-              </button>
-            )}
-
-            <button
-              onClick={() => {
-                if (isAdmin) {
-                  setIsAdminModalOpen(true);
-                } else {
-                  setIsAdminPortalModalOpen(true);
-                }
-              }}
-              className="flex items-center gap-1.5 text-[#0077d9] hover:text-[#0066bd] font-bold transition cursor-pointer bg-[#0077d9]/10 hover:bg-[#0077d9]/20 px-2.5 py-1 rounded-lg border border-[#0077d9]/30"
-              style={{ color: '#0077d9' }}
-              title="ورود به پنل مدیریت سایت و سطل زباله"
-            >
-              <Crown className="w-3.5 h-3.5 text-[#0077d9]" style={{ color: '#0077d9' }} />
-              <span style={{ color: '#0077d9' }}>پنل مدیریت سایت</span>
-            </button>
 
             <button
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}

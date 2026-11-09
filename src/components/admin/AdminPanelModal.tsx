@@ -42,7 +42,8 @@ import {
   HardDrive,
   Cloud,
   CloudUpload,
-  RefreshCw
+  RefreshCw,
+  Zap
 } from 'lucide-react';
 import { 
   signInWithGoogleDrive, 
@@ -310,8 +311,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     }
   }, [isOpen, activeTab, logFilterLevel]);
 
-
-
   // PostgreSQL Migration State
   const [isMigratingPostgres, setIsMigratingPostgres] = useState(false);
   const [postgresMigrationMessage, setPostgresMigrationMessage] = useState<{ success: boolean; text: string } | null>(null);
@@ -396,7 +395,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           text: `پشتیبان دیتابیس با موفقیت به گوگل درایو متصل شده ارسال شد (${res.fileName})`,
           link: res.webViewLink
         });
-        // Record backup in server and postgres backup history
         try {
           const adminHeaders = await getAdminHeaders();
           await fetch('/api/database/backup-drive', {
@@ -695,7 +693,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     }
   };
 
-  // Fullscreen state & effect (MUST BE DECLARED BEFORE ANY RETURN STATEMENT)
+  // Fullscreen state & effect
   const [isBrowserFullscreen, setIsBrowserFullscreen] = useState(
     typeof document !== 'undefined' ? Boolean(document.fullscreenElement) : false
   );
@@ -726,7 +724,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Current authoritative contents for the admin panel (panelContents prioritized)
+  // Current authoritative contents for the admin panel
   const currentContents = panelContents.length > 0 ? panelContents : contents;
 
   // Counts
@@ -805,7 +803,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
   return (
     <div 
-      className="admin-theme fixed inset-0 z-50 w-screen h-screen bg-slate-950 flex flex-col overflow-hidden animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 w-screen h-screen bg-slate-950 flex flex-col overflow-hidden animate-in fade-in duration-200"
       dir="rtl"
       onClick={onClose}
     >
@@ -832,7 +830,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   3dsaz1990@gmail.com
                 </span>
               </div>
-              <p className="text-xs text-slate-300 hidden sm:block">
+              <p className="text-xs text-slate-300 hidden sm:block mt-0.5">
                 مدیریت انتشار، نظارت بر پست‌های معلق، سطوح دسترسی کاربران، تنظیمات و سطل بازیافت
               </p>
             </div>
@@ -880,1524 +878,190 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               onClick={() => setActiveTab('dashboard')}
               className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
                 activeTab === 'dashboard'
-                ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
-                : 'border-transparent text-slate-300 hover:text-white'
-            }`}
-          >
-            <LayoutDashboard className="w-4 h-4 text-white" />
-            داشبورد و وضعیت
-          </button>
+                  ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
+                  : 'border-transparent text-slate-300 hover:text-white'
+              }`}
+            >
+              <LayoutDashboard className="w-4 h-4 text-white" />
+              داشبورد و وضعیت
+            </button>
 
-          <button
-            onClick={() => setActiveTab('contents')}
-            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
-              activeTab === 'contents'
-                ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
-                : 'border-transparent text-slate-300 hover:text-white'
-            }`}
-          >
-            <Layers className="w-4 h-4 text-white" />
-            مدیریت محتوا
-            {pendingCount > 0 && (
-              <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px] animate-pulse">
-                {pendingCount} در انتظار تایید
-              </span>
-            )}
-            {trashCount > 0 && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-600 text-white font-bold">
-                {trashCount} سطل
-              </span>
-            )}
-          </button>
-
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
-              activeTab === 'users'
-                ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
-                : 'border-transparent text-slate-300 hover:text-white'
-            }`}
-          >
-            <Users className="w-4 h-4 text-white" />
-            مدیریت کاربران و انتشار مستقیم
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-mono font-bold">
-              {usersList.length}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('database')}
-            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
-              activeTab === 'database'
-                ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
-                : 'border-transparent text-slate-300 hover:text-white'
-            }`}
-          >
-            <Database className="w-4 h-4 text-white" />
-            پایداری داده‌ها و پشتیبان‌گیری
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-600 text-white font-mono font-bold">
-              JSON + Firestore
-            </span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('diagnostic')}
-            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
-              activeTab === 'diagnostic'
-                ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
-                : 'border-transparent text-slate-300 hover:text-white'
-            }`}
-          >
-            <ShieldAlert className="w-4 h-4 text-white animate-pulse" />
-            تست جامع دیتابیس و همگام‌سازی
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-mono font-bold">
-              Live Ping
-            </span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
-              activeTab === 'settings'
-                ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
-                : 'border-transparent text-slate-300 hover:text-white'
-            }`}
-          >
-            <Settings className="w-4 h-4 text-white" />
-            تنظیمات تایید محتوا
-            <span className={`w-2.5 h-2.5 rounded-full ${siteSettings.requireContentApproval ? 'bg-amber-500' : 'bg-slate-500'}`} />
-          </button>
-
-          <button
-            onClick={() => setActiveTab('feedback')}
-            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
-              activeTab === 'feedback'
-                ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
-                : 'border-transparent text-slate-300 hover:text-white'
-            }`}
-          >
-            <MessageSquarePlus className="w-4 h-4 text-white" />
-            انتقادات و پیشنهادات
-            {pendingFeedbackCount > 0 && (
-              <span className="w-4 h-4 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px] flex items-center justify-center">
-                {pendingFeedbackCount}
-              </span>
-            )}
-          </button>
-
-          <button
-            onClick={() => setActiveTab('broadcast')}
-            className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
-              activeTab === 'broadcast'
-                ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
-                : 'border-transparent text-slate-300 hover:text-white'
-            }`}
-          >
-            <Send className="w-4 h-4 text-white" />
-            پیام همگانی
-          </button>
-        </div>
-      </div>
-
-      {/* Tab Body */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-950/40">
-        <div className="max-w-7xl mx-auto w-full">
-          {/* 1. Dashboard Tab */}
-          {activeTab === 'dashboard' && (
-            <div className="space-y-6">
-              {/* Metric Cards Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-2">
-                  <span className="text-xs px-2.5 py-1 rounded-lg bg-[#0077d9] text-white font-bold inline-block">محتواهای فعال و منتشرشده</span>
-                  <div className="text-2xl sm:text-3xl font-black text-white">{activeCount}</div>
-                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-600 text-white font-bold inline-block">نمایش عمومی در سایت</span>
-                </div>
-
-                <div 
-                  onClick={() => {
-                    setActiveTab('contents');
-                    setContentFilter('pending');
-                  }}
-                  className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-2 cursor-pointer hover:bg-slate-750 transition"
-                >
-                  <span className="text-xs px-2.5 py-1 rounded-lg bg-amber-600 text-slate-950 font-bold inline-block">در انتظار تایید ادمین</span>
-                  <div className="text-2xl sm:text-3xl font-black text-white">{pendingCount}</div>
-                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500 text-slate-950 font-bold inline-block">بررسی و تایید انتشار ←</span>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-2">
-                  <span className="text-xs px-2.5 py-1 rounded-lg bg-rose-600 text-white font-bold inline-block">سطل بازیافت (حذف نرم)</span>
-                  <div className="text-2xl sm:text-3xl font-black text-white">{trashCount}</div>
-                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-rose-600 text-white font-bold inline-block">قابل بازگردانی مجدد</span>
-                </div>
-
-                <div 
-                  onClick={() => setActiveTab('users')}
-                  className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-2 cursor-pointer hover:bg-slate-750 transition"
-                >
-                  <span className="text-xs px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-bold inline-block">کاربران ثبت‌نام شده</span>
-                  <div className="text-2xl sm:text-3xl font-black text-white">{usersList.length}</div>
-                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-600 text-white font-bold inline-block">
-                    {autoApprovedUsersCount} کاربر با انتشار مستقیم
-                  </span>
-                </div>
-              </div>
-
-              {/* Main Quick Toggle: Content Approval Mode */}
-              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <ShieldAlert className="w-5 h-5 text-white" />
-                    <h4 className="text-sm font-bold text-slate-100">
-                      وضعیت تأیید محتوا قبل از انتشار در سایت
-                    </h4>
-                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                      siteSettings.requireContentApproval 
-                        ? 'bg-amber-500 text-slate-950'
-                        : 'bg-emerald-600 text-white'
-                    }`}>
-                      {siteSettings.requireContentApproval ? 'تایید دستی فعال است' : 'انتشار مستقیم و آزاد'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-300 leading-relaxed max-w-2xl">
-                    {siteSettings.requireContentApproval
-                      ? 'محتوای ارسالی توسط اعضای عادی سایت نیازمند بررسی و تأیید در پنل مدیریت است، به جز کاربرانی که در تب «مدیریت کاربران» دسترسی انتشار مستقیم دارند.'
-                      : 'تمامی محتواهای ثبت‌شده توسط تمام کاربران بلافاصله و بدون وقفه در سایت منتشر می‌شوند.'}
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => onUpdateSiteSettings({
-                    ...siteSettings,
-                    requireContentApproval: !siteSettings.requireContentApproval
-                  })}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition active:scale-95 cursor-pointer shrink-0 ${
-                    siteSettings.requireContentApproval
-                      ? 'bg-amber-500 text-slate-950 hover:bg-amber-400 shadow-md'
-                      : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
-                  }`}
-                >
-                  {siteSettings.requireContentApproval ? (
-                    <>
-                      <ToggleRight className="w-5 h-5 text-slate-950" />
-                      تایید محتوا: فعال
-                    </>
-                  ) : (
-                    <>
-                      <ToggleLeft className="w-5 h-5 text-slate-300" />
-                      تایید محتوا: غیرفعال
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Quick Actions & Guidelines */}
-              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-3">
-                <h4 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-white" />
-                  راهنمای مدیریت دسترسی‌ها و محتوا
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-300 leading-relaxed">
-                  <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-750 space-y-1">
-                    <span className="bg-amber-500 text-slate-950 px-2 py-0.5 rounded-md font-bold text-xs inline-block mb-1">⚡ کاربران با انتشار مستقیم</span>
-                    <p className="text-slate-200">شما می‌توانید در تب <strong className="text-white">«مدیریت کاربران»</strong>، به نویسندگان معتمد، تیم تحریریه یا کاربران ویژه، دسترسی <span className="bg-emerald-600 text-white px-1.5 py-0.2 rounded font-bold text-[10px]">انتشار مستقیم بدون تایید</span> اعطا کنید تا حتی در زمان فعال بودن تایید محتوا، پست‌هایشان فوراً پخش شود.</p>
-                  </div>
-                  <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-750 space-y-1">
-                    <span className="bg-emerald-600 text-white px-2 py-0.5 rounded-md font-bold text-xs inline-block mb-1">♻️ سطل بازیافت محتوا</span>
-                    <p className="text-slate-200">هر محتوایی که توسط مدیر یا منتشرکننده حذف شود، در حافظه سیستم باقی می‌ماند و در تب <strong className="text-white">«مدیریت محتوا»</strong> قابل بازیابی است.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 2. Contents & Moderation Tab */}
-          {activeTab === 'contents' && (
-            <div className="space-y-4">
-              {/* Filter controls */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700/80 shadow-md">
-                <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto">
-                  <button
-                    onClick={() => setContentFilter('all')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
-                      contentFilter === 'all'
-                        ? 'bg-[#0077d9] text-white shadow-sm font-bold'
-                        : 'bg-slate-800 text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    همه ({currentContents.length})
-                  </button>
-                  <button
-                    onClick={() => setContentFilter('active')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
-                      contentFilter === 'active'
-                        ? 'bg-emerald-600 text-white shadow-sm font-bold'
-                        : 'bg-slate-800 text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    فعال‌ها ({activeCount})
-                  </button>
-                  <button
-                    onClick={() => setContentFilter('pending')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                      contentFilter === 'pending'
-                        ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
-                        : 'bg-slate-800 text-slate-200 hover:text-white'
-                    }`}
-                  >
-                    <Clock className="w-3.5 h-3.5 text-white" />
-                    در انتظار تایید ({pendingCount})
-                  </button>
-                  <button
-                    onClick={() => setContentFilter('trash')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
-                      contentFilter === 'trash'
-                        ? 'bg-rose-600 text-white shadow-sm font-bold'
-                        : 'bg-slate-800 text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    سطل بازیافت ({trashCount})
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={fetchPanelContents}
-                    disabled={isRefreshingContents}
-                    className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white transition cursor-pointer shrink-0"
-                    title="تازه‌سازی فوری لیست محتواها و سطل زباله از سرور"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingContents ? 'animate-spin text-white' : 'text-white'}`} />
-                  </button>
-                </div>
-
-                <div className="relative w-full sm:w-64">
-                  <Search className="w-3.5 h-3.5 absolute right-3 top-3 text-slate-400" />
-                  <input
-                    type="text"
-                    id="contentSearchInput"
-                    name="contentSearch"
-                    value={contentSearch}
-                    onChange={(e) => setContentSearch(e.target.value)}
-                    placeholder="جستجو در عنوان یا نویسنده..."
-                    className="w-full pr-8 pl-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-
-              {/* Trash Quick Restore Banner */}
-              {contentFilter === 'trash' && trashCount > 0 && (
-                <div className="p-3.5 rounded-2xl bg-slate-900 border border-rose-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-md">
-                  <div className="flex items-center gap-2.5 text-white">
-                    <Trash2 className="w-4 h-4 text-white shrink-0" />
-                    <span>تعداد <strong className="text-white font-mono bg-rose-600 px-2 py-0.5 rounded">{trashCount}</strong> محتوا در سطل بازیافت قرار دارد.</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      panelContents.forEach((c) => {
-                        if (c.isDeleted || c.isArchived) {
-                          onToggleSoftDelete(c.id, false);
-                        }
-                      });
-                      setPanelContents((prev) =>
-                        prev.map((c) => ({ ...c, isDeleted: false, isArchived: false, deletedAt: undefined }))
-                      );
-                    }}
-                    className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-sm active:scale-95 shrink-0"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5 text-white" />
-                    بازگردانی تمامی محتواها به فید
-                  </button>
-                </div>
-              )}
-
-              {/* Contents Table / List */}
-              <div className="space-y-3">
-                {filteredContents.length === 0 ? (
-                  <div className="text-center py-12 text-slate-300 bg-slate-800/80 rounded-2xl border border-slate-700/80 shadow-md text-xs font-medium">
-                    {contentFilter === 'trash' ? 'سطل بازیافت خالی است (هیچ محتوای حذف‌شده‌ای یافت نشد).' : 'محتوایی در این بخش یافت نشد.'}
-                  </div>
-                ) : (
-                  filteredContents.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`p-4 rounded-2xl border shadow-md transition flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
-                        item.approvalStatus === 'pending'
-                          ? 'bg-slate-900 border-amber-500/80 ring-1 ring-amber-500/50'
-                          : (item.isDeleted || item.isArchived)
-                          ? 'bg-slate-900 border-rose-800/80 opacity-90'
-                          : 'bg-slate-800/80 border-slate-700/80'
-                      }`}
-                    >
-                      <div className="flex items-start sm:items-center gap-3">
-                        <img
-                          src={resolveCoverImageUrl(item.thumbnail)}
-                          alt={item.title}
-                          className="w-16 h-16 rounded-xl object-cover shrink-0 ring-1 ring-slate-700"
-                          onError={(e) => handleImageError(e, getPlatformFallbackImage(item.platform), item.platform, item.id)}
-                        />
-                        <div className="space-y-1.5">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs sm:text-sm font-bold text-slate-100 line-clamp-1 max-w-sm sm:max-w-md">
-                              {item.title}
-                            </span>
-                            {item.approvalStatus === 'pending' && (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 flex items-center gap-1">
-                                <Clock className="w-3 h-3 text-slate-950" />
-                                نیازمند بررسی و تأیید مدیر
-                              </span>
-                            )}
-                            {(item.isDeleted || item.isArchived) && (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-600 text-white">
-                                در سطل بازیافت
-                              </span>
-                            )}
-                            {!(item.isDeleted || item.isArchived) && item.approvalStatus !== 'pending' && (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-600 text-white">
-                                فعال در فید
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="flex items-center gap-3 text-[11px] text-slate-300 flex-wrap">
-                            <span>منتشرکننده: <strong className="text-white">{item.author.name}</strong></span>
-                            <span>پلتفرم: <strong className="text-white">{item.platform}</strong></span>
-                            <span>دسته‌بندی: <strong className="bg-[#0077d9] text-white px-1.5 py-0.2 rounded">{item.category}</strong></span>
-                            <span>{item.publishedAt}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Action buttons */}
-                      <div className="flex items-center gap-2 mr-auto md:mr-0 shrink-0 w-full sm:w-auto justify-end">
-                        {/* If item is in Pending Moderation */}
-                        {item.approvalStatus === 'pending' && (
-                          <>
-                            <button
-                              onClick={() => onApproveContent(item.id)}
-                              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-sm cursor-pointer"
-                              title="تأیید و انتشار عمومی در سایت"
-                            >
-                              <Check className="w-4 h-4 text-white" />
-                              تأیید و انتشار
-                            </button>
-                            <button
-                              onClick={() => onRejectContent(item.id)}
-                              className="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
-                              title="عدم تأیید محتوا"
-                            >
-                              <X className="w-4 h-4 text-white" />
-                              رد محتوا
-                            </button>
-                          </>
-                        )}
-
-                        {/* If item is in Trash */}
-                        {(item.isDeleted || item.isArchived) && (
-                          <>
-                            <button
-                              onClick={() => handleRestoreItem(item.id)}
-                              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer active:scale-95"
-                              title="بازگردانی به فید عمومی سایت"
-                            >
-                              <RotateCcw className="w-3.5 h-3.5 text-white" />
-                              بازگردانی به فید
-                            </button>
-                            <button
-                              onClick={() => handlePermDeleteItem(item.id)}
-                              className="p-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white transition cursor-pointer active:scale-95"
-                              title="حذف کامل از دیتابیس"
-                            >
-                              <Trash2 className="w-4 h-4 text-white" />
-                            </button>
-                          </>
-                        )}
-
-                        {/* Normal Active Content */}
-                        {!(item.isDeleted || item.isArchived) && item.approvalStatus !== 'pending' && (
-                          <button
-                            onClick={() => onToggleSoftDelete(item.id, true)}
-                            className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
-                            title="پنهان‌سازی از فید و انتقال به سطل بازیافت"
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-white" />
-                            انتقال به سطل بازیافت
-                          </button>
-                        )}
-
-                        {/* External link preview */}
-                        <a
-                          href={item.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition"
-                          title="مشاهده لینک اصلی"
-                        >
-                          <ExternalLink className="w-4 h-4 text-white" />
-                        </a>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* 3. User Management & Direct Publishing Tab */}
-          {activeTab === 'users' && (
-            <div className="space-y-5">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700/80 shadow-md">
-                <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto">
-                  <button
-                    onClick={() => setUserFilter('all')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
-                      userFilter === 'all'
-                        ? 'bg-[#0077d9] text-white shadow-sm font-bold'
-                        : 'bg-slate-800 text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    همه کاربران ({usersList.length})
-                  </button>
-                  <button
-                    onClick={() => setUserFilter('auto_approved')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                      userFilter === 'auto_approved'
-                        ? 'bg-emerald-600 text-white shadow-sm font-bold'
-                        : 'bg-slate-800 text-slate-200 hover:text-white'
-                    }`}
-                  >
-                    <UserCheck className="w-3.5 h-3.5 text-white" />
-                    انتشار مستقیم ({autoApprovedUsersCount})
-                  </button>
-                  <button
-                    onClick={() => setUserFilter('need_approval')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
-                      userFilter === 'need_approval'
-                        ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
-                        : 'bg-slate-800 text-slate-200 hover:text-white'
-                    }`}
-                  >
-                    نیازمند تایید ({needApprovalUsersCount})
-                  </button>
-                  <button
-                    onClick={() => setUserFilter('admins')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
-                      userFilter === 'admins'
-                        ? 'bg-amber-600 text-slate-950 font-bold shadow-sm'
-                        : 'bg-slate-800 text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    مدیران سیستم ({usersList.filter((u) => u.isAdmin).length})
-                  </button>
-                </div>
-
-                <div className="relative w-full sm:w-64">
-                  <Search className="w-3.5 h-3.5 absolute right-3 top-3 text-slate-400" />
-                  <input
-                    type="text"
-                    id="userSearchInput"
-                    name="userSearch"
-                    value={userSearch}
-                    onChange={(e) => setUserSearch(e.target.value)}
-                    placeholder="جستجو بر اساس نام، نام کاربری یا ایمیل..."
-                    className="w-full pr-8 pl-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-
-              {/* Informative banner about direct publishing permission */}
-              <div className="p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md flex items-center gap-3 text-xs text-slate-200">
-                <Sparkles className="w-4 h-4 text-white shrink-0" />
-                <span>
-                  <strong>نکته مهم:</strong> کاربرانی که سوییچ <em>«انتشار مستقیم (بدون تایید)»</em> برای آن‌ها فعال باشد، محتوای اشتراک‌گذاری‌شده‌شان بلافاصله و بدون نیاز به تایید ادمین روی سایت قرار می‌گیرد.
+            <button
+              onClick={() => setActiveTab('contents')}
+              className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'contents'
+                  ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
+                  : 'border-transparent text-slate-300 hover:text-white'
+              }`}
+            >
+              <Layers className="w-4 h-4 text-white" />
+              مدیریت محتوا
+              {pendingCount > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px] animate-pulse">
+                  {pendingCount} در انتظار تایید
                 </span>
-              </div>
+              )}
+              {trashCount > 0 && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-600 text-white font-bold">
+                  {trashCount} سطل
+                </span>
+              )}
+            </button>
 
-              {/* Users Cards Grid */}
-              <div className="space-y-3">
-                {filteredUsers.length === 0 ? (
-                  <div className="text-center py-12 text-slate-300 bg-slate-800/80 rounded-2xl border border-slate-700/80 shadow-md text-xs font-medium">
-                    هیچ کاربری با این مشخصات یافت نشد.
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'users'
+                  ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
+                  : 'border-transparent text-slate-300 hover:text-white'
+              }`}
+            >
+              <Users className="w-4 h-4 text-white" />
+              مدیریت کاربران و انتشار مستقیم
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-mono font-bold">
+                {usersList.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('database')}
+              className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'database'
+                  ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
+                  : 'border-transparent text-slate-300 hover:text-white'
+              }`}
+            >
+              <Database className="w-4 h-4 text-white" />
+              پایداری داده‌ها و پشتیبان‌گیری
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-600 text-white font-mono font-bold">
+                JSON + Firestore
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('diagnostic')}
+              className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'diagnostic'
+                  ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
+                  : 'border-transparent text-slate-300 hover:text-white'
+              }`}
+            >
+              <ShieldAlert className="w-4 h-4 text-white animate-pulse" />
+              تست جامع دیتابیس و همگام‌سازی
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-mono font-bold">
+                Live Ping
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'settings'
+                  ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
+                  : 'border-transparent text-slate-300 hover:text-white'
+              }`}
+            >
+              <Settings className="w-4 h-4 text-white" />
+              تنظیمات تایید محتوا
+              <span className={`w-2.5 h-2.5 rounded-full ${siteSettings.requireContentApproval ? 'bg-amber-500' : 'bg-slate-500'}`} />
+            </button>
+
+            <button
+              onClick={() => setActiveTab('feedback')}
+              className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'feedback'
+                  ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
+                  : 'border-transparent text-slate-300 hover:text-white'
+              }`}
+            >
+              <MessageSquarePlus className="w-4 h-4 text-white" />
+              انتقادات و پیشنهادات
+              {pendingFeedbackCount > 0 && (
+                <span className="w-4 h-4 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px] flex items-center justify-center">
+                  {pendingFeedbackCount}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('broadcast')}
+              className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'broadcast'
+                  ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
+                  : 'border-transparent text-slate-300 hover:text-white'
+              }`}
+            >
+              <Send className="w-4 h-4 text-white" />
+              پیام همگانی
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Body */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-950/40">
+          <div className="max-w-7xl mx-auto w-full">
+
+            {/* 1. Dashboard Tab */}
+            {activeTab === 'dashboard' && (
+              <div className="space-y-6">
+                {/* Metric Cards Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                  <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-2">
+                    <span className="text-xs px-2.5 py-1 rounded-lg bg-[#0077d9] text-white font-bold inline-block">محتواهای فعال و منتشرشده</span>
+                    <div className="text-2xl sm:text-3xl font-black text-white">{activeCount}</div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-600 text-white font-bold inline-block">نمایش عمومی در سایت</span>
                   </div>
-                ) : (
-                  filteredUsers.map((u) => {
-                    const isDirectPublishing = Boolean(u.autoApproveContent || u.isAdmin);
-                    return (
-                      <div
-                        key={u.uid}
-                        className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md hover:border-slate-600 transition flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-                      >
-                        <div className="flex items-center gap-3.5">
-                          <img
-                            src={u.photoURL}
-                            alt={u.displayName}
-                            className="w-12 h-12 rounded-2xl object-cover ring-2 ring-slate-700 shadow-md"
-                          />
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h5 className="text-sm font-bold text-slate-100">
-                                {u.displayName}
-                              </h5>
-                              <span className="text-[11px] font-mono text-white bg-[#0077d9] px-2 py-0.5 rounded-md dir-ltr font-bold">
-                                @{u.username}
-                              </span>
-                              {u.isAdmin && (
-                                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500 text-slate-950 flex items-center gap-1">
-                                  <Crown className="w-3 h-3 text-slate-950" />
-                                  مدیر ارشد
-                                </span>
-                              )}
-                            </div>
 
-                            <div className="flex items-center gap-3 text-xs text-slate-300 flex-wrap">
-                              <span className="font-mono dir-ltr">{u.email}</span>
-                              <span>• عضویت: {u.joinedAt || 'عضو جدید'}</span>
-                              {u.role && <span className="text-white">({u.role})</span>}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Auto-Approval Toggle Control */}
-                        <div className="flex items-center gap-3 mr-auto sm:mr-0 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-800">
-                          <div className="text-right">
-                            <span className="text-[11px] block font-bold text-slate-200">
-                              وضعیت تایید محتوا:
-                            </span>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md inline-block ${
-                              isDirectPublishing ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-slate-950'
-                            }`}>
-                              {isDirectPublishing ? '✓ انتشار مستقیم و آزاد' : '⏳ نیازمند بررسی ادمین'}
-                            </span>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onUpdateUserPermissions(u.uid, {
-                                autoApproveContent: !u.autoApproveContent
-                              });
-                            }}
-                            className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-sm ${
-                              u.autoApproveContent
-                                ? 'bg-emerald-600 text-white hover:bg-emerald-500'
-                                : 'bg-slate-700 hover:bg-slate-600 text-white border border-slate-600'
-                            }`}
-                            title={
-                              u.autoApproveContent
-                                ? 'کلیک کنید تا تایید محتوا برای این کاربر الزامی شود'
-                                : 'کلیک کنید تا این کاربر بدون تایید محتوا را منتشر کند'
-                            }
-                          >
-                            {u.autoApproveContent ? (
-                              <>
-                                <CheckCircle2 className="w-4 h-4 text-white" />
-                                <span>بدون نیاز به تایید</span>
-                              </>
-                            ) : (
-                              <>
-                                <Clock className="w-4 h-4 text-white" />
-                                <span>نیاز به تایید</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* 3.1. Database & Backup Tab */}
-          {activeTab === 'database' && (
-            <div className="space-y-6 max-w-4xl mx-auto">
-              {/* Storage Health Overview */}
-              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-700 pb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-[#0077d9] text-white">
-                      <Database className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
-                        وضعیت پایداری دیتابیس و همگام‌سازی دوگانه
-                        <span className="text-[10px] bg-emerald-600 text-white px-2.5 py-0.5 rounded-full font-bold">
-                          Firestore + Disk JSON
-                        </span>
-                      </h4>
-                      <p className="text-xs text-slate-300">
-                        اطلاعات محتواها، پروفایل کاربران و تنظیمات پنل در دو لایه حافظه ابری و دیسک محلی ذخیره می‌شوند
-                      </p>
-                    </div>
+                  <div 
+                    onClick={() => {
+                      setActiveTab('contents');
+                      setContentFilter('pending');
+                    }}
+                    className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-2 cursor-pointer hover:bg-slate-750 transition"
+                  >
+                    <span className="text-xs px-2.5 py-1 rounded-lg bg-amber-600 text-slate-950 font-bold inline-block">در انتظار تایید ادمین</span>
+                    <div className="text-2xl sm:text-3xl font-black text-white">{pendingCount}</div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500 text-slate-950 font-bold inline-block">بررسی و تایید انتشار ←</span>
                   </div>
-                </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-                  <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
-                    <span className="text-[11px] text-slate-400 block mb-1">حجم فایل دیتابیس</span>
-                    <span className="text-lg font-mono font-bold text-white">
-                      {dbStats?.fileSizeFormatted || 'محاسبه...'}
-                    </span>
-                    <span className="text-[10px] text-slate-400 block mt-0.5">data/database.json</span>
+                  <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-2">
+                    <span className="text-xs px-2.5 py-1 rounded-lg bg-rose-600 text-white font-bold inline-block">سطل بازیافت (حذف نرم)</span>
+                    <div className="text-2xl sm:text-3xl font-black text-white">{trashCount}</div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-rose-600 text-white font-bold inline-block">قابل بازگردانی مجدد</span>
                   </div>
-                  <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
-                    <span className="text-[11px] text-slate-400 block mb-1">کل پست‌های ثبت‌شده</span>
-                    <span className="text-xl font-mono font-bold text-slate-100">{dbStats?.contentsCount ?? contents.length}</span>
-                    <span className="text-[10px] text-slate-400 block mt-0.5">{dbStats?.profilesCount ?? usersList.length} پروفایل کاربر</span>
-                  </div>
-                  <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
-                    <span className="text-[11px] text-slate-400 block mb-1">فایل‌های پشتیبان محلی</span>
-                    <span className="text-xl font-mono font-bold text-white">
-                      {dbStats?.backupFilesCount ?? 0} نسخه
-                    </span>
-                    <span className="text-[10px] bg-emerald-600 text-white px-1.5 py-0.2 rounded font-bold block mt-0.5">پشتیبان‌گیری ۱۲ ساعته</span>
-                  </div>
-                  <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
-                    <span className="text-[11px] text-slate-400 block mb-1">حفاظت خودکار هنگام بازیابی</span>
-                    <span className="text-xs font-bold text-white bg-emerald-600 px-2 py-0.5 rounded-md flex items-center justify-center gap-1 mt-1">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-white" />
-                      پیش‌پشتیبان اضطراری
+
+                  <div 
+                    onClick={() => setActiveTab('users')}
+                    className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-2 cursor-pointer hover:bg-slate-750 transition"
+                  >
+                    <span className="text-xs px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-bold inline-block">کاربران ثبت‌نام شده</span>
+                    <div className="text-2xl sm:text-3xl font-black text-white">{usersList.length}</div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-600 text-white font-bold inline-block">
+                      {autoApprovedUsersCount} کاربر با انتشار مستقیم
                     </span>
                   </div>
                 </div>
-              </div>
 
-              {/* PostgreSQL Relational Database Section */}
-              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-700 pb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-[#0077d9] text-white">
-                      <Database className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
-                        پایگاه داده رابطه‌ای PostgreSQL (موتور اختصاصی سرور مجازی)
-                        <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold ${
-                          diagnosticReport?.postgres?.connected
-                            ? 'bg-emerald-600 text-white'
-                            : 'bg-amber-500 text-slate-950'
-                        }`}>
-                          {diagnosticReport?.postgres?.connected ? 'PostgreSQL متصل و فعال' : 'در حال اجرا با JSON Store'}
-                        </span>
-                      </h4>
-                      <p className="text-xs text-slate-300">
-                        معماری دوگانه: پایداری بر روی دیسک با پشتیبانی کامل از PostgreSQL جهت جستجوهای سریع، روابط ساختاری و ارتقای ده‌هزار محتوایی
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-750 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="space-y-1">
+                {/* Main Quick Toggle: Content Approval Mode */}
+                <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-slate-200">وضعیت اتصال پایگاه داده:</span>
-                      {diagnosticReport?.postgres?.connected ? (
-                        <span className="text-xs font-bold text-white bg-emerald-600 px-2 py-0.5 rounded-md flex items-center gap-1">
-                          <CheckCircle2 className="w-4 h-4 text-white" />
-                          متصل به PostgreSQL ({diagnosticReport.postgres.tableCounts?.contents || contents.length} محتوا ثبت‌شده)
-                        </span>
-                      ) : (
-                        <span className="text-xs font-bold text-slate-950 bg-amber-500 px-2 py-0.5 rounded-md flex items-center gap-1">
-                          <AlertTriangle className="w-4 h-4 text-slate-950" />
-                          آماده فعال‌سازی با تنظیم متغیر DATABASE_URL در سرور مجازی
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">
-                      {diagnosticReport?.postgres?.connected
-                        ? `پایگاه داده فعال: ${diagnosticReport.postgres.engine} (پینگ سرور: ${diagnosticReport.postgres.pingMs} میلی‌ثانیه)`
-                        : 'تمامی کوئری‌ها در حال حاضر از حافظه سریع دیسک و همگام‌سازی ابری تامین می‌شوند.'}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <button
-                      type="button"
-                      onClick={handleMigrateToPostgres}
-                      disabled={isMigratingPostgres}
-                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-md cursor-pointer disabled:opacity-50"
-                    >
-                      <RefreshCw className={`w-4 h-4 text-white ${isMigratingPostgres ? 'animate-spin' : ''}`} />
-                      {isMigratingPostgres ? 'در حال مهاجرت داده‌ها...' : 'همگام‌سازی و مهاجرت به PostgreSQL'}
-                    </button>
-                  </div>
-                </div>
-
-                {postgresMigrationMessage && (
-                  <div
-                    className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${
-                      postgresMigrationMessage.success
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-rose-600 text-white'
-                    }`}
-                  >
-                    {postgresMigrationMessage.success ? <CheckCircle2 className="w-4 h-4 text-white" /> : <AlertTriangle className="w-4 h-4 text-white" />}
-                    <span>{postgresMigrationMessage.text}</span>
-                  </div>
-                )}
-
-                {/* CloudPanel Quick Setup Instructions */}
-                <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 text-[11px] text-slate-300 space-y-1.5">
-                  <span className="font-bold bg-[#0077d9] text-white px-2 py-0.5 rounded inline-block">راهنمای راه‌اندازی PostgreSQL در CloudPanel سرور مجازی (OVH):</span>
-                  <ol className="list-decimal list-inside space-y-1 text-slate-300 pr-1">
-                    <li>در پنل مدیریت <span className="text-slate-100 font-mono">CloudPanel</span> وارد منوی <span className="text-slate-100">Databases</span> شوید.</li>
-                    <li>یک دیتابیس با نوع <span className="text-white font-mono bg-slate-800 px-1 rounded">PostgreSQL</span>، نام <span className="text-white font-mono bg-slate-800 px-1 rounded">geekclub_db</span> و کاربر بسازید.</li>
-                    <li>در فایل <span className="text-slate-950 font-mono bg-amber-500 px-1 rounded">.env</span> سرور، متغیر اتصال را وارد کنید: <span className="text-white font-mono text-[10px] bg-slate-800 px-1 rounded">DATABASE_URL="postgresql://user:password@127.0.0.1:5432/geekclub_db"</span></li>
-                    <li>سرویس نود را در CloudPanel ریستارت کنید؛ تمامی جداول و ایندکس‌ها خودکار ساخته و با اطلاعات فعلی همگام می‌شوند.</li>
-                  </ol>
-                </div>
-              </div>
-
-              {/* Google Drive Automated 12-Hour Sync Section */}
-              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-700 pb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-[#0077d9] text-white">
-                      <Cloud className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
-                        پشتیبان‌گیری خودکار ۱۲ ساعته روی Google Drive
-                        <span className="text-[10px] bg-[#0077d9] text-white px-2.5 py-0.5 rounded-full font-bold">
-                          Google Workspace OAuth
-                        </span>
+                      <ShieldAlert className="w-5 h-5 text-white" />
+                      <h4 className="text-sm font-bold text-slate-100">
+                        وضعیت تأیید محتوا قبل از انتشار در سایت
                       </h4>
-                      <p className="text-xs text-slate-300">
-                        ارسال خودکار و منظم فایل‌های snapshot دیتابیس سایت به پوشه گوگل درایو ادمین (3dsaz1990@gmail.com)
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-750 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-slate-200">وضعیت اتصال گوگل درایو:</span>
-                      {driveUser ? (
-                        <span className="text-xs font-bold text-white bg-emerald-600 px-2 py-0.5 rounded-md flex items-center gap-1">
-                          <CheckCircle2 className="w-4 h-4 text-white" />
-                          متصل به {driveUser.email}
-                        </span>
-                      ) : (
-                        <span className="text-xs font-bold text-slate-950 bg-amber-500 px-2 py-0.5 rounded-md flex items-center gap-1">
-                          <AlertTriangle className="w-4 h-4 text-slate-950" />
-                          عدم اتصال به گوگل درایو
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-slate-400">
-                      {lastDriveUploadTime 
-                        ? `آخرین آپلود موفق روی درایو: ساعت ${lastDriveUploadTime}`
-                        : 'سیستم آماده اتصال و ارسال فایل پشتیبان ۱۲ ساعته می‌باشد.'}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
-                    {!driveUser ? (
-                      <button
-                        type="button"
-                        onClick={handleConnectDrive}
-                        disabled={isConnectingDrive}
-                        className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-md cursor-pointer disabled:opacity-50"
-                      >
-                        <Cloud className="w-4 h-4 text-white" />
-                        {isConnectingDrive ? 'در حال اتصال...' : 'اتصال به اکانت Google Drive'}
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleUploadDriveNow}
-                        disabled={isUploadingDrive}
-                        className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-md cursor-pointer disabled:opacity-50"
-                      >
-                        <CloudUpload className={`w-4 h-4 text-white ${isUploadingDrive ? 'animate-bounce' : ''}`} />
-                        {isUploadingDrive ? 'در حال ارسال پشتیبان به درایو...' : 'ارسال آنی دیتابیس به گوگل درایو'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {driveSyncMessage && (
-                  <div
-                    className={`p-3 rounded-xl text-xs font-bold flex items-center justify-between gap-2 ${
-                      driveSyncMessage.success
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-rose-600 text-white'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      {driveSyncMessage.success ? <CheckCircle2 className="w-4 h-4 text-white" /> : <AlertTriangle className="w-4 h-4 text-white" />}
-                      <span>{driveSyncMessage.text}</span>
-                    </div>
-                    {driveSyncMessage.link && (
-                      <a
-                        href={driveSyncMessage.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-[#0077d9] hover:bg-[#0062b3] text-white font-mono text-[11px] px-2.5 py-1 rounded-lg flex items-center gap-1 shrink-0 font-bold"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5 text-white" />
-                        مشاهده در گوگل درایو
-                      </a>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Full Backup Download & Restore Section */}
-              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
-                <div className="flex items-center gap-3 border-b border-slate-700 pb-3">
-                  <div className="p-2.5 rounded-xl bg-[#0077d9] text-white">
-                    <HardDrive className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm sm:text-base font-bold text-slate-100">
-                      دانلود و بازیابی فایل پشتیبان (Full JSON Backup)
-                    </h4>
-                    <p className="text-xs text-slate-300">
-                      دانلود یک نسخه پشتیبان جامع از کلیه اطلاعات محتواها، پروفایل‌ها، کامنت‌ها و تنظیمات یا بازیابی آن‌ها
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Download Backup Button */}
-                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-750 flex flex-col justify-between space-y-3">
-                    <div>
-                      <h5 className="text-xs font-bold text-slate-200 flex items-center gap-1.5 mb-1">
-                        <Download className="w-4 h-4 text-white" />
-                        دانلود نسخه کامل فایل پشتیبان
-                      </h5>
-                      <p className="text-[11px] text-slate-400 leading-relaxed">
-                        فایل جامع JSON شامل تمامی محتواها، دیدگاه‌ها، سطل بازیافت، پروفایل‌های کاربران و تنظیمات پنل مدیریت را دانلود کنید.
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleExportBackup}
-                      disabled={isExportingDb}
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-md cursor-pointer disabled:opacity-50"
-                    >
-                      <Download className={`w-4 h-4 text-white ${isExportingDb ? 'animate-bounce' : ''}`} />
-                      {isExportingDb ? 'در حال دریافت فایل...' : 'دانلود فایل پشتیبان (JSON)'}
-                    </button>
-                  </div>
-
-                  {/* Restore Backup File Selector */}
-                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-750 flex flex-col justify-between space-y-3">
-                    <div>
-                      <h5 className="text-xs font-bold text-slate-200 flex items-center gap-1.5 mb-1">
-                        <Upload className="w-4 h-4 text-white" />
-                        بازیابی اطلاعات از فایل پشتیبان
-                      </h5>
-                      <p className="text-[11px] text-slate-400 leading-relaxed">
-                        فایل پشتیبان JSON قبلی را انتخاب نمایید تا دیتابیس سایت بلافاصله بازسازی و به‌روزرسانی شود.
-                      </p>
-                    </div>
-
-                    <div className="relative">
-                      <input
-                        type="file"
-                        id="backupFileInput"
-                        accept=".json,application/json"
-                        onChange={handleImportFileChange}
-                        disabled={isImportingDb}
-                        className="hidden"
-                      />
-                      <label
-                        htmlFor="backupFileInput"
-                        className="btn-restore-json-backup w-full px-4 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
-                      >
-                        <Upload className={`w-4 h-4 text-white ${isImportingDb ? 'animate-spin' : ''}`} />
-                        {isImportingDb ? 'در حال پردازش و بازیابی...' : 'انتخاب و آپلود فایل JSON'}
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {importMessage && (
-                  <div
-                    className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${
-                      importMessage.success
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-rose-600 text-white'
-                    }`}
-                  >
-                    {importMessage.success ? <CheckCircle2 className="w-4 h-4 text-white" /> : <AlertTriangle className="w-4 h-4 text-white" />}
-                    {importMessage.text}
-                  </div>
-                )}
-              </div>
-
-              {/* Seed Merge & Template Maintenance Section */}
-              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-700 pb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-amber-500 text-slate-950">
-                      <RotateCcw className="w-6 h-6 text-slate-950" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm sm:text-base font-bold text-slate-100">
-                        ترکیب و ادغام مجدد داده‌های اولیه نمونه (Seed Templates)
-                      </h4>
-                      <p className="text-xs text-slate-300">
-                        ادغام آیتم‌های نمونه اولیه جدید با دیتابیس فعلی، بدون حذف پست‌های کاربر یا بازگردانی آیتم‌های حذف شده
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleMergeSeeds}
-                    disabled={isMergingSeeds}
-                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-md disabled:opacity-50"
-                  >
-                    <RotateCcw className={`w-3.5 h-3.5 text-slate-950 ${isMergingSeeds ? 'animate-spin' : ''}`} />
-                    {isMergingSeeds ? 'در حال ادغام...' : 'ادغام داده‌های اولیه'}
-                  </button>
-                </div>
-
-                {mergeMessage && (
-                  <div
-                    className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${
-                      mergeMessage.success
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-rose-600 text-white'
-                    }`}
-                  >
-                    {mergeMessage.success ? <CheckCircle2 className="w-4 h-4 text-white" /> : <AlertTriangle className="w-4 h-4 text-white" />}
-                    {mergeMessage.text}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* 3.3. Database & Sync Diagnostic Tab */}
-          {activeTab === 'diagnostic' && (
-            <div className="space-y-6 max-w-4xl mx-auto">
-              {/* Top Card: Full Automated System Checkup & Health Score */}
-              <div className="p-6 rounded-2xl bg-slate-800/90 border border-slate-700/80 shadow-xl space-y-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-700 pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-2xl bg-[#0077d9] text-white">
-                      <ShieldCheck className="w-7 h-7 text-white" />
-                    </div>
-                    <div>
-                      <h4 className="text-base sm:text-lg font-black text-slate-100 flex items-center gap-2">
-                        موتور هوشمند عیب‌یابی و پایش خودکار سیستم
-                        <span className="text-[10px] bg-[#0077d9] text-white px-2.5 py-0.5 rounded-full font-bold">
-                          System Diagnostic Engine
-                        </span>
-                      </h4>
-                      <p className="text-xs text-slate-300">
-                        بررسی خودکار سلامت دیتابیس، آپلود و CDN، ناهمخوانی سطل زباله، و گزارش لاگ‌های خطای زنده
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleRunFullSystemCheck}
-                    disabled={isCheckingDiagnostic}
-                    className="px-5 py-2.5 rounded-xl bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs flex items-center gap-2 transition active:scale-95 shadow-lg cursor-pointer disabled:opacity-50"
-                  >
-                    <RefreshCw className={`w-4 h-4 text-white ${isCheckingDiagnostic ? 'animate-spin' : ''}`} />
-                    {isCheckingDiagnostic ? 'در حال پایش و چک‌آپ...' : 'اجرای چک‌آپ کامل سیستم'}
-                  </button>
-                </div>
-
-                {fullDiagReport ? (
-                  <div className="space-y-4">
-                    {/* Overall Health Score & Status Badge */}
-                    <div className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
-                      fullDiagReport.status === 'ok'
-                        ? 'bg-emerald-600 text-white'
-                        : fullDiagReport.status === 'warn'
-                        ? 'bg-amber-500 text-slate-950 font-bold'
-                        : 'bg-rose-600 text-white'
-                    }`}>
-                      <div className="flex items-center gap-3">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 font-mono font-black text-lg ${
-                          fullDiagReport.healthScore >= 90
-                            ? 'bg-white text-slate-900'
-                            : 'bg-slate-900 text-white'
-                        }`}>
-                          {fullDiagReport.healthScore ?? 100}%
-                        </div>
-                        <div>
-                          <h5 className="text-sm font-bold flex items-center gap-2">
-                            {fullDiagReport.status === 'ok'
-                              ? 'سیستم کاملاً سالم، پایدار و بدون خطاست'
-                              : fullDiagReport.status === 'warn'
-                              ? 'سیستم فعال است (نیاز به توجه جزئی دارد)'
-                              : 'هشدار خطای بحرانی در سیستم'}
-                          </h5>
-                          <p className="text-xs opacity-90 mt-0.5">
-                            تست‌ها در زمان {fullDiagReport.latencyMs ?? 0} میلی‌ثانیه با موفقیت اجرا شدند.
-                          </p>
-                        </div>
-                      </div>
-
-                      {fullDiagReport.system && (
-                        <div className="flex items-center gap-2 font-mono text-[11px] dir-ltr text-white bg-slate-900/80 p-2 rounded-lg border border-slate-700">
-                          <span>Node: {fullDiagReport.system.nodeVersion}</span>
-                          <span>|</span>
-                          <span>Uptime: {fullDiagReport.system.uptimeSeconds}s</span>
-                          <span>|</span>
-                          <span>RAM: {fullDiagReport.system.memoryMb?.heapUsed}MB</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Recommendations Box if any */}
-                    {fullDiagReport.recommendations && fullDiagReport.recommendations.length > 0 && (
-                      <div className="p-4 rounded-xl bg-slate-900 border border-amber-500 text-white space-y-2 text-xs">
-                        <h6 className="font-bold flex items-center gap-2 bg-amber-500 text-slate-950 px-2 py-0.5 rounded-md inline-block">
-                          <AlertTriangle className="w-4 h-4 text-slate-950" />
-                          پیشنهادات هوشمند جهت رفع باگ‌ها و بهینه‌سازی:
-                        </h6>
-                        <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-200">
-                          {fullDiagReport.recommendations.map((rec: string, idx: number) => (
-                            <li key={idx}>{rec}</li>
-                          ))}
-                        </ul>
-
-                        {fullDiagReport.checks?.some((c: any) => c.inconsistentItemsCount > 0) && (
-                          <div className="pt-2">
-                            <button
-                              type="button"
-                              onClick={handleFixTrashTombstones}
-                              disabled={isFixingTrash}
-                              className="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
-                            >
-                              <RotateCcw className={`w-3.5 h-3.5 text-slate-950 ${isFixingTrash ? 'animate-spin' : ''}`} />
-                              {isFixingTrash ? 'در حال اصلاح سطل زباله...' : 'اصلاح خودکار ناهمخوانی سطل زباله'}
-                            </button>
-                            {fixTrashMsg && <p className="text-[11px] bg-emerald-600 text-white px-2 py-0.5 rounded mt-1 font-bold inline-block">{fixTrashMsg}</p>}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Structural Check Breakdown Grid */}
-                    {fullDiagReport.checks && Array.isArray(fullDiagReport.checks) && (
-                      <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
-                        <h5 className="text-xs font-bold text-slate-200 flex items-center gap-2 border-b border-slate-800 pb-2">
-                          <Database className="w-4 h-4 text-white" />
-                          نتایج چک‌آپ ماژول‌های حیاتی وبسایت
-                        </h5>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                          {fullDiagReport.checks.map((check: any, idx: number) => (
-                            <div key={idx} className="p-3 rounded-xl bg-slate-800/60 border border-slate-750 space-y-1">
-                              <div className="flex items-center justify-between font-bold">
-                                <span className="text-slate-200">{check.name}</span>
-                                <span className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded font-bold ${
-                                  check.status === 'pass'
-                                    ? 'bg-emerald-600 text-white'
-                                    : check.status === 'warn'
-                                    ? 'bg-amber-500 text-slate-950'
-                                    : check.status === 'info'
-                                    ? 'bg-[#0077d9] text-white'
-                                    : 'bg-rose-600 text-white'
-                                }`}>
-                                  {check.status === 'pass' && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
-                                  {check.status === 'warn' && <AlertTriangle className="w-3.5 h-3.5 text-slate-950" />}
-                                  {check.status === 'pass' ? 'موفق' : check.status === 'warn' ? 'هشدار' : check.status === 'info' ? 'اطلاعیه' : 'خطا'}
-                                </span>
-                              </div>
-                              <p className="text-[11px] text-slate-300 leading-relaxed">{check.details}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Action Bar */}
-                    <div className="p-4 rounded-xl bg-slate-900 border border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-4">
-                      <div>
-                        <h6 className="text-xs font-bold text-white">همگام‌سازی فوری و بازنشانی کش مرورگر</h6>
-                        <p className="text-[11px] text-slate-300 mt-0.5">
-                          تخلیه کش localStorage و دریافت آخرین وضعیت فید و سطل زباله از سرور
-                        </p>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const latest = await api.getContents({ includeDeleted: true });
-                          if (Array.isArray(latest)) {
-                            onUpdateContents?.(latest);
-                          }
-                          handleRunFullSystemCheck();
-                        }}
-                        className="px-4 py-2.5 rounded-xl bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs shadow-md transition cursor-pointer shrink-0 active:scale-95"
-                      >
-                        همگام‌سازی و بروزرسانی فید
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-12 text-slate-300 space-y-3">
-                    <RefreshCw className="w-8 h-8 animate-spin mx-auto text-white" />
-                    <p className="text-xs">در حال پایش خودکار دیتابیس، فایل‌ها و خطاهای سیستم...</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Automated Error Logs Viewer Card */}
-              <div className="p-6 rounded-2xl bg-slate-800/90 border border-slate-700/80 shadow-xl space-y-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-700 pb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-rose-600 text-white">
-                      <Inbox className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
-                        گزارش لاگ‌های زنده خطا و استثناها (System Error Logs)
-                        <span className="text-[10px] bg-rose-600 text-white px-2.5 py-0.5 rounded-full font-bold">
-                          {systemLogsList.length} لاگ ثبت‌شده
-                        </span>
-                      </h4>
-                      <p className="text-xs text-slate-300">
-                        مشاهده خطاهای ثبت شده از فرانت‌اند مرورگر، APIهای سرور و فرایندهای پس‌زمینه
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const blob = new Blob([JSON.stringify(systemLogsList, null, 2)], { type: 'application/json' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `system_diagnostic_logs_${Date.now()}.json`;
-                        a.click();
-                      }}
-                      disabled={systemLogsList.length === 0}
-                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-750 text-white border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
-                    >
-                      <Download className="w-3.5 h-3.5 text-white" />
-                      دانلود گزارش JSON
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleClearLogs}
-                      disabled={systemLogsList.length === 0}
-                      className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white border border-rose-500 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-white" />
-                      پاکسازی لاگ‌ها
-                    </button>
-                  </div>
-                </div>
-
-                {/* Filter and Search controls */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-1.5 w-full sm:w-auto">
-                    <button
-                      type="button"
-                      onClick={() => setLogFilterLevel('all')}
-                      className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
-                        logFilterLevel === 'all' ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
-                      }`}
-                    >
-                      همه ({systemLogsList.length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLogFilterLevel('error')}
-                      className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
-                        logFilterLevel === 'error' ? 'bg-rose-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
-                      }`}
-                    >
-                      خطاها
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLogFilterLevel('warn')}
-                      className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
-                        logFilterLevel === 'warn' ? 'bg-amber-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
-                      }`}
-                    >
-                      هشدارها
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLogFilterLevel('info')}
-                      className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
-                        logFilterLevel === 'info' ? 'bg-cyan-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
-                      }`}
-                    >
-                      اطلاعیه‌ها
-                    </button>
-                  </div>
-
-                  <div className="relative w-full sm:w-64">
-                    <Search className="w-3.5 h-3.5 absolute right-3 top-2.5 text-slate-500" />
-                    <input
-                      type="text"
-                      placeholder="جستجو در متن لاگ..."
-                      value={logSearchTerm}
-                      onChange={(e) => setLogSearchTerm(e.target.value)}
-                      className="w-full pr-8 pl-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
-                </div>
-
-                {/* Logs List Container */}
-                <div className="max-h-72 overflow-y-auto space-y-2 p-1 font-mono text-[11px]">
-                  {systemLogsList
-                    .filter((log) => {
-                      if (!logSearchTerm) return true;
-                      const term = logSearchTerm.toLowerCase();
-                      return (
-                        log.message?.toLowerCase().includes(term) ||
-                        log.category?.toLowerCase().includes(term) ||
-                        JSON.stringify(log.details || {}).toLowerCase().includes(term)
-                      );
-                    })
-                    .length === 0 ? (
-                    <div className="text-center py-8 text-slate-500 font-sans text-xs">
-                      هیچ خطایی ثبت نشده است یا لاگی تطابق ندارد.
-                    </div>
-                  ) : (
-                    systemLogsList
-                      .filter((log) => {
-                        if (!logSearchTerm) return true;
-                        const term = logSearchTerm.toLowerCase();
-                        return (
-                          log.message?.toLowerCase().includes(term) ||
-                          log.category?.toLowerCase().includes(term) ||
-                          JSON.stringify(log.details || {}).toLowerCase().includes(term)
-                        );
-                      })
-                      .map((log) => (
-                        <div
-                          key={log.id}
-                          className={`p-3 rounded-xl border space-y-1 ${
-                            log.level === 'error'
-                              ? 'bg-rose-950/20 border-rose-500/30 text-rose-200'
-                              : log.level === 'warn'
-                              ? 'bg-amber-950/20 border-amber-500/30 text-amber-200'
-                              : 'bg-slate-900 border-slate-800 text-slate-300'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between font-bold dir-ltr text-left">
-                            <span className="flex items-center gap-2">
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-sans ${
-                                log.level === 'error' ? 'bg-rose-500/30 text-rose-300' : log.level === 'warn' ? 'bg-amber-500/30 text-amber-300' : 'bg-slate-800 text-slate-400'
-                              }`}>
-                                [{log.category || 'system'}] {log.level.toUpperCase()}
-                              </span>
-                              <span className="truncate max-w-md font-sans">{log.message}</span>
-                            </span>
-                            <span className="text-[10px] opacity-60 text-slate-400">
-                              {new Date(log.timestamp).toLocaleTimeString('fa-IR')}
-                            </span>
-                          </div>
-
-                          {log.details && (
-                            <div className="dir-ltr text-left text-[10px] bg-slate-950 p-2 rounded-lg border border-slate-800/80 overflow-x-auto text-slate-400">
-                              {typeof log.details === 'string' ? log.details : JSON.stringify(log.details)}
-                            </div>
-                          )}
-                        </div>
-                      ))
-                  )}
-                </div>
-              </div>
-
-
-              {/* Apify Instagram Extraction Diagnostic Card */}
-              <div className="p-6 rounded-2xl bg-slate-800/90 border border-slate-700/80 shadow-xl space-y-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-700 pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-2xl bg-pink-500/20 text-pink-400 ring-2 ring-pink-500/30">
-                      <Instagram className="w-7 h-7" />
-                    </div>
-                    <div>
-                      <h4 className="text-base sm:text-lg font-black text-slate-100 flex items-center gap-2">
-                        عیب‌یابی اتصال و استخراج محتوا از Apify (اینستاگرام)
-                        <span className="text-[10px] bg-pink-500/20 text-pink-300 px-2.5 py-0.5 rounded-full border border-pink-500/30">
-                          Apify Inspector
-                        </span>
-                      </h4>
-                      <p className="text-xs text-slate-300">
-                        بررسی وضعیت توکن API، تست اتصال به سرور Apify و شبیه‌سازی استخراج پست نمونه اینستاگرام
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleAbortAllApifyRuns}
-                      disabled={isAbortingRuns}
-                      className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-2 transition active:scale-95 shadow-lg shadow-rose-600/30 cursor-pointer disabled:opacity-50"
-                      title="در صورت بروز خطای 5 concurrent Actor runs، با این دکمه کانتینرهای معلق متوقف می‌شوند"
-                    >
-                      <Trash2 className={`w-4 h-4 ${isAbortingRuns ? 'animate-spin' : ''}`} />
-                      {isAbortingRuns ? 'در حال آزادسازی...' : 'آزادسازی صف کانتینرهای Apify'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleRunApifyDiagnostic}
-                      disabled={isCheckingApifyDiag}
-                      className="px-5 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs flex items-center gap-2 transition active:scale-95 shadow-lg shadow-pink-600/30 cursor-pointer disabled:opacity-50"
-                    >
-                      <RefreshCw className={`w-4 h-4 ${isCheckingApifyDiag ? 'animate-spin' : ''}`} />
-                      {isCheckingApifyDiag ? 'در حال بررسی...' : 'بررسی توکن و اتصال Apify'}
-                    </button>
-                  </div>
-                </div>
-
-                {abortResultMsg && (
-                  <div className="p-3 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-xs text-indigo-300 font-bold flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    <span>{abortResultMsg}</span>
-                  </div>
-                )}
-
-                {apifyDiagnosticReport && (
-                  <div className={`p-4 rounded-xl border flex items-center justify-between gap-3 ${
-                    apifyDiagnosticReport.apiReachable
-                      ? 'bg-emerald-500/15 text-emerald-200 border-emerald-500/40'
-                      : 'bg-amber-500/15 text-amber-200 border-amber-500/40'
-                  }`}>
-                    <div className="flex items-center gap-3">
-                      {apifyDiagnosticReport.apiReachable ? (
-                        <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0" />
-                      ) : (
-                        <AlertTriangle className="w-6 h-6 text-amber-400 shrink-0" />
-                      )}
-                      <div>
-                        <h5 className="text-sm font-bold flex items-center gap-2">
-                          {apifyDiagnosticReport.apiReachable ? 'اتصال به Apify API موفق و توکن معتبر است' : 'هشدار در اتصال به Apify'}
-                          {apifyDiagnosticReport.activeRunsCount !== undefined && (
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
-                              apifyDiagnosticReport.activeRunsCount >= 5 
-                                ? 'bg-rose-500/30 text-rose-300 border border-rose-500/50 animate-pulse'
-                                : 'bg-slate-800 text-slate-300'
-                            }`}>
-                              اجراهای هم‌زمان: {apifyDiagnosticReport.activeRunsCount} از ۵
-                            </span>
-                          )}
-                        </h5>
-                        <p className="text-xs opacity-90 mt-0.5">
-                          {apifyDiagnosticReport.message} {apifyDiagnosticReport.tokenMasked ? `(توکن: ${apifyDiagnosticReport.tokenMasked}, منبع: ${apifyDiagnosticReport.tokenSource})` : ''}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Live Extraction Test Box */}
-                <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
-                  <h5 className="text-xs font-bold text-slate-200 flex items-center justify-between">
-                    <span className="flex items-center gap-2">
-                      <Search className="w-4 h-4 text-pink-400" />
-                      تست زنده استخراج لینک نمونه اینستاگرام
-                    </span>
-                    <span className="text-[10px] text-amber-400 font-normal">
-                      نکته: فقط لینک مستقیم پست یا ریلز (/p/ یا /reel/) پشتیبانی می‌شود
-                    </span>
-                  </h5>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <input
-                      type="text"
-                      id="testInstagramUrlInput"
-                      name="testInstagramUrl"
-                      value={testInstagramUrl}
-                      onChange={(e) => setTestInstagramUrl(e.target.value)}
-                      placeholder="لینک پست یا ریلز اینستاگرام را وارد کنید..."
-                      className="flex-1 px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-pink-500 dir-ltr font-mono"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleRunApifyLiveTest}
-                      disabled={isRunningApifyTest || !testInstagramUrl.trim()}
-                      className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-md shadow-indigo-600/20 cursor-pointer disabled:opacity-50 shrink-0"
-                    >
-                      <Sparkles className={`w-4 h-4 ${isRunningApifyTest ? 'animate-spin' : ''}`} />
-                      {isRunningApifyTest ? 'در حال استخراج...' : 'اجرای تست استخراج'}
-                    </button>
-                  </div>
-
-                  {apifyTestRunResult && (
-                    <div className={`p-4 rounded-xl border text-xs space-y-2 ${
-                      apifyTestRunResult.success
-                        ? 'bg-emerald-500/10 text-emerald-200 border-emerald-500/30'
-                        : 'bg-rose-500/10 text-rose-200 border-rose-500/30'
-                    }`}>
-                      <div className="flex items-center justify-between font-bold">
-                        <span className="flex items-center gap-1.5">
-                          {apifyTestRunResult.success ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <AlertTriangle className="w-4 h-4 text-rose-400" />}
-                          {apifyTestRunResult.message}
-                        </span>
-                        {apifyTestRunResult.durationMs && (
-                          <span className="font-mono text-[10px] text-slate-400">زمان اجرا: {apifyTestRunResult.durationMs}ms</span>
-                        )}
-                      </div>
-
-                      {/* Logs trace */}
-                      {apifyTestRunResult.logs && Array.isArray(apifyTestRunResult.logs) && (
-                        <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 font-mono text-[10px] text-slate-300 space-y-1 max-h-36 overflow-y-auto dir-ltr text-left">
-                          {apifyTestRunResult.logs.map((log: string, idx: number) => (
-                            <div key={idx} className={log.includes('ERROR') ? 'text-rose-400 font-bold' : log.includes('SUCCESS') ? 'text-emerald-400 font-bold' : 'text-slate-300'}>
-                              {log}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {apifyTestRunResult.error && (
-                        <div className="p-2 rounded bg-rose-950/40 text-rose-300 font-mono text-[11px]">
-                          خطا: {apifyTestRunResult.error}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 4. Settings Tab */}
-          {activeTab === 'settings' && (
-            <div className="max-w-2xl mx-auto space-y-6">
-              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
-                <div className="flex items-center gap-3 border-b border-slate-700 pb-3">
-                  <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400">
-                    <ShieldAlert className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm sm:text-base font-bold text-slate-100">
-                      تنظیمات نظارت و انتشار محتوا
-                    </h4>
-                    <p className="text-xs text-slate-300">
-                      کنترل شرایط پیش‌فرض انتشار پست‌های ارسالی کاربران در کل سایت
-                    </p>
-                  </div>
-                </div>
-
-                {/* Primary Content Moderation Toggle */}
-                <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-750 shadow-sm flex items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs sm:text-sm font-bold text-slate-100">
-                        فعال‌سازی تأیید محتوا پیش از انتشار عمومی (Content Moderation)
+                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                        siteSettings.requireContentApproval 
+                          ? 'bg-amber-500 text-slate-950'
+                          : 'bg-emerald-600 text-white'
+                      }`}>
+                        {siteSettings.requireContentApproval ? 'تایید دستی فعال است' : 'انتشار مستقیم و آزاد'}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-300 leading-relaxed">
-                      هنگامی که این گزینه روشن باشد، محتوای اشتراک‌گذاری شده توسط کاربران عادی به صورت معلق (در انتظار بررسی) ذخیره شده و پس از تأیید در پنل مدیریت روی فید اصلی سایت قرار می‌گیرد.
+                    <p className="text-xs text-slate-300 leading-relaxed max-w-2xl">
+                      {siteSettings.requireContentApproval
+                        ? 'محتوای ارسالی توسط اعضای عادی سایت نیازمند بررسی و تأیید در پنل مدیریت است، به جز کاربرانی که در تب «مدیریت کاربران» دسترسی انتشار مستقیم دارند.'
+                        : 'تمامی محتواهای ثبت‌شده توسط تمام کاربران بلافاصله و بدون وقفه در سایت منتشر می‌شوند.'}
                     </p>
                   </div>
 
@@ -2407,765 +1071,839 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       ...siteSettings,
                       requireContentApproval: !siteSettings.requireContentApproval
                     })}
-                    className={`p-1 text-2xl transition cursor-pointer ${
-                      siteSettings.requireContentApproval ? 'text-amber-400' : 'text-slate-500'
+                    className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition active:scale-95 cursor-pointer shrink-0 ${
+                      siteSettings.requireContentApproval
+                        ? 'bg-amber-500 text-slate-950 hover:bg-amber-400 shadow-md'
+                        : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
                     }`}
-                    title={siteSettings.requireContentApproval ? 'تایید محتوا فعال است' : 'تایید محتوا غیرفعال است'}
                   >
                     {siteSettings.requireContentApproval ? (
-                      <ToggleRight className="w-9 h-9" />
+                      <>
+                        <ToggleRight className="w-5 h-5 text-slate-950" />
+                        تایید محتوا: فعال
+                      </>
                     ) : (
-                      <ToggleLeft className="w-9 h-9" />
+                      <>
+                        <ToggleLeft className="w-5 h-5 text-slate-300" />
+                        تایید محتوا: غیرفعال
+                      </>
                     )}
                   </button>
                 </div>
 
-                {/* Status summary */}
-                <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-750 shadow-sm flex items-center justify-between text-xs">
-                  <span className="text-slate-400">وضعیت فعلی سیستم:</span>
-                  <span className={`font-bold ${
-                    siteSettings.requireContentApproval ? 'text-amber-300' : 'text-emerald-400'
-                  }`}>
-                    {siteSettings.requireContentApproval 
-                      ? '🔒 محتواهای جدید نیاز به تأیید ادمین دارند' 
-                      : '⚡ محتواها بدون معطلی منتشر می‌شوند'}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between pt-2">
-                  <button
-                    onClick={() => {
-                      setActiveTab('contents');
-                      setContentFilter('pending');
-                    }}
-                    className="text-xs text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <span>مشاهده صف محتواهای در انتظار تایید ({pendingCount})</span>
-                    <span>←</span>
-                  </button>
-
-                  <button
-                    onClick={() => setActiveTab('users')}
-                    className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <span>مدیریت کاربران بدون نیاز به تایید ({autoApprovedUsersCount})</span>
-                    <span>←</span>
-                  </button>
+                {/* Quick Actions & Guidelines */}
+                <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-3">
+                  <h4 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-white" />
+                    راهنمای مدیریت دسترسی‌ها و محتوا
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-300 leading-relaxed">
+                    <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-750 space-y-1">
+                      <span className="bg-amber-500 text-slate-950 px-2 py-0.5 rounded-md font-bold text-xs inline-block mb-1">⚡ کاربران با انتشار مستقیم</span>
+                      <p className="text-slate-200">شما می‌توانید در تب <strong className="text-white">«مدیریت کاربران»</strong>، به نویسندگان معتمد، تیم تحریریه یا کاربران ویژه، دسترسی <span className="bg-emerald-600 text-white px-1.5 py-0.2 rounded font-bold text-[10px]">انتشار مستقیم بدون تایید</span> اعطا کنید تا حتی در زمان فعال بودن تایید محتوا، پست‌هایشان فوراً پخش شود.</p>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-750 space-y-1">
+                      <span className="bg-emerald-600 text-white px-2 py-0.5 rounded-md font-bold text-xs inline-block mb-1">♻️ سطل بازیافت محتوا</span>
+                      <p className="text-slate-200">هر محتوایی که توسط مدیر یا منتشرکننده حذف شود، در حافظه سیستم باقی می‌ماند و در تب <strong className="text-white">«مدیریت محتوا»</strong> قابل بازیابی است.</p>
+                    </div>
+                  </div>
                 </div>
               </div>
+            )}
 
-              {/* Platform Enable/Disable Toggles Section */}
-              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
-                <div className="flex items-center gap-3 border-b border-slate-700 pb-3">
-                  <div className="p-2.5 rounded-xl bg-pink-500/10 text-pink-400">
-                    <Layers className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm sm:text-base font-bold text-slate-100">
-                      مدیریت پلتفرم‌های مجاز اشتراک‌گذاری
-                    </h4>
-                    <p className="text-xs text-slate-400">
-                      امکان فعال یا غیرفعال‌سازی ورود و انتشار محتوا از هر سه پلتفرم سایت
-                    </p>
-                  </div>
-                </div>
+            {/* 2. Contents & Moderation Tab */}
+            {activeTab === 'contents' && (
+              <div className="space-y-4">
+                {/* Filter controls */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700/80 shadow-md">
+                  <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto">
+                    <button
+                      onClick={() => setContentFilter('all')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
+                        contentFilter === 'all'
+                          ? 'bg-[#0077d9] text-white shadow-sm font-bold'
+                          : 'bg-slate-800 text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      همه ({currentContents.length})
+                    </button>
+                    <button
+                      onClick={() => setContentFilter('active')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
+                        contentFilter === 'active'
+                          ? 'bg-emerald-600 text-white shadow-sm font-bold'
+                          : 'bg-slate-800 text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      فعال‌ها ({activeCount})
+                    </button>
+                    <button
+                      onClick={() => setContentFilter('pending')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                        contentFilter === 'pending'
+                          ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
+                          : 'bg-slate-800 text-slate-200 hover:text-white'
+                      }`}
+                    >
+                      <Clock className="w-3.5 h-3.5 text-white" />
+                      در انتظار تایید ({pendingCount})
+                    </button>
+                    <button
+                      onClick={() => setContentFilter('trash')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
+                        contentFilter === 'trash'
+                          ? 'bg-rose-600 text-white shadow-sm font-bold'
+                          : 'bg-slate-800 text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      سطل بازیافت ({trashCount})
+                    </button>
 
-                {/* YouTube Toggle */}
-                <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center shrink-0">
-                      <Youtube className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <span className="text-xs sm:text-sm font-bold text-slate-200 block">
-                        پلتفرم یوتیوب (YouTube)
-                      </span>
-                      <span className="text-[11px] text-slate-400">
-                        {siteSettings.allowYouTube ? 'فعال - کاربران می‌توانند ویدیوهای یوتیوب را ثبت کنند' : 'غیرفعال - ورود لینک یوتیوب مسدود است'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => onUpdateSiteSettings({
-                      ...siteSettings,
-                      allowYouTube: !siteSettings.allowYouTube
-                    })}
-                    className={`p-1 text-2xl transition cursor-pointer ${
-                      siteSettings.allowYouTube ? 'text-red-400' : 'text-slate-500'
-                    }`}
-                  >
-                    {siteSettings.allowYouTube ? <ToggleRight className="w-9 h-9" /> : <ToggleLeft className="w-9 h-9" />}
-                  </button>
-                </div>
-
-                {/* Instagram Toggle */}
-                <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-pink-500/20 text-pink-400 flex items-center justify-center shrink-0">
-                      <Instagram className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <span className="text-xs sm:text-sm font-bold text-slate-200 block">
-                        پلتفرم اینستاگرام (Instagram)
-                      </span>
-                      <span className="text-[11px] text-slate-400">
-                        {siteSettings.allowInstagram ? 'فعال - کاربران می‌توانند پست و ریلز اینستاگرام را ثبت کنند' : 'غیرفعال - ورود لینک اینستاگرام مسدود است'}
-                      </span>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={fetchPanelContents}
+                      disabled={isRefreshingContents}
+                      className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white transition cursor-pointer shrink-0"
+                      title="تازه‌سازی فوری لیست محتواها و سطل زباله از سرور"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingContents ? 'animate-spin text-white' : 'text-white'}`} />
+                    </button>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => onUpdateSiteSettings({
-                      ...siteSettings,
-                      allowInstagram: !siteSettings.allowInstagram
-                    })}
-                    className={`p-1 text-2xl transition cursor-pointer ${
-                      siteSettings.allowInstagram ? 'text-pink-400' : 'text-slate-500'
-                    }`}
-                  >
-                    {siteSettings.allowInstagram ? <ToggleRight className="w-9 h-9" /> : <ToggleLeft className="w-9 h-9" />}
-                  </button>
-                </div>
-
-                {/* Aparat Toggle */}
-                <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
-                      <Video className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <span className="text-xs sm:text-sm font-bold text-slate-200 block">
-                        پلتفرم آپارات (Aparat.com)
-                      </span>
-                      <span className="text-[11px] text-slate-400">
-                        {siteSettings.allowAparat ? 'فعال - کاربران می‌توانند ویدیوهای آپارات را ثبت و به اشتراک بگذارند' : 'غیرفعال - ورود لینک آپارات مسدود است'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => onUpdateSiteSettings({
-                      ...siteSettings,
-                      allowAparat: !siteSettings.allowAparat
-                    })}
-                    className={`p-1 text-2xl transition cursor-pointer ${
-                      siteSettings.allowAparat ? 'text-rose-400' : 'text-slate-500'
-                    }`}
-                  >
-                    {siteSettings.allowAparat ? <ToggleRight className="w-9 h-9" /> : <ToggleLeft className="w-9 h-9" />}
-                  </button>
-                </div>
-
-                {/* Articles Toggle */}
-                <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                      <Newspaper className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <span className="text-xs sm:text-sm font-bold text-slate-200 block">
-                        مقالات و وبسایت‌ها (Articles & Web)
-                      </span>
-                      <span className="text-[11px] text-slate-400">
-                        {siteSettings.allowArticles ? 'فعال - کاربران می‌توانند مقالات و لینک وب را ثبت کنند' : 'غیرفعال - ورود لینک مقالات مسدود است'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => onUpdateSiteSettings({
-                      ...siteSettings,
-                      allowArticles: !siteSettings.allowArticles
-                    })}
-                    className={`p-1 text-2xl transition cursor-pointer ${
-                      siteSettings.allowArticles ? 'text-emerald-400' : 'text-slate-500'
-                    }`}
-                  >
-                    {siteSettings.allowArticles ? <ToggleRight className="w-9 h-9" /> : <ToggleLeft className="w-9 h-9" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Google reCAPTCHA Security Section */}
-              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
-                <div className="flex items-center gap-3 border-b border-slate-700 pb-3">
-                  <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400">
-                    <ShieldCheck className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm sm:text-base font-bold text-slate-100">
-                      امنیت فرم اشتراک محتوا (Google reCAPTCHA)
-                    </h4>
-                    <p className="text-xs text-slate-400">
-                      محافظت از فرم ثبت و انتشار لینک در برابر روبات‌ها و اسپم
-                    </p>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 font-bold text-xs">
-                      v2/v3
-                    </div>
-                    <div>
-                      <span className="text-xs sm:text-sm font-bold text-slate-200 block">
-                        تایید امنیتی گوگل کپچا (Google reCAPTCHA)
-                      </span>
-                      <span className="text-[11px] text-slate-400">
-                        {siteSettings.enableCaptcha ? 'فعال - کاربران باید تایید ربات نبودن را در فرم انتشار محتوا تکمیل کنند' : 'غیرفعال - بدون نیاز به تایید کپچا'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => onUpdateSiteSettings({
-                      ...siteSettings,
-                      enableCaptcha: !siteSettings.enableCaptcha
-                    })}
-                    className={`p-1 text-2xl transition cursor-pointer ${
-                      siteSettings.enableCaptcha ? 'text-blue-400' : 'text-slate-500'
-                    }`}
-                  >
-                    {siteSettings.enableCaptcha ? <ToggleRight className="w-9 h-9" /> : <ToggleLeft className="w-9 h-9" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Dedicated CDN Setup & Management Section (upc.geekclub.ir) */}
-              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-700 pb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400">
-                      <ExternalLink className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm sm:text-base font-bold text-amber-200">
-                        تنظیمات و اسکریپت CDN هاست اختصاصی (upc.geekclub.ir)
-                      </h4>
-                      <p className="text-xs text-slate-300">
-                        مدیریت نقطه اتصال آپلود تصاویر و دریافت کد آماده فایل <code className="text-amber-300 font-mono">upload.php</code>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-200 mb-1.5">
-                      آدرس کامل Endpoint آپلود CDN
-                    </label>
-                    <input
-                      type="url"
-                      id="cdnEndpointInput"
-                      name="cdnEndpoint"
-                      value={cdnEndpoint}
-                      onChange={(e) => setCdnEndpoint(e.target.value)}
-                      placeholder="https://upc.geekclub.ir/upload.php"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 dir-ltr text-left font-mono focus:outline-none focus:border-amber-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-200 mb-1.5">
-                      توکن امنیتی API (Secret Key)
-                    </label>
+                  <div className="relative w-full sm:w-64">
+                    <Search className="w-3.5 h-3.5 absolute right-3 top-3 text-slate-400" />
                     <input
                       type="text"
-                      id="cdnTokenInput"
-                      name="cdnToken"
-                      value={cdnToken}
-                      onChange={(e) => setCdnToken(e.target.value)}
-                      placeholder="CDN API token"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 dir-ltr text-left font-mono focus:outline-none focus:border-amber-500"
+                      id="contentSearchInput"
+                      name="contentSearch"
+                      value={contentSearch}
+                      onChange={(e) => setContentSearch(e.target.value)}
+                      placeholder="جستجو در عنوان یا نویسنده..."
+                      className="w-full pr-8 pl-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                     />
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      saveCDNConfig({ endpointUrl: cdnEndpoint, apiToken: cdnToken });
-                      setCdnSaveSuccess(true);
-                      setTimeout(() => setCdnSaveSuccess(false), 2500);
-                    }}
-                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md shadow-amber-500/20"
-                  >
-                    <Check className="w-4 h-4" />
-                    ذخیره تنظیمات CDN
-                  </button>
-
-                  {cdnSaveSuccess && (
-                    <span className="text-xs text-emerald-400 font-bold flex items-center gap-1 animate-in fade-in duration-200">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                      تنظیمات CDN با موفقیت ذخیره شد.
-                    </span>
-                  )}
-                </div>
-
-                {/* PHP Script Code Copy Box */}
-                <div className="pt-3 border-t border-amber-500/20 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                      کد اسکریپت واسط PHP (ذخیره با نام upload.php روی upc.geekclub.ir)
-                    </span>
+                {/* Trash Quick Restore Banner */}
+                {contentFilter === 'trash' && trashCount > 0 && (
+                  <div className="p-3.5 rounded-2xl bg-slate-900 border border-rose-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-md">
+                    <div className="flex items-center gap-2.5 text-white">
+                      <Trash2 className="w-4 h-4 text-white shrink-0" />
+                      <span>تعداد <strong className="text-white font-mono bg-rose-600 px-2 py-0.5 rounded">{trashCount}</strong> محتوا در سطل بازیافت قرار دارد.</span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => {
-                        navigator.clipboard.writeText(PHP_CDN_SCRIPT_CODE);
-                        setCopiedPhpScript(true);
-                        setTimeout(() => setCopiedPhpScript(false), 2500);
+                        panelContents.forEach((c) => {
+                          if (c.isDeleted || c.isArchived) {
+                            onToggleSoftDelete(c.id, false);
+                          }
+                        });
+                        setPanelContents((prev) =>
+                          prev.map((c) => ({ ...c, isDeleted: false, isArchived: false, deletedAt: undefined }))
+                        );
                       }}
-                      className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-white border border-amber-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                      className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-sm active:scale-95 shrink-0"
                     >
-                      {copiedPhpScript ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-emerald-400" />
-                          کد کپی شد!
-                        </>
-                      ) : (
-                        <>
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          کپی کد upload.php
-                        </>
-                      )}
+                      <RotateCcw className="w-3.5 h-3.5 text-white" />
+                      بازگردانی تمامی محتواها به فید
                     </button>
-                  </div>
-
-                  <div className="relative">
-                    <textarea
-                      id="phpCodeTextarea"
-                      name="phpCode"
-                      readOnly
-                      rows={6}
-                      value={PHP_CDN_SCRIPT_CODE}
-                      className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] font-mono text-emerald-400 dir-ltr text-left leading-relaxed focus:outline-none"
-                    />
-                  </div>
-                  <p className="text-[11px] text-slate-400 leading-relaxed">
-                    راهنما: کافیست متن بالا را کپی کرده، در هاست خود در پوشه اصلی <code className="text-amber-300 font-mono">upc.geekclub.ir</code> درون فایلی به نام <code className="text-amber-300 font-mono">upload.php</code> ذخیره نمایید. تصاویر به صورت پوشه‌بندی شده و سازمان‌دهی شده درون پوشه اصلی <code className="text-amber-300 font-mono">s1/</code> و بخش‌های مربوطه (مانند <code className="text-amber-300 font-mono">s1/contents/YYYY/MM/</code> و <code className="text-amber-300 font-mono">s1/avatars/YYYY/MM/</code>) خودکار ذخیره می‌شوند.
-                  </p>
-                </div>
-
-                {/* Connection Health Test & Diagnostic Report Box */}
-                <div className="pt-4 border-t border-amber-500/20 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h5 className="text-xs font-bold text-slate-100 flex items-center gap-1.5">
-                        <ShieldCheck className="w-4 h-4 text-amber-400" />
-                        گزارش سلامت اتصال و وضعیت خطاهای CDN
-                      </h5>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        ارزیابی زنده اتصال مرورگر به endpoint اختصاصی <code className="text-amber-300 font-mono">upc.geekclub.ir/s1/upload.php</code>
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleTestCDNHealth}
-                      disabled={isTestingCdn}
-                      className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer border border-amber-500/30 disabled:opacity-50"
-                    >
-                      <Clock className={`w-3.5 h-3.5 ${isTestingCdn ? 'animate-spin text-amber-400' : ''}`} />
-                      {isTestingCdn ? 'در حال سنجش...' : 'تست اتصال CDN'}
-                    </button>
-                  </div>
-
-                  {cdnHealthReport && (
-                    <div
-                      className={`p-3 rounded-xl text-xs space-y-1.5 border animate-in fade-in duration-200 ${
-                        cdnHealthReport.ok
-                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
-                          : 'bg-rose-500/10 border-rose-500/30 text-rose-200'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between font-bold">
-                        <span className="flex items-center gap-1.5">
-                          {cdnHealthReport.ok ? (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                          ) : (
-                            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-                          )}
-                          {cdnHealthReport.message}
-                        </span>
-                        <span className="font-mono text-[10px] dir-ltr opacity-80">
-                          {cdnHealthReport.timestamp} - {cdnHealthReport.latencyMs}ms
-                        </span>
-                      </div>
-                      <p className="text-[11px] leading-relaxed opacity-90">
-                        {cdnHealthReport.details}
-                      </p>
-                      <div className="text-[10px] font-mono dir-ltr text-slate-400 bg-slate-950/60 p-2 rounded-lg border border-slate-800/80">
-                        Endpoint: {cdnHealthReport.endpoint} | Status Code: {cdnHealthReport.statusCode}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Existing Images Transfer / Migration Tool Section */}
-                <div className="pt-4 border-t border-amber-500/20 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h5 className="text-xs font-bold text-slate-100 flex items-center gap-1.5">
-                        <RotateCcw className="w-4 h-4 text-amber-400" />
-                        انتقال عکس‌های فعلی به منبع اختصاصی CDN
-                      </h5>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        فشرده‌سازی خودکار و انتقال تصاویری که هنوز روی CDN آپلود نشده‌اند
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleStartImageMigration}
-                      disabled={isMigratingImages}
-                      className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md shadow-amber-500/20 disabled:opacity-50"
-                    >
-                      <ExternalLink className={`w-3.5 h-3.5 ${isMigratingImages ? 'animate-spin' : ''}`} />
-                      {isMigratingImages ? 'در حال انتقال...' : 'انتقال عکس‌های فعلی به CDN'}
-                    </button>
-                  </div>
-
-                  {/* Migration Stats Pill */}
-                  <div className="grid grid-cols-3 gap-2 text-center text-xs pt-1">
-                    <div className="p-2 rounded-xl bg-slate-900 border border-slate-800">
-                      <span className="block text-[10px] text-slate-400">کل محتواها</span>
-                      <span className="font-bold text-slate-100 font-mono">{contents.length}</span>
-                    </div>
-                    <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                      <span className="block text-[10px] text-emerald-300">روی CDN اختصاصی</span>
-                      <span className="font-bold text-emerald-400 font-mono">
-                        {contents.filter((c) => c.thumbnail && c.thumbnail.includes('upc.geekclub.ir')).length}
-                      </span>
-                    </div>
-                    <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                      <span className="block text-[10px] text-amber-300">نیازمند انتقال</span>
-                      <span className="font-bold text-amber-400 font-mono">
-                        {contents.filter((c) => c.thumbnail && !c.thumbnail.includes('upc.geekclub.ir')).length}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Progress & Live Log Box */}
-                  {migrationStatus && (
-                    <div className="p-3 rounded-xl bg-slate-900 border border-amber-500/30 space-y-2 text-xs">
-                      <div className="flex items-center justify-between text-amber-300 font-medium">
-                        <span className="truncate max-w-[240px]">
-                          {migrationStatus.completed ? 'اتمام فرآیند انتقال' : `در حال انتقال: ${migrationStatus.currentTitle}`}
-                        </span>
-                        <span className="font-mono text-white">
-                          {migrationStatus.current} / {migrationStatus.total}
-                        </span>
-                      </div>
-                      <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                        <div
-                          className="bg-amber-400 h-full transition-all duration-300 rounded-full"
-                          style={{
-                            width: `${
-                              migrationStatus.total > 0
-                                ? Math.round((migrationStatus.current / migrationStatus.total) * 100)
-                                : 100
-                            }%`
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {migrationLogs.length > 0 && (
-                    <div className="max-h-32 overflow-y-auto p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-[10px] font-mono text-slate-300 space-y-1 dir-ltr text-left">
-                      {migrationLogs.map((log, idx) => (
-                        <div key={idx} className="leading-snug border-b border-slate-900/60 pb-0.5">
-                          {log}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Apify Instagram Media Scraper & CDN Integration */}
-              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-700 pb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-400">
-                      <Instagram className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm sm:text-base font-bold text-indigo-200 flex items-center gap-2">
-                        اتصال به Apify (استخراج خودکار ویدیو و رسانه‌های اینستاگرام)
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                          Video & Media Pipeline
-                        </span>
-                      </h4>
-                      <p className="text-xs text-slate-300">
-                        دانلود فایل‌های اصلی MP4 و تصاویر از اینستاگرام، ذخیره روی سرور و انتقال به CDN جهت پخش بدون تحریم
-                      </p>
-                    </div>
-                  </div>
-
-                  <a
-                    href="https://console.apify.com/account/integrations"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hidden sm:flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 underline font-medium"
-                  >
-                    دریافت API Token از Apify
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-200 mb-1.5">
-                      توکن اختصاصی API در Apify (APIFY_API_TOKEN)
-                    </label>
-                    <input
-                      type="password"
-                      id="apifyTokenInput"
-                      name="apifyToken"
-                      value={apifyToken}
-                      onChange={(e) => setApifyToken(e.target.value)}
-                      placeholder="apify_api_xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 dir-ltr text-left font-mono focus:outline-none focus:border-indigo-500"
-                    />
-                    <span className="text-[11px] text-slate-400 mt-1 block">
-                      قابل تنظیم از طریق متغیر محیطی <code className="text-indigo-300 font-mono">APIFY_API_TOKEN</code> یا فیلد بالا
-                    </span>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-200 mb-1.5">
-                      شناسه اکتور استخراجگر (Actor ID)
-                    </label>
-                    <input
-                      type="text"
-                      id="apifyActorInput"
-                      name="apifyActor"
-                      value={apifyActor}
-                      onChange={(e) => setApifyActor(e.target.value)}
-                      placeholder="apify~instagram-scraper"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 dir-ltr text-left font-mono focus:outline-none focus:border-indigo-500"
-                    />
-                    <span className="text-[11px] text-slate-400 mt-1 block">
-                      پیش‌فرض: <code className="text-indigo-300 font-mono">apify~instagram-scraper</code>
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleSaveApifySettings}
-                      className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md shadow-indigo-600/30"
-                    >
-                      <Check className="w-4 h-4" />
-                      ذخیره تنظیمات Apify
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleTestApify}
-                      disabled={isTestingApify || !apifyToken.trim()}
-                      className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-indigo-300 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer border border-indigo-500/30 disabled:opacity-50"
-                    >
-                      <Clock className={`w-3.5 h-3.5 ${isTestingApify ? 'animate-spin text-indigo-400' : ''}`} />
-                      {isTestingApify ? 'در حال تست...' : 'تست اتصال به Apify'}
-                    </button>
-                  </div>
-
-                  {apifySaveSuccess && (
-                    <span className="text-xs text-emerald-400 font-bold flex items-center gap-1 animate-in fade-in duration-200">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                      تنظیمات Apify با موفقیت ذخیره شد.
-                    </span>
-                  )}
-                </div>
-
-                {apifyTestResult && (
-                  <div
-                    className={`p-3 rounded-xl text-xs space-y-1 border animate-in fade-in duration-200 ${
-                      apifyTestResult.ok
-                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
-                        : 'bg-rose-500/10 border-rose-500/30 text-rose-200'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5 font-bold">
-                      {apifyTestResult.ok ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      ) : (
-                        <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-                      )}
-                      {apifyTestResult.message}
-                    </div>
-                    {apifyTestResult.details && (
-                      <p className="text-[11px] opacity-90">{apifyTestResult.details}</p>
-                    )}
                   </div>
                 )}
-              </div>
-            </div>
-          )}
 
-          {/* 5. Feedback & Suggestions Tab */}
-          {activeTab === 'feedback' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <span>پیام‌های دریافتی از کاربران و مهمانان ({feedbackList.length})</span>
-                <select
-                  id="feedbackStatusSelect"
-                  name="feedbackStatusFilter"
-                  value={feedbackStatusFilter}
-                  onChange={(e) => setFeedbackStatusFilter(e.target.value)}
-                  className="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 text-xs"
-                >
-                  <option value="all">همه وضعیت‌ها</option>
-                  <option value="pending">در انتظار بررسی</option>
-                  <option value="reviewed">بررسی‌شده</option>
-                  <option value="resolved">حل‌شده / پاسخ‌داده‌شده</option>
-                </select>
-              </div>
+                {/* Contents Table / List */}
+                <div className="space-y-3">
+                  {filteredContents.length === 0 ? (
+                    <div className="text-center py-12 text-slate-300 bg-slate-800/80 rounded-2xl border border-slate-700/80 shadow-md text-xs font-medium">
+                      {contentFilter === 'trash' ? 'سطل بازیافت خالی است (هیچ محتوای حذف‌شده‌ای یافت نشد).' : 'محتوایی در این بخش یافت نشد.'}
+                    </div>
+                  ) : (
+                    filteredContents.map((item) => (
+                      <div
+                        key={item.id}
+                        className={`p-4 rounded-2xl border shadow-md transition flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
+                          item.approvalStatus === 'pending'
+                            ? 'bg-slate-900 border-amber-500/80 ring-1 ring-amber-500/50'
+                            : (item.isDeleted || item.isArchived)
+                            ? 'bg-slate-900 border-rose-800/80 opacity-90'
+                            : 'bg-slate-800/80 border-slate-700/80'
+                        }`}
+                      >
+                        <div className="flex items-start sm:items-center gap-3">
+                          <img
+                            src={resolveCoverImageUrl(item.thumbnail)}
+                            alt={item.title}
+                            className="w-16 h-16 rounded-xl object-cover shrink-0 ring-1 ring-slate-700"
+                            onError={(e) => handleImageError(e, getPlatformFallbackImage(item.platform), item.platform, item.id)}
+                          />
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs sm:text-sm font-bold text-slate-100 line-clamp-1 max-w-sm sm:max-w-md">
+                                {item.title}
+                              </span>
+                              {item.approvalStatus === 'pending' && (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 flex items-center gap-1">
+                                  <Clock className="w-3 h-3 text-slate-950" />
+                                  نیازمند بررسی و تأیید مدیر
+                                </span>
+                              )}
+                              {(item.isDeleted || item.isArchived) && (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-600 text-white">
+                                  در سطل بازیافت
+                                </span>
+                              )}
+                              {!(item.isDeleted || item.isArchived) && item.approvalStatus !== 'pending' && (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-600 text-white">
+                                  فعال در فید
+                                </span>
+                              )}
+                            </div>
 
-               {filteredFeedback.length === 0 ? (
-                <div className="text-center py-12 text-slate-300 bg-slate-800/80 rounded-2xl border border-slate-700/80 shadow-md text-xs font-medium">
-                  هیچ پیشنهادی یا انتقادی در این بخش وجود ندارد.
-                </div>
-              ) : (
-                filteredFeedback.map((fb) => (
-                  <div
-                    key={fb.id}
-                    className="p-4.5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-3"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h5 className="text-sm font-bold text-slate-100">{fb.title}</h5>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            fb.type === 'suggestion'
-                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                              : fb.type === 'critique'
-                              ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-                              : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                          }`}>
-                            {fb.type === 'suggestion' ? 'پیشنهاد' : fb.type === 'critique' ? 'انتقاد' : 'گزارش مشکل'}
-                          </span>
+                            <div className="flex items-center gap-3 text-[11px] text-slate-300 flex-wrap">
+                              <span>منتشرکننده: <strong className="text-white">{item.author.name}</strong></span>
+                              <span>پلتفرم: <strong className="text-white">{item.platform}</strong></span>
+                              <span>دسته‌بندی: <strong className="bg-[#0077d9] text-white px-1.5 py-0.2 rounded">{item.category}</strong></span>
+                              <span>{item.publishedAt}</span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
-                          <span>ارسال از: <strong className="text-slate-200">{fb.senderName}</strong> {fb.isGuest && '(مهمان)'}</span>
-                          {fb.senderEmail && <span className="dir-ltr font-mono">{fb.senderEmail}</span>}
-                          <span>| {fb.createdAt}</span>
+
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-2 mr-auto md:mr-0 shrink-0 w-full sm:w-auto justify-end">
+                          {item.approvalStatus === 'pending' && (
+                            <>
+                              <button
+                                onClick={() => onApproveContent(item.id)}
+                                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-sm cursor-pointer"
+                                title="تأیید و انتشار عمومی در سایت"
+                              >
+                                <Check className="w-4 h-4 text-white" />
+                                تأیید و انتشار
+                              </button>
+                              <button
+                                onClick={() => onRejectContent(item.id)}
+                                className="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
+                                title="عدم تأیید محتوا"
+                              >
+                                <X className="w-4 h-4 text-white" />
+                                رد محتوا
+                              </button>
+                            </>
+                          )}
+
+                          {(item.isDeleted || item.isArchived) && (
+                            <>
+                              <button
+                                onClick={() => handleRestoreItem(item.id)}
+                                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer active:scale-95"
+                                title="بازگردانی به فید عمومی سایت"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5 text-white" />
+                                بازگردانی به فید
+                              </button>
+                              <button
+                                onClick={() => handlePermDeleteItem(item.id)}
+                                className="p-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white transition cursor-pointer active:scale-95"
+                                title="حذف کامل از دیتابیس"
+                              >
+                                <Trash2 className="w-4 h-4 text-white" />
+                              </button>
+                            </>
+                          )}
+
+                          {!(item.isDeleted || item.isArchived) && item.approvalStatus !== 'pending' && (
+                            <button
+                              onClick={() => onToggleSoftDelete(item.id, true)}
+                              className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                              title="پنهان‌سازی از فید و انتقال به سطل بازیافت"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-white" />
+                              انتقال به سطل بازیافت
+                            </button>
+                          )}
+
+                          <a
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition"
+                            title="مشاهده لینک اصلی"
+                          >
+                            <ExternalLink className="w-4 h-4 text-white" />
+                          </a>
                         </div>
                       </div>
-
-                      <span className={`text-xs px-2.5 py-1 rounded-xl font-semibold ${
-                        fb.status === 'resolved'
-                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                          : fb.status === 'reviewed'
-                          ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-                          : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                      }`}>
-                        {fb.status === 'resolved' ? 'پاسخ داده شد' : fb.status === 'reviewed' ? 'در حال بررسی' : 'در انتظار بررسی'}
-                      </span>
-                    </div>
-
-                    <p className="text-xs text-slate-100 font-medium bg-slate-900/80 p-3.5 rounded-xl border border-slate-750 leading-relaxed whitespace-pre-line shadow-inner">
-                      {fb.message}
-                    </p>
-
-                    {/* Admin Reply or Action */}
-                    <div className="flex items-center gap-2 pt-1">
-                      {fb.status !== 'resolved' && (
-                        <button
-                          onClick={() => onUpdateFeedbackStatus(fb.id, 'resolved')}
-                          className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1 transition"
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                          تایید و نشانه‌گذاری به عنوان حل‌شده
-                        </button>
-                      )}
-                      {fb.status === 'pending' && (
-                        <button
-                          onClick={() => onUpdateFeedbackStatus(fb.id, 'reviewed')}
-                          className="px-3 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold transition"
-                        >
-                          شروع بررسی
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-
-          {/* 6. Broadcast / Send System Message Tab */}
-          {activeTab === 'broadcast' && (
-            <div className="max-w-xl mx-auto space-y-4">
-              <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md text-xs text-slate-200 leading-relaxed">
-                این پیام به عنوان اعلان رسمی مدیریت مستقیماً در صندوق پیام‌های ورودی (این‌باکس) کاربران قرار خواهد گرفت.
-              </div>
-
-              {broadcastSent ? (
-                <div className="p-8 text-center bg-slate-800/80 rounded-2xl border border-slate-700/80 shadow-md space-y-2">
-                  <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
-                  <h4 className="font-bold text-white text-sm">پیام با موفقیت به این‌باکس ارسال شد!</h4>
+                    ))
+                  )}
                 </div>
-              ) : (
-                <form onSubmit={handleSendBroadcast} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                      عنوان یا موضوع پیام *
-                    </label>
+              </div>
+            )}
+
+            {/* 3. User Management & Direct Publishing Tab */}
+            {activeTab === 'users' && (
+              <div className="space-y-5">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700/80 shadow-md">
+                  <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto">
+                    <button
+                      onClick={() => setUserFilter('all')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
+                        userFilter === 'all'
+                          ? 'bg-[#0077d9] text-white shadow-sm font-bold'
+                          : 'bg-slate-800 text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      همه کاربران ({usersList.length})
+                    </button>
+                    <button
+                      onClick={() => setUserFilter('auto_approved')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                        userFilter === 'auto_approved'
+                          ? 'bg-emerald-600 text-white shadow-sm font-bold'
+                          : 'bg-slate-800 text-slate-200 hover:text-white'
+                      }`}
+                    >
+                      <UserCheck className="w-3.5 h-3.5 text-white" />
+                      انتشار مستقیم ({autoApprovedUsersCount})
+                    </button>
+                    <button
+                      onClick={() => setUserFilter('need_approval')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
+                        userFilter === 'need_approval'
+                          ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
+                          : 'bg-slate-800 text-slate-200 hover:text-white'
+                      }`}
+                    >
+                      نیازمند تایید ({needApprovalUsersCount})
+                    </button>
+                    <button
+                      onClick={() => setUserFilter('admins')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
+                        userFilter === 'admins'
+                          ? 'bg-amber-600 text-slate-950 font-bold shadow-sm'
+                          : 'bg-slate-800 text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      مدیران سیستم ({usersList.filter((u) => u.isAdmin).length})
+                    </button>
+                  </div>
+
+                  <div className="relative w-full sm:w-64">
+                    <Search className="w-3.5 h-3.5 absolute right-3 top-3 text-slate-400" />
                     <input
                       type="text"
-                      id="msgSubjectInput"
-                      name="msgSubject"
-                      required
-                      value={msgSubject}
-                      onChange={(e) => setMsgSubject(e.target.value)}
-                      placeholder="مثال: بروزرسانی جدید گیک کلاب یا اطلاعیه مهم..."
-                      className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-100 placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      id="userSearchInput"
+                      name="userSearch"
+                      value={userSearch}
+                      onChange={(e) => setUserSearch(e.target.value)}
+                      placeholder="جستجو بر اساس نام، نام کاربری یا ایمیل..."
+                      className="w-full pr-8 pl-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                     />
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                      متن پیام *
-                    </label>
-                    <textarea
-                      id="msgContentTextarea"
-                      name="msgContent"
-                      rows={5}
-                      required
-                      value={msgContent}
-                      onChange={(e) => setMsgContent(e.target.value)}
-                      placeholder="متن پیام رسمی ادمین برای کاربران..."
-                      className="w-full p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-100 placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none leading-relaxed"
-                    />
+                <div className="p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md flex items-center gap-3 text-xs text-slate-200">
+                  <Sparkles className="w-4 h-4 text-white shrink-0" />
+                  <span>
+                    <strong>نکته مهم:</strong> کاربرانی که سوییچ <em>«انتشار مستقیم (بدون تایید)»</em> برای آن‌ها فعال باشد، محتوای اشتراک‌گذاری‌شده‌شان بلافاصله و بدون نیاز به تایید ادمین روی سایت قرار می‌گیرد.
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {filteredUsers.length === 0 ? (
+                    <div className="text-center py-12 text-slate-300 bg-slate-800/80 rounded-2xl border border-slate-700/80 shadow-md text-xs font-medium">
+                      هیچ کاربری با این مشخصات یافت نشد.
+                    </div>
+                  ) : (
+                    filteredUsers.map((u) => {
+                      const isDirectPublishing = Boolean(u.autoApproveContent || u.isAdmin);
+                      return (
+                        <div
+                          key={u.uid}
+                          className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md hover:border-slate-600 transition flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                        >
+                          <div className="flex items-center gap-3.5">
+                            <img
+                              src={u.photoURL}
+                              alt={u.displayName}
+                              className="w-12 h-12 rounded-2xl object-cover ring-2 ring-slate-700 shadow-md"
+                            />
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h5 className="text-sm font-bold text-slate-100">
+                                  {u.displayName}
+                                </h5>
+                                <span className="text-[11px] font-mono text-white bg-[#0077d9] px-2 py-0.5 rounded-md dir-ltr font-bold">
+                                  @{u.username}
+                                </span>
+                                {u.isAdmin && (
+                                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500 text-slate-950 flex items-center gap-1">
+                                    <Crown className="w-3 h-3 text-slate-950" />
+                                    مدیر ارشد
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-3 text-xs text-slate-300 flex-wrap">
+                                <span className="font-mono dir-ltr">{u.email}</span>
+                                <span>• عضویت: {u.joinedAt || 'عضو جدید'}</span>
+                                {u.role && <span className="text-white">({u.role})</span>}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3 mr-auto sm:mr-0 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-800">
+                            <div className="text-right">
+                              <span className="text-[11px] block font-bold text-slate-200">
+                                وضعیت تایید محتوا:
+                              </span>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md inline-block ${
+                                isDirectPublishing ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-slate-950'
+                              }`}>
+                                {isDirectPublishing ? '✓ انتشار مستقیم و آزاد' : '⏳ نیازمند بررسی ادمین'}
+                              </span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onUpdateUserPermissions(u.uid, {
+                                  autoApproveContent: !u.autoApproveContent
+                                });
+                              }}
+                              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-sm ${
+                                u.autoApproveContent
+                                  ? 'bg-emerald-600 text-white hover:bg-emerald-500'
+                                  : 'bg-slate-700 hover:bg-slate-600 text-white border border-slate-600'
+                              }`}
+                              title={
+                                u.autoApproveContent
+                                  ? 'کلیک کنید تا تایید محتوا برای این کاربر الزامی شود'
+                                  : 'کلیک کنید تا این کاربر بدون تایید محتوا را منتشر کند'
+                              }
+                            >
+                              {u.autoApproveContent ? (
+                                <>
+                                  <CheckCircle2 className="w-4 h-4 text-white" />
+                                  <span>بدون نیاز به تایید</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Clock className="w-4 h-4 text-white" />
+                                  <span>نیازمند تایید</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 4. Database & Backups Tab */}
+            {activeTab === 'database' && (
+              <div className="space-y-6 max-w-4xl mx-auto">
+                <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
+                  <div className="flex items-center gap-3 border-b border-slate-700 pb-3">
+                    <div className="p-2.5 rounded-xl bg-cyan-600 text-white shadow-md">
+                      <Database className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
+                        وضعیت پایداری دیتابیس و همگام‌سازی دوگانه
+                        <span className="bg-emerald-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">JSON + Firestore</span>
+                      </h4>
+                      <p className="text-xs text-slate-300">ذخیره‌سازی هم‌زمان داده‌ها روی دیسک سرور و لایه ابری</p>
+                    </div>
                   </div>
 
-                  <button
-                    type="submit"
-                    className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 transition active:scale-95 cursor-pointer"
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                    <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-750">
+                      <span className="text-[11px] text-slate-400 block mb-1">حجم دیتابیس</span>
+                      <span className="text-lg font-mono font-bold text-slate-100">{dbStats?.fileSizeFormatted || '...'}</span>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-750">
+                      <span className="text-[11px] text-slate-400 block mb-1">کل پست‌ها</span>
+                      <span className="text-xl font-mono font-bold text-slate-100">{dbStats?.contentsCount ?? contents.length}</span>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-750">
+                      <span className="text-[11px] text-slate-400 block mb-1">بک‌آپ‌های محلی</span>
+                      <span className="text-xl font-mono font-bold text-[#0077d9]">{dbStats?.backupFilesCount ?? 0}</span>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-750">
+                      <span className="text-[11px] text-slate-400 block mb-1">حفاظت بازیابی</span>
+                      <span className="text-xs font-bold text-emerald-400 block mt-1">✓ فعال</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* PostgreSQL Migration Card */}
+                <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-700 pb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-xl bg-sky-600 text-white shadow-md">
+                        <Database className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
+                          پایگاه داده PostgreSQL
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                            diagnosticReport?.postgres?.connected ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-slate-950'
+                          }`}>
+                            {diagnosticReport?.postgres?.connected ? 'PostgreSQL فعال' : 'حالت JSON Store'}
+                          </span>
+                        </h4>
+                        <p className="text-xs text-slate-300">همگام‌سازی و انتقال به ساختار رابطه‌ای سرور</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-750 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <span className="text-xs font-bold text-slate-200 block">
+                        {diagnosticReport?.postgres?.connected ? '✓ متصل به PostgreSQL' : 'آماده اتصال به DATABASE_URL'}
+                      </span>
+                      <p className="text-[11px] text-slate-400">
+                        {diagnosticReport?.postgres?.connected
+                          ? `پینگ: ${diagnosticReport.postgres.pingMs}ms`
+                          : 'داده‌ها در حال حاضر از JSON Store و Cloud تامین می‌شوند.'}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleMigrateToPostgres}
+                      disabled={isMigratingPostgres}
+                      className="px-4 py-2 rounded-xl bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs flex items-center gap-2 transition cursor-pointer shadow-md active:scale-95 shrink-0"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${isMigratingPostgres ? 'animate-spin' : ''}`} />
+                      {isMigratingPostgres ? 'در حال همگام‌سازی...' : 'مهاجرت به PostgreSQL'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Google Drive Backup Card */}
+                <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-700 pb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-xl bg-blue-600 text-white shadow-md">
+                        <Cloud className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm sm:text-base font-bold text-slate-100">
+                          پشتیبان‌گیری خودکار Google Drive
+                        </h4>
+                        <p className="text-xs text-slate-300">ارسال فایل‌های اسنپ‌شات دیتابیس به درایو ادمین</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-750 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <span className="text-xs font-bold text-slate-200 block">
+                        {driveUser ? `متصل به ${driveUser.email}` : 'عدم اتصال به گوگل درایو'}
+                      </span>
+                      <p className="text-[11px] text-slate-400">
+                        {lastDriveUploadTime ? `آخرین آپلود: ${lastDriveUploadTime}` : 'آماده اتصال'}
+                      </p>
+                    </div>
+
+                    {!driveUser ? (
+                      <button
+                        type="button"
+                        onClick={handleConnectDrive}
+                        disabled={isConnectingDrive}
+                        className="px-4 py-2 rounded-xl bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs flex items-center gap-2 transition cursor-pointer shadow-md active:scale-95 shrink-0"
+                      >
+                        <Cloud className="w-4 h-4" />
+                        اتصال به Google Drive
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleUploadDriveNow}
+                        disabled={isUploadingDrive}
+                        className="px-4 py-2 rounded-xl bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs flex items-center gap-2 transition cursor-pointer shadow-md active:scale-95 shrink-0"
+                      >
+                        <CloudUpload className="w-4 h-4" />
+                        ارسال آنی به درایو
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Import & Export Backups */}
+                <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-750 space-y-3 flex flex-col justify-between">
+                      <div>
+                        <h5 className="text-xs font-bold text-slate-100 flex items-center gap-1.5 mb-1">
+                          <Download className="w-4 h-4 text-[#0077d9]" />
+                          دانلود نسخه کامل دیتابیس
+                        </h5>
+                        <p className="text-[11px] text-slate-400">فایل جامع JSON کلیه محتواها و کاربران</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleExportBackup}
+                        disabled={isExportingDb}
+                        className="px-4 py-2 rounded-xl bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-md active:scale-95 w-full"
+                      >
+                        <Download className="w-4 h-4" />
+                        دانلود JSON
+                      </button>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-750 space-y-3 flex flex-col justify-between">
+                      <div>
+                        <h5 className="text-xs font-bold text-slate-100 flex items-center gap-1.5 mb-1">
+                          <Upload className="w-4 h-4 text-cyan-400" />
+                          بازیابی از فایل پشتیبان
+                        </h5>
+                        <p className="text-[11px] text-slate-400">آپلود فایل JSON قبلی جهت بازسازی سریع</p>
+                      </div>
+                      <div>
+                        <input
+                          type="file"
+                          id="backupFileInput"
+                          accept=".json,application/json"
+                          onChange={handleImportFileChange}
+                          disabled={isImportingDb}
+                          className="hidden"
+                        />
+                        <label
+                          htmlFor="backupFileInput"
+                          className="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-md active:scale-95 w-full btn-restore-json-backup"
+                        >
+                          <Upload className="w-4 h-4" />
+                          انتخاب و آپلود JSON
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 5. Diagnostic Tab */}
+            {activeTab === 'diagnostic' && (
+              <div className="space-y-6 max-w-4xl mx-auto">
+                <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-700 pb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-xl bg-emerald-600 text-white shadow-md">
+                        <ShieldCheck className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h4 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                          پایش خودکار سلامت سرور و سیستم
+                        </h4>
+                        <p className="text-xs text-slate-300">بررسی سلامت دیتابیس، کش، CDN و سطل زباله</p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleRunFullSystemCheck}
+                      disabled={isCheckingDiagnostic}
+                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 transition cursor-pointer shadow-md active:scale-95 shrink-0"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${isCheckingDiagnostic ? 'animate-spin' : ''}`} />
+                      اجرای چک‌آپ کامل
+                    </button>
+                  </div>
+
+                  {fullDiagReport && (
+                    <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-750 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-slate-100">امتیاز سلامت سیستم:</span>
+                        <span className="text-xl font-bold font-mono text-emerald-400">
+                          {fullDiagReport.healthScore ?? 100}%
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-700 pb-2">
+                    <h5 className="text-xs font-bold text-slate-100 flex items-center gap-2">
+                      <Inbox className="w-4 h-4 text-rose-400" />
+                      لاگ‌های زنده سیستم ({systemLogsList.length})
+                    </h5>
+                    <button
+                      type="button"
+                      onClick={handleClearLogs}
+                      disabled={systemLogsList.length === 0}
+                      className="text-xs text-rose-400 hover:underline cursor-pointer"
+                    >
+                      پاکسازی
+                    </button>
+                  </div>
+
+                  <div className="max-h-60 overflow-y-auto space-y-2 font-mono text-[11px]">
+                    {systemLogsList.length === 0 ? (
+                      <div className="text-center py-6 text-slate-400 font-sans text-xs">هیچ خطایی ثبت نشده است.</div>
+                    ) : (
+                      systemLogsList.map((log) => (
+                        <div key={log.id} className="p-2 rounded-lg bg-slate-900 border border-slate-750 text-slate-300">
+                          [{log.level?.toUpperCase()}] {log.message}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 6. Settings Tab */}
+            {activeTab === 'settings' && (
+              <div className="max-w-2xl mx-auto space-y-6">
+                <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
+                  <div className="flex items-center gap-3 border-b border-slate-700 pb-3">
+                    <div className="p-2.5 rounded-xl bg-[#0077d9] text-white shadow-md">
+                      <Settings className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm sm:text-base font-bold text-slate-100">
+                        تنظیمات نظارت و انتشار محتوا
+                      </h4>
+                      <p className="text-xs text-slate-300">کنترل پیش‌فرض نحوه تایید و انتشار پست‌های کاربران</p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-750 flex items-center justify-between gap-4">
+                    <div>
+                      <span className="text-xs sm:text-sm font-bold text-slate-100 block">
+                        فعال‌سازی تأیید محتوا پیش از انتشار عمومی
+                      </span>
+                      <p className="text-[11px] text-slate-300 mt-0.5">
+                        در صورت فعال بودن، پست‌های کاربران عادی پس از بررسی ادمین در سایت قرار می‌گیرند.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => onUpdateSiteSettings({
+                        ...siteSettings,
+                        requireContentApproval: !siteSettings.requireContentApproval
+                      })}
+                      className={`p-1 text-2xl transition cursor-pointer ${
+                        siteSettings.requireContentApproval ? 'text-amber-500' : 'text-slate-500'
+                      }`}
+                    >
+                      {siteSettings.requireContentApproval ? <ToggleRight className="w-9 h-9" /> : <ToggleLeft className="w-9 h-9" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 7. Feedback Tab */}
+            {activeTab === 'feedback' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between text-xs text-slate-300">
+                  <span>پیام‌های دریافتی ({feedbackList.length})</span>
+                  <select
+                    value={feedbackStatusFilter}
+                    onChange={(e) => setFeedbackStatusFilter(e.target.value)}
+                    className="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs"
                   >
-                    <Send className="w-4 h-4 ml-1" />
-                    ارسال اعلان رسمی به این‌باکس
-                  </button>
-                </form>
-              )}
-            </div>
-          )}
+                    <option value="all">همه وضعیت‌ها</option>
+                    <option value="pending">در انتظار بررسی</option>
+                    <option value="reviewed">بررسی‌شده</option>
+                    <option value="resolved">حل‌شده</option>
+                  </select>
+                </div>
+
+                <div className="space-y-3">
+                  {filteredFeedback.length === 0 ? (
+                    <div className="text-center py-12 text-slate-300 bg-slate-800/80 rounded-2xl border border-slate-700/80 shadow-md text-xs font-medium">
+                      هیچ پیامی ثبت نشده است.
+                    </div>
+                  ) : (
+                    filteredFeedback.map((fb) => (
+                      <div key={fb.id} className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h5 className="text-sm font-bold text-slate-100">{fb.title}</h5>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#0077d9] text-white">
+                                {fb.type === 'suggestion' ? 'پیشنهاد' : fb.type === 'critique' ? 'انتقاد' : 'گزارش'}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-slate-300 mt-1">
+                              ارسال از: {fb.senderName} • {fb.createdAt}
+                            </div>
+                          </div>
+                        </div>
+                        <p className="p-3 rounded-xl bg-slate-900/80 border border-slate-750 text-xs text-slate-200 leading-relaxed whitespace-pre-line">
+                          {fb.message}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 8. Broadcast Tab */}
+            {activeTab === 'broadcast' && (
+              <div className="max-w-xl mx-auto space-y-4">
+                <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md text-xs text-slate-300 leading-relaxed">
+                  این پیام به عنوان اعلان رسمی مدیریت مستقیماً در این‌باکس کاربران قرار خواهد گرفت.
+                </div>
+
+                {broadcastSent ? (
+                  <div className="p-8 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md text-center space-y-2">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
+                    <h4 className="font-bold text-slate-100 text-sm">پیام با موفقیت ارسال شد!</h4>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSendBroadcast} className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-200 mb-1.5">موضوع پیام *</label>
+                      <input
+                        type="text"
+                        required
+                        value={msgSubject}
+                        onChange={(e) => setMsgSubject(e.target.value)}
+                        placeholder="عنوان پیام..."
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-200 mb-1.5">متن پیام *</label>
+                      <textarea
+                        rows={5}
+                        required
+                        value={msgContent}
+                        onChange={(e) => setMsgContent(e.target.value)}
+                        placeholder="متن پیام رسمی..."
+                        className="w-full p-3.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none leading-relaxed"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full py-2.5 rounded-xl bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition cursor-pointer active:scale-95"
+                    >
+                      <Send className="w-4 h-4" />
+                      ارسال اعلان به کاربران
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
+
+          </div>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
 };
+
+export default AdminPanelModal;
