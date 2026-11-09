@@ -103,17 +103,18 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
       >
         {/* Modal Top Header Bar */}
         <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 backdrop-blur-xl shrink-0 gap-3">
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
-          </div>
-
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={onClose}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition cursor-pointer"
-              title="بستن پنجره"
+              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition cursor-pointer flex items-center gap-1.5"
+             
             >
               <X className="w-5 h-5" />
+              <span className="text-xs font-semibold"></span>
             </button>
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
           </div>
         </div>
 
