@@ -1492,7 +1492,7 @@ export default function App() {
         onGoHome={handleGoHome}
       />
       {/* Main Content Area: Right Sidebar (FilterBar) + Left Feed Area */}
-      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 flex-1 w-full flex flex-col lg:flex-row gap-6 items-start" dir="rtl">
+      <main className="w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex-1 flex flex-col lg:flex-row gap-6 items-start" dir="rtl">
         {/* Right Sidebar (Search, Platforms, Categories, Sort, View Modes) */}
         <FilterBar
           searchQuery={searchQuery}
@@ -1650,7 +1650,7 @@ export default function App() {
 
       {/* Footer */}
       <footer className="border-t border-slate-800/80 bg-slate-900/95 backdrop-blur-xl py-8 text-xs text-slate-400 mt-12 shadow-lg shadow-slate-950/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="w-full px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <a
               href="/"
