@@ -355,48 +355,90 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             حالت چینش کارت‌ها
           </span>
 
-          <div className="flex items-center gap-1.5 bg-slate-800/80 light:bg-slate-100 border border-slate-750 light:border-slate-200 rounded-2xl p-1">
-            <button
-              id="btn-filter-viewmode-grid3"
-              onClick={() => onViewModeChange('grid3')}
-              className={`btn-filter-viewmode btn-filter-viewmode-grid3 flex-1 py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                viewMode === 'grid3'
-                  ? 'bg-[#0077d9] text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-              title="نمای گرید ۳ تایی"
-            >
-              <Grid3X3 className="w-3.5 h-3.5" />
-              <span>گرید ۳</span>
-            </button>
+          <div className="space-y-1.5">
+            {/* Row 1: Grid 6, Grid 5, Grid 4 */}
+            <div className="flex items-center gap-1 bg-slate-800/80 light:bg-slate-100 border border-slate-750 light:border-slate-200 rounded-2xl p-1">
+              <button
+                id="btn-filter-viewmode-grid6"
+                onClick={() => onViewModeChange('grid6')}
+                className={`btn-filter-viewmode btn-filter-viewmode-grid6 flex-1 py-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
+                  viewMode === 'grid6'
+                    ? 'bg-[#0077d9] text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="نمای گرید ۶ تایی"
+              >
+                <span>گرید ۶</span>
+              </button>
 
-            <button
-              id="btn-filter-viewmode-grid2"
-              onClick={() => onViewModeChange('grid2')}
-              className={`btn-filter-viewmode btn-filter-viewmode-grid2 flex-1 py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                viewMode === 'grid2'
-                  ? 'bg-[#0077d9] text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-              title="نمای گرید ۲ تایی (عریض)"
-            >
-              <Grid2X2 className="w-3.5 h-3.5" />
-              <span>گرید ۲</span>
-            </button>
+              <button
+                id="btn-filter-viewmode-grid5"
+                onClick={() => onViewModeChange('grid5')}
+                className={`btn-filter-viewmode btn-filter-viewmode-grid5 flex-1 py-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
+                  viewMode === 'grid5'
+                    ? 'bg-[#0077d9] text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="نمای گرید ۵ تایی"
+              >
+                <span>گرید ۵</span>
+              </button>
 
-            <button
-              id="btn-filter-viewmode-compact"
-              onClick={() => onViewModeChange('compact')}
-              className={`btn-filter-viewmode btn-filter-viewmode-compact flex-1 py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                viewMode === 'compact'
-                  ? 'bg-[#0077d9] text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-              title="نمای فهرست فشرده"
-            >
-              <LayoutList className="w-3.5 h-3.5" />
-              <span>فشرده</span>
-            </button>
+              <button
+                id="btn-filter-viewmode-grid4"
+                onClick={() => onViewModeChange('grid4')}
+                className={`btn-filter-viewmode btn-filter-viewmode-grid4 flex-1 py-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
+                  viewMode === 'grid4'
+                    ? 'bg-[#0077d9] text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="نمای گرید ۴ تایی"
+              >
+                <span>گرید ۴</span>
+              </button>
+            </div>
+
+            {/* Row 2: Grid 3, Grid 2, Compact */}
+            <div className="flex items-center gap-1 bg-slate-800/80 light:bg-slate-100 border border-slate-750 light:border-slate-200 rounded-2xl p-1">
+              <button
+                id="btn-filter-viewmode-grid3"
+                onClick={() => onViewModeChange('grid3')}
+                className={`btn-filter-viewmode btn-filter-viewmode-grid3 flex-1 py-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
+                  viewMode === 'grid3'
+                    ? 'bg-[#0077d9] text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="نمای گرید ۳ تایی"
+              >
+                <span>گرید ۳</span>
+              </button>
+
+              <button
+                id="btn-filter-viewmode-grid2"
+                onClick={() => onViewModeChange('grid2')}
+                className={`btn-filter-viewmode btn-filter-viewmode-grid2 flex-1 py-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
+                  viewMode === 'grid2'
+                    ? 'bg-[#0077d9] text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="نمای گرید ۲ تایی"
+              >
+                <span>گرید ۲</span>
+              </button>
+
+              <button
+                id="btn-filter-viewmode-compact"
+                onClick={() => onViewModeChange('compact')}
+                className={`btn-filter-viewmode btn-filter-viewmode-compact flex-1 py-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
+                  viewMode === 'compact'
+                    ? 'bg-[#0077d9] text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="نمای فشرده"
+              >
+                <span>فشرده</span>
+              </button>
+            </div>
           </div>
         </div>
 

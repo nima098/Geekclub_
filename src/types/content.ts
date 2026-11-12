@@ -212,4 +212,4 @@ export interface ProfileComment {
 }
 
 export type SortOption = 'newest' | 'most_liked' | 'most_comments' | 'trending';
-export type ViewMode = 'grid3' | 'grid2' | 'compact';
+export type ViewMode = 'grid6' | 'grid5' | 'grid4' | 'grid3' | 'grid2' | 'compact';

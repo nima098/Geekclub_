@@ -183,7 +183,7 @@ class ConcurrencyQueue {
   private activeCount: number = 0;
   private queue: Array<{ fn: () => Promise<any>; resolve: (val: any) => void; reject: (err: any) => void }> = [];
 
-  constructor(maxConcurrent = 5) {
+  constructor(maxConcurrent = 4) {
     this.maxConcurrent = maxConcurrent;
   }
 

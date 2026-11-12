@@ -1451,6 +1451,12 @@ export default function App() {
   // Dynamic Grid Class based on View Mode
   const getGridClasses = () => {
     switch (viewMode) {
+      case 'grid6':
+        return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4';
+      case 'grid5':
+        return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4';
+      case 'grid4':
+        return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6';
       case 'grid3':
         return 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6';
       case 'grid2':
