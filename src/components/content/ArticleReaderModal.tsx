@@ -215,14 +215,15 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
               ) : (
                 <div className="relative w-full h-full min-h-[320px] sm:min-h-[460px] flex items-center justify-center bg-slate-950 overflow-hidden">
                   <img
-                    src={activeSlide.url}
+                    src={resolveCoverImageUrl(activeSlide.url || activeSlide.thumbnail || item.thumbnail, 'instagram')}
                     alt=""
                     aria-hidden="true"
                     className="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-60 select-none pointer-events-none"
+                    onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
                   />
                   <div className="absolute inset-0 bg-black/30 pointer-events-none z-10" />
                   <img
-                    src={activeSlide.url}
+                    src={resolveCoverImageUrl(activeSlide.url || activeSlide.thumbnail || item.thumbnail, 'instagram')}
                     alt={`${item.title} - اسلاید ${activeSlideIndex + 1}`}
                     className="w-full max-h-[550px] object-contain relative z-10 drop-shadow-md"
                     onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}

@@ -221,17 +221,18 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   >
                     {/* لایه پس‌زمینه محو */}
                     <img
-                      src={activeSlide.thumbnail || item.thumbnail}
+                      src={resolveCoverImageUrl(activeSlide.thumbnail || activeSlide.url || item.thumbnail, 'instagram')}
                       alt=""
                       aria-hidden="true"
                       decoding="async"
                       className="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-60 pointer-events-none"
+                      onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
                     />
                     {/* روکش تیره ملایم */}
                     <div className="absolute inset-0 bg-black/30 pointer-events-none" />
                     {/* تصویر اصلی بدون برش */}
                     <img
-                      src={activeSlide.thumbnail || item.thumbnail}
+                      src={resolveCoverImageUrl(activeSlide.thumbnail || activeSlide.url || item.thumbnail, 'instagram')}
                       alt={item.title}
                       className="relative z-10 max-h-full max-w-full object-contain transition-transform duration-500 group-hover/ig:scale-105 opacity-95 group-hover/ig:opacity-100 drop-shadow-md"
                       decoding="async"
@@ -251,17 +252,18 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 >
                   {/* لایه پس‌زمینه محو */}
                   <img
-                    src={activeSlide.url}
+                    src={resolveCoverImageUrl(activeSlide.url || activeSlide.thumbnail || item.thumbnail, 'instagram')}
                     alt=""
                     aria-hidden="true"
                     decoding="async"
                     className="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-60 pointer-events-none"
+                    onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
                   />
                   {/* روکش تیره ملایم */}
                   <div className="absolute inset-0 bg-black/30 pointer-events-none" />
                   {/* تصویر اصلی بدون برش */}
                   <img
-                    src={activeSlide.url}
+                    src={resolveCoverImageUrl(activeSlide.url || activeSlide.thumbnail || item.thumbnail, 'instagram')}
                     alt={`${item.title} - اسلاید ${activeSlideIndex + 1}`}
                     className="relative z-10 max-h-full max-w-full object-contain transition-transform duration-500 group-hover/ig:scale-105 opacity-95 group-hover/ig:opacity-100 drop-shadow-md"
                     decoding="async"

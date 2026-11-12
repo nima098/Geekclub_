@@ -83,8 +83,8 @@ const STORAGE_KEYS = {
 // the response REPLACED the local state. A poll that was already in flight (or hit a stale server
 // instance) therefore brought the deleted item back. We now remember local delete/restore actions and
 // re-apply them on top of every poll result until the server confirms the change.
-type PendingKind = 'soft' | 'restore' | 'perm';
-interface PendingOverride { kind: PendingKind; at: number; deletedAt?: string; }
+type PendingKind = 'soft' | 'restore' | 'perm' | 'add';
+interface PendingOverride { kind: PendingKind; at: number; deletedAt?: string; item?: ContentItem; }
 const PENDING_OVERRIDE_TTL_MS = 2 * 60 * 1000;
 const stripContentPrefix = (id: string) => id.replace(/^(post|content)-/, '');
 
@@ -106,7 +106,13 @@ export default function App() {
       const isMatch = (c: ContentItem) => c.id === id || stripContentPrefix(c.id) === clean;
       const serverItem = result.find(isMatch);
 
-      if (ov.kind === 'perm') {
+      if (ov.kind === 'add' && ov.item) {
+        if (serverItem) {
+          overrides.delete(id); // Server sync confirmed the new item
+        } else {
+          result = [ov.item, ...result]; // Keep newly added item in local feed until server confirms
+        }
+      } else if (ov.kind === 'perm') {
         if (!serverItem) { overrides.delete(id); continue; } // server confirmed the deletion
         result = result.filter((c) => !isMatch(c));
       } else if (ov.kind === 'soft') {
@@ -844,7 +850,8 @@ export default function App() {
     const isAutoApproved =
       user?.isAdmin ||
       user?.autoApproveContent ||
-      isLoggedInUser;
+      isLoggedInUser ||
+      !siteSettings?.requireContentApproval;
 
     const newItem: ContentItem = {
       ...itemData,
@@ -863,6 +870,13 @@ export default function App() {
         uid: user.uid
       } : undefined)
     };
+
+    // Store optimistic addition in pendingOverridesRef so background polling doesn't overwrite it
+    pendingOverridesRef.current.set(newItem.id, {
+      kind: 'add',
+      at: Date.now(),
+      item: newItem
+    });
 
     // Auto-reset active filters so the new content is immediately visible at the top
     setSelectedPlatform('all');

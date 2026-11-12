@@ -1185,14 +1185,22 @@ export async function extractMetadataForUrl(targetUrl: string): Promise<Extracte
     };
   }
 
+function extractInstagramShortcode(rawUrl: string): string {
+  if (!rawUrl) return '';
+  const clean = rawUrl.trim();
+  const match = clean.match(/(?:instagram\.com|instagr\.am)\/(?:[^\/\s]+\/)*(?:p|reel|reels|tv|share\/p|share\/reel|share)\/([a-zA-Z0-9_-]+)/i) ||
+                clean.match(/(?:instagram\.com|instagr\.am)\/(?:p|reel|reels|tv)\/([a-zA-Z0-9_-]+)/i) ||
+                clean.match(/(?:instagram\.com|instagr\.am)\/([a-zA-Z0-9_-]{5,})/i);
+  return match ? match[1] : '';
+}
+
 // Helper to fetch Instagram post details and media files using Apify API
 async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMetaResult | null> {
   const db = loadDatabase();
   const token = process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN || db.settings?.apifyApiToken;
   const actorId = process.env.APIFY_ACTOR_ID || db.settings?.apifyActorId || 'apify~instagram-scraper';
 
-  const match = instagramUrl.match(/instagram\.com\/(?:p|reel|reels|tv)\/([a-zA-Z0-9_-]+)/i);
-  const shortcode = match ? match[1] : '';
+  const shortcode = extractInstagramShortcode(instagramUrl);
   const cleanDirectUrl = shortcode ? `https://www.instagram.com/p/${shortcode}/` : instagramUrl.split('?')[0];
 
   console.log(`[Apify Pipeline] Checking Instagram URL via Apify: ${cleanDirectUrl} (shortcode: ${shortcode || 'unknown'})`);
@@ -1209,12 +1217,14 @@ async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMe
       actorEndpoint,
       {
         directUrls: [cleanDirectUrl],
+        urls: [cleanDirectUrl],
+        startUrls: [{ url: cleanDirectUrl }],
         resultsType: 'posts',
         resultsLimit: 1,
         searchLimit: 1
       },
       {
-        timeout: 30000,
+        timeout: 35000,
         headers: {
           'Content-Type': 'application/json'
         }
@@ -1230,8 +1240,8 @@ async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMe
         caption: (item.caption || item.text || '').substring(0, 40)
       });
 
-      const rawVideoUrl = item.videoUrl || item.video_url || item.video_play_url || (item.videoVersions && item.videoVersions[0]?.url);
-      const rawDisplayUrl = item.displayUrl || item.display_url || (item.images && item.images[0]) || item.thumbnailUrl;
+      const rawVideoUrl = item.videoUrl || item.video_url || item.video_play_url || (item.videoVersions && item.videoVersions[0]?.url) || '';
+      const rawDisplayUrl = item.displayUrl || item.display_url || (item.images && item.images[0]) || item.thumbnailUrl || '';
       const rawImages: string[] = Array.isArray(item.images) ? item.images : [];
       const caption = item.caption || item.text || '';
       const ownerUsername = item.ownerUsername || item.owner_username || item.owner?.username || 'instagram';
@@ -1267,14 +1277,10 @@ async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMe
 
       // Fallback if childList is empty, but item has images or single video
       if (rawSlidesInput.length === 0) {
-        const rawVideoUrl = item.videoUrl || item.video_url || item.video_play_url || (item.videoVersions && item.videoVersions[0]?.url);
-        const rawDisplayUrl = item.displayUrl || item.display_url || (item.images && item.images[0]) || item.thumbnailUrl;
-        const rawImagesList = Array.isArray(item.images) ? item.images : [];
-
         if (rawVideoUrl) {
           rawSlidesInput.push({ type: 'video', videoUrl: rawVideoUrl, imageUrl: rawDisplayUrl });
-        } else if (rawImagesList.length > 0) {
-          for (const imgUrl of rawImagesList) {
+        } else if (rawImages.length > 0) {
+          for (const imgUrl of rawImages) {
             rawSlidesInput.push({ type: 'image', imageUrl: imgUrl });
           }
         } else if (rawDisplayUrl) {
@@ -1287,8 +1293,8 @@ async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMe
       // Process and cache all slides onto local server & transfer to CDN under s1/instagram/{cleanUsername}/
       const cdnSlides: MediaSlide[] = [];
       const cdnImages: string[] = [];
-      let cdnPrimaryVideo = '';
-      let cdnPrimaryThumb = '';
+      let cdnPrimaryVideo = rawVideoUrl;
+      let cdnPrimaryThumb = rawDisplayUrl;
 
       const nowPfx = Date.now();
       for (let i = 0; i < Math.min(rawSlidesInput.length, 10); i++) {
@@ -1301,21 +1307,26 @@ async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMe
           }
           cdnSlides.push({
             type: 'video',
-            url: cachedVideo,
-            thumbnail: cachedThumb || cachedVideo
+            url: cachedVideo || slide.videoUrl,
+            thumbnail: cachedThumb || slide.imageUrl || cachedVideo || slide.videoUrl
           });
-          if (!cdnPrimaryVideo) cdnPrimaryVideo = cachedVideo;
-          if (!cdnPrimaryThumb && cachedThumb) cdnPrimaryThumb = cachedThumb;
+          if (!cdnPrimaryVideo) cdnPrimaryVideo = cachedVideo || slide.videoUrl;
+          if (!cdnPrimaryThumb && (cachedThumb || slide.imageUrl)) cdnPrimaryThumb = cachedThumb || slide.imageUrl || '';
         } else if (slide.imageUrl) {
           const cachedImg = await downloadAndCacheImage(slide.imageUrl, `ig_img_slide_${nowPfx}_${i}`, igCdnFolder);
+          const finalImg = cachedImg || slide.imageUrl;
           cdnSlides.push({
             type: 'image',
-            url: cachedImg,
-            thumbnail: cachedImg
+            url: finalImg,
+            thumbnail: finalImg
           });
-          cdnImages.push(cachedImg);
-          if (!cdnPrimaryThumb) cdnPrimaryThumb = cachedImg;
+          cdnImages.push(finalImg);
+          if (!cdnPrimaryThumb) cdnPrimaryThumb = finalImg;
         }
+      }
+
+      if (!cdnPrimaryThumb) {
+        cdnPrimaryThumb = rawDisplayUrl || 'https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_da3d8448.jpg';
       }
 
       // Determine clean title from caption or author
@@ -1366,10 +1377,9 @@ async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMe
 
 // Helper to fetch Instagram via public bridge services & embed frames (VPS-friendly)
 async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<ExtractedMetaResult | null> {
-  const match = instagramUrl.match(/instagram\.com\/(?:p|reel|reels|tv)\/([a-zA-Z0-9_-]+)/i);
-  if (!match || !match[1]) return null;
+  const shortcode = extractInstagramShortcode(instagramUrl);
+  if (!shortcode) return null;
 
-  const shortcode = match[1];
   console.log(`[Instagram Bridge Pipeline] Extracting Instagram post ${shortcode}...`);
 
   let title = '';
@@ -1488,12 +1498,31 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
   return null;
 }
 
-  // 3. Instagram metadata extraction (Lightning-fast non-blocking with strict timeouts < 3s)
-  if (cleanUrl.includes('instagram.com')) {
-    // Tier 1: Fast Public Bridge extraction with strict 2.5s timeout
+  // 3. Instagram metadata extraction
+  if (cleanUrl.includes('instagram.com') || cleanUrl.includes('instagr.am')) {
+    const db = loadDatabase();
+    const hasApifyToken = Boolean(process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN || db.settings?.apifyApiToken);
+
+    // If Apify is configured, prioritize Apify extraction with full 25s timeout
+    if (hasApifyToken) {
+      try {
+        console.log(`[Instagram Pipeline] Priority Tier 1: Executing Apify extraction for ${cleanUrl}...`);
+        const apifyPromise = fetchInstagramViaApify(cleanUrl);
+        const apifyTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Apify timeout')), 25000));
+        const apifyResult: any = await Promise.race([apifyPromise, apifyTimeout]);
+        if (apifyResult && apifyResult.success) {
+          console.log(`[Instagram Pipeline SUCCESS] Apify extracted details for ${cleanUrl}`);
+          return apifyResult;
+        }
+      } catch (err: any) {
+        console.warn('Apify extraction notice:', err.message);
+      }
+    }
+
+    // Fallback Tier: Fast Public Bridges (VXInstagram / embed captioned)
     try {
       const bridgePromise = fetchInstagramViaPublicBridges(cleanUrl);
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Bridge timeout')), 2500));
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Bridge timeout')), 6000));
       const bridgeResult: any = await Promise.race([bridgePromise, timeoutPromise]);
       if (bridgeResult && bridgeResult.success && bridgeResult.title) {
         return bridgeResult;
@@ -1502,21 +1531,20 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
       console.warn('Instagram Public Bridge fast notice:', err.message);
     }
 
-    // Tier 2: Apify attempt with 8.5-second timeout (matches ~4.8s Apify response)
-    try {
-      const apifyPromise = fetchInstagramViaApify(cleanUrl);
-      const apifyTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Apify timeout')), 8500));
-      const apifyResult: any = await Promise.race([apifyPromise, apifyTimeout]);
-      if (apifyResult && apifyResult.success) {
-        return apifyResult;
-      }
-    } catch (err: any) {
-      console.warn('Apify extraction notice (falling back to instant metadata):', err.message);
+    // Secondary Apify attempt if not tried above
+    if (!hasApifyToken) {
+      try {
+        const apifyPromise = fetchInstagramViaApify(cleanUrl);
+        const apifyTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Apify timeout')), 15000));
+        const apifyResult: any = await Promise.race([apifyPromise, apifyTimeout]);
+        if (apifyResult && apifyResult.success) {
+          return apifyResult;
+        }
+      } catch {}
     }
 
     // Fast Instant Fallback (Guarantees response in < 2 seconds)
-    const shortcodeMatch = cleanUrl.match(/instagram\.com\/(?:p|reel|reels|tv)\/([a-zA-Z0-9_-]+)/i);
-    const shortcode = shortcodeMatch ? shortcodeMatch[1] : 'post';
+    const shortcode = extractInstagramShortcode(cleanUrl) || 'post';
     const isReel = cleanUrl.includes('reel');
 
     return {
@@ -1941,14 +1969,13 @@ app.post('/api/contents', rateLimit('add-content', 30, 60_000), async (req: Requ
   if (finalThumbnail && finalThumbnail.includes('upc.geekclub.ir/uploads/')) {
     finalThumbnail = finalThumbnail.substring(finalThumbnail.indexOf('/uploads/'));
   }
-  // If not a data URL and not already on CDN/local uploads, we can ensure CDN upload
+  // Non-blocking background CDN cover cache so POST /api/contents responds instantly (<10ms)
   if (rawThumbnail && !rawThumbnail.startsWith('data:') && !rawThumbnail.startsWith('/uploads/') && !rawThumbnail.includes('upc.geekclub.ir')) {
-    try {
-      finalThumbnail = await ensureCDNImage(rawThumbnail, 'contents');
-      if (finalThumbnail && finalThumbnail.includes('upc.geekclub.ir/uploads/')) {
-        finalThumbnail = finalThumbnail.substring(finalThumbnail.indexOf('/uploads/'));
-      }
-    } catch {}
+    setImmediate(async () => {
+      try {
+        await ensureCDNImage(rawThumbnail, 'contents');
+      } catch {}
+    });
   }
 
   const db = loadDatabase();

@@ -27,6 +27,15 @@ export interface ExtractedMetadata {
   data?: any;
 }
 
+export function extractInstagramShortcode(rawUrl: string): string {
+  if (!rawUrl) return '';
+  const clean = rawUrl.trim();
+  const match = clean.match(/(?:instagram\.com|instagr\.am)\/(?:[^\/\s]+\/)*(?:p|reel|reels|tv|share\/p|share\/reel|share)\/([a-zA-Z0-9_-]+)/i) ||
+                clean.match(/(?:instagram\.com|instagr\.am)\/(?:p|reel|reels|tv)\/([a-zA-Z0-9_-]+)/i) ||
+                clean.match(/(?:instagram\.com|instagr\.am)\/([a-zA-Z0-9_-]{5,})/i);
+  return match ? match[1] : '';
+}
+
 export function parseContentUrl(inputUrl: string): ParsedUrlResult {
   const url = inputUrl.trim();
   
@@ -45,16 +54,13 @@ export function parseContentUrl(inputUrl: string): ParsedUrlResult {
   }
 
   // Check Instagram
-  const instagramMatch = url.match(
-    /(?:instagram\.com\/(?:p|reel|reels|tv)\/([a-zA-Z0-9_-]+))/i
-  );
-  if (instagramMatch && instagramMatch[1]) {
-    const postCode = instagramMatch[1];
+  if (url.includes('instagram.com') || url.includes('instagr.am')) {
+    const postCode = extractInstagramShortcode(url) || 'post';
     return {
       platform: 'instagram',
       embedUrl: `https://www.instagram.com/p/${postCode}/embed`,
       sourceDomain: 'instagram.com',
-      detectedId: postCode
+      detectedId: postCode !== 'post' ? postCode : undefined
     };
   }
 

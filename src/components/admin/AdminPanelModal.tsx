@@ -116,7 +116,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   onUpdateContents
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'dashboard' | 'contents' | 'users' | 'database' | 'diagnostic' | 'feedback' | 'broadcast' | 'settings' | 'composio'
+    'dashboard' | 'contents' | 'users' | 'database' | 'diagnostic' | 'instagram_debug' | 'feedback' | 'broadcast' | 'settings' | 'composio'
   >('dashboard');
 
   // Composio Instagram Connection & Sync State
@@ -1181,6 +1181,24 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             </button>
 
             <button
+              id="admin-tab-btn-instagram-debug"
+              onClick={() => setActiveTab('instagram_debug')}
+              className={`btn-admin-sidebar-tab admin-tab-btn-instagram-debug w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
+                activeTab === 'instagram_debug'
+                  ? 'bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 text-white shadow-lg shadow-pink-600/20 font-bold border border-pink-400/40'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Instagram className="w-4 h-4 text-pink-400 shrink-0" />
+                <span>دیباگر اینستاگرام</span>
+              </div>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 font-mono font-bold border border-pink-500/30">
+                Instagram Debug
+              </span>
+            </button>
+
+            <button
               id="admin-tab-btn-settings"
               onClick={() => setActiveTab('settings')}
               className={`btn-admin-sidebar-tab admin-tab-btn-settings w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
@@ -2038,6 +2056,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     )}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Dedicated Instagram Debugger Tab */}
+            {activeTab === 'instagram_debug' && (
+              <div id="admin-panel-instagram-debugger-tab-content" className="admin-panel-instagram-debugger-tab-content space-y-6">
+                <InstagramPipelineDebugger />
               </div>
             )}
 

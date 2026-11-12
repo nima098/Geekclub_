@@ -5,7 +5,7 @@ import { Platform } from '../types/content';
  * These data URIs contain zero external network requests and never fail or expire.
  */
 export const FALLBACK_IMAGES = {
-  youtube: `data:image/svg+xml;utf8,${encodeURIComponent(`
+  youtube: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
   <defs>
     <linearGradient id="ytbg" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -26,7 +26,7 @@ export const FALLBACK_IMAGES = {
 </svg>
 `.trim())}`,
 
-  instagram: `data:image/svg+xml;utf8,${encodeURIComponent(`
+  instagram: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
   <defs>
     <linearGradient id="igbg" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -45,7 +45,7 @@ export const FALLBACK_IMAGES = {
 </svg>
 `.trim())}`,
 
-  aparat: `data:image/svg+xml;utf8,${encodeURIComponent(`
+  aparat: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
   <defs>
     <linearGradient id="apbg" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -61,7 +61,7 @@ export const FALLBACK_IMAGES = {
 </svg>
 `.trim())}`,
 
-  article: `data:image/svg+xml;utf8,${encodeURIComponent(`
+  article: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
   <defs>
     <linearGradient id="artbg" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -84,7 +84,7 @@ export const FALLBACK_IMAGES = {
 </svg>
 `.trim())}`,
 
-  avatar: `data:image/svg+xml;utf8,${encodeURIComponent(`
+  avatar: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
   <defs>
     <linearGradient id="avbg" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -120,7 +120,7 @@ export const getAuthorAvatar = (name: string = 'کاربر'): string => {
   }
   const colorPair = colors[Math.abs(hash) % colors.length];
 
-  return `data:image/svg+xml;utf8,${encodeURIComponent(`
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
   <defs>
     <linearGradient id="g_${Math.abs(hash)}" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -159,20 +159,28 @@ export const getPlatformFallbackImage = (platform?: Platform | string, rawUrl?: 
 
 /**
  * Resolves cover image URL to ensure broken host prefixes like upc.geekclub.ir/uploads/
- * are converted into reliable local /uploads/ URLs.
+ * are converted into reliable local /uploads/ URLs or proxied if external.
  */
-export const resolveCoverImageUrl = (url?: string | null): string => {
-  if (!url) return '';
+export const resolveCoverImageUrl = (url?: string | null, platform?: Platform | string): string => {
+  if (!url || typeof url !== 'string' || !url.trim() || url === 'null' || url === 'undefined') {
+    return getPlatformFallbackImage(platform);
+  }
   let clean = url.trim();
+
   if (clean.includes('upc.geekclub.ir/uploads/')) {
     clean = clean.substring(clean.indexOf('/uploads/'));
   }
+
   if (!clean.startsWith('http://') && !clean.startsWith('https://') && !clean.startsWith('data:')) {
     if (clean.startsWith('uploads/')) {
       clean = '/' + clean;
+    } else if (!clean.startsWith('/')) {
+      clean = '/' + clean;
     }
+    return clean;
   }
-  return clean;
+
+  return getProxiedImageUrl(clean);
 };
 
 /**
@@ -232,16 +240,26 @@ export const handleImageError = (
 };
 
 /**
- * Automatically proxies Google user profile pictures and external blocked images through /api/proxy-image
- * so they load properly in Iran without being filtered.
+ * Automatically proxies Google user profile pictures and external blocked images (Instagram, Facebook, etc.)
+ * through /api/proxy-image so they load properly without CORS or referrer filtering.
  */
 export const getProxiedImageUrl = (url?: string | null): string => {
-  if (!url) return '';
-  if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('/')) {
-    return url;
+  if (!url || typeof url !== 'string' || !url.trim()) return '';
+  const clean = url.trim();
+  if (clean.startsWith('data:') || clean.startsWith('blob:') || clean.startsWith('/')) {
+    return clean;
   }
-  if (url.includes('googleusercontent.com') || url.includes('ggpht.com')) {
-    return `/api/proxy-image?url=${encodeURIComponent(url)}`;
+
+  if (
+    clean.includes('googleusercontent.com') ||
+    clean.includes('ggpht.com') ||
+    clean.includes('cdninstagram.com') ||
+    clean.includes('fbcdn.net') ||
+    clean.includes('instagram.com') ||
+    clean.includes('twimg.com')
+  ) {
+    return `/api/proxy-image?url=${encodeURIComponent(clean)}`;
   }
-  return url;
+
+  return clean;
 };
