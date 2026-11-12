@@ -67,7 +67,16 @@ app.get(['/sw.js', '/service-worker.js', '/registerSW.js', '/workbox-*.js'], (_r
   `);
 });
 
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+// AI Studio port constraint: dev server must run on port 3000 (host 0.0.0.0).
+// Ignore PORT=8080 which is reserved for the container's nginx proxy.
+let PORT = 3000;
+const portArgIndex = process.argv.indexOf('--port');
+if (portArgIndex !== -1 && process.argv[portArgIndex + 1]) {
+  const p = parseInt(process.argv[portArgIndex + 1], 10);
+  if (!isNaN(p) && p !== 8080) {
+    PORT = p;
+  }
+}
 const IS_VERCEL = Boolean(process.env.VERCEL || process.env.NOW_BUILDER);
 
 const DB_PATH = IS_VERCEL
@@ -1276,17 +1285,8 @@ async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMe
         }
       }
 
-      // Determine clean title from caption or author
-      let title = '';
-      if (caption) {
-        const firstLine = caption.split('\n')[0].replace(/#[\w\u0600-\u06FF]+/g, '').trim();
-        if (firstLine.length > 5) {
-          title = firstLine.length > 90 ? firstLine.substring(0, 87) + '...' : firstLine;
-        }
-      }
-      if (!title) {
-        title = cdnPrimaryVideo ? `ویدیوی اینستاگرام از @${ownerUsername}` : `پست اینستاگرام از @${ownerUsername}`;
-      }
+      // For Instagram, do not generate a default title
+      const title = '';
 
       const finalMediaType = cdnSlides.length > 1 ? 'carousel' : (cdnSlides[0]?.type || (cdnPrimaryVideo ? 'video' : 'image'));
 
@@ -1395,16 +1395,8 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
     }
   }
 
-  // Clean title from caption
-  if (caption) {
-    const firstLine = caption.split('\n')[0].replace(/#[\w\u0600-\u06FF]+/g, '').trim();
-    if (firstLine.length > 5) {
-      title = firstLine.length > 90 ? firstLine.substring(0, 87) + '...' : firstLine;
-    }
-  }
-  if (!title) {
-    title = authorName ? `پست اینستاگرام از @${authorName}` : 'پست اینستاگرام';
-  }
+  // For Instagram, do not generate a default title
+  title = '';
 
   const cleanUser = authorName ? authorName.replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase() : 'general';
   const cdnFolder = `instagram/${cleanUser}`;
@@ -1480,7 +1472,7 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
     return {
       success: true,
       platform: 'instagram',
-      title: isReel ? `ریلز اینستاگرام (${shortcode})` : `پست اینستاگرام (${shortcode})`,
+      title: '',
       description: `محتوای اشتراک‌گذاری شده از اینستاگرام. برای مشاهده تعاملی روی کارت کلیک نمایید.`,
       authorName: 'اینستاگرام',
       author: 'اینستاگرام',
@@ -1666,7 +1658,7 @@ async function enrichDatabaseContent(id: string, url: string) {
     if (!item) {
       item = {
         id: id || `content-${Date.now()}`,
-        title: meta.title || 'محتوای اشتراک‌گذاری شده',
+        title: meta.platform === 'instagram' ? '' : (meta.title || 'محتوای اشتراک‌گذاری شده'),
         description: meta.description || '',
         url,
         platform: meta.platform || 'article',
@@ -1701,8 +1693,10 @@ async function enrichDatabaseContent(id: string, url: string) {
     let changed = false;
 
     if (meta.title && meta.title.trim() && meta.title !== item.title) {
-      item.title = meta.title.trim();
-      changed = true;
+      if (item.platform !== 'instagram') {
+        item.title = meta.title.trim();
+        changed = true;
+      }
     }
     if (meta.description && meta.description.trim() && (!item.description || item.description.includes('به اشتراک گذاشته شده') || item.description.length < 20)) {
       item.description = meta.description.trim();
@@ -3980,7 +3974,10 @@ async function startServer() {
   }
 
   if (!IS_VERCEL) {
-    syncPlatformCoverImages().catch((err) => console.warn('Sync cover images warning:', err));
+    // Run initial cover enrichment asynchronously with a delay so it does not block boot
+    setTimeout(() => {
+      syncPlatformCoverImages().catch((err) => console.warn('Sync cover images warning:', err));
+    }, 4000);
   }
 
 function injectInitialDataIntoHtml(html: string): string {
@@ -4034,7 +4031,7 @@ function injectInitialDataIntoHtml(html: string): string {
     // Mount Vite in middleware mode for seamless development
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, hmr: false },
       appType: 'custom',
     });
     app.use(vite.middlewares);
@@ -4073,7 +4070,8 @@ function injectInitialDataIntoHtml(html: string): string {
 // 6. Automatic Composio Webhook Registration function for server startup
 async function registerComposioWebhookOnBoot() {
   const db = loadDatabase();
-  const apiKey = db.settings?.composioApiKey || process.env.COMPOSIO_API_KEY || 'ck_o6j3ZmMqGcodzVON_NYQ';
+  const apiKey = db.settings?.composioApiKey || process.env.COMPOSIO_API_KEY;
+  if (!apiKey) return;
   const callbackUrl = 'https://geekclub.ir/api/composio/webhook';
 
   try {

@@ -413,8 +413,8 @@ export const ContentCard: React.FC<ContentCardProps> = ({
       </div>
 
       {/* Content Body */}
-      <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3 bg-slate-900/95 backdrop-blur-xl">
-        <div>
+      <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between bg-slate-900/95 backdrop-blur-xl">
+        <div className="flex flex-col flex-1">
           {/* Author & Published Info - Unboxed Text Metadata */}
           <div className="flex items-center justify-between gap-2 mb-2.5">
             <div className="flex items-center gap-2.5">
@@ -435,11 +435,13 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                     </span>
                   )}
                 </div>
-                {item.author.handle && (
-                  <span className="text-[10px] text-slate-400 block dir-ltr text-right font-mono">
-                    {item.author.handle}
-                  </span>
-                )}
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  {item.sourceDomain && (
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-indigo-300 border border-slate-700/60 font-medium">
+                      {item.sourceDomain}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -448,21 +450,27 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             </span>
           </div>
 
-          {/* Title */}
-          <h3 
-            className="text-base sm:text-lg font-black text-slate-100 group-hover:text-indigo-300 transition-colors line-clamp-2 leading-relaxed cursor-pointer"
-            onClick={() => onOpenArticleReader(item)}
-          >
-            {item.title}
-          </h3>
+          {/* Title - For Instagram, only render if user explicitly wrote a title */}
+          {Boolean(
+            item.title &&
+            item.title.trim() &&
+            (item.platform === 'instagram' ? item.hasCustomTitle === true : true)
+          ) && (
+            <h3 
+              className="text-base sm:text-lg font-black text-slate-100 group-hover:text-indigo-300 transition-colors line-clamp-2 leading-relaxed cursor-pointer"
+              onClick={() => onOpenArticleReader(item)}
+            >
+              {item.title}
+            </h3>
+          )}
 
           {/* Description */}
-          <p className="text-xs sm:text-sm text-slate-400 line-clamp-3 mt-2 leading-relaxed sm:leading-loose">
+          <p className="text-xs sm:text-sm text-slate-400 line-clamp-3 mt-2 mb-auto leading-relaxed sm:leading-loose">
             {item.description}
           </p>
 
-          {/* Tags - High-Contrast Chip Badges */}
-          <div className="flex flex-wrap gap-1.5 mt-3">
+          {/* Tags - High-Contrast Chip Badges pinned right above the separator */}
+          <div className="flex flex-wrap gap-1.5 pt-4 mt-2">
             {item.tags.map((tag) => (
               <button
                 key={tag}

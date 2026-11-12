@@ -101,6 +101,7 @@ export interface ContentItem {
   images?: string[];
   slides?: MediaSlide[];
   apifyFetched?: boolean;
+  hasCustomTitle?: boolean;
 }
 
 export interface UserProfile {

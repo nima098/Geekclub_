@@ -46,7 +46,8 @@ import {
   Zap,
   Copy,
   Bug,
-  Terminal
+  Terminal,
+  Key
 } from 'lucide-react';
 import { 
   signInWithGoogleDrive, 
@@ -1049,166 +1050,185 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="px-4 sm:px-6 lg:px-8 border-b border-slate-800 bg-slate-900/60 shrink-0">
-          <div className="flex items-center gap-2 pt-3 text-xs font-semibold overflow-x-auto no-scrollbar">
+        {/* Main Body: Right Sidebar Navigation + Tab Content Area */}
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+          {/* Right Sidebar (RTL layout places this on the right side) */}
+          <aside 
+            id="admin-sidebar-nav"
+            className="admin-sidebar-nav w-full md:w-64 lg:w-72 bg-slate-900/95 border-b md:border-b-0 md:border-l border-slate-800/80 flex flex-col shrink-0 overflow-y-auto p-3 space-y-1.5 shadow-xl"
+          >
+            <div className="px-3 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider hidden md:block border-b border-slate-800/80 mb-1">
+              منوی دسترسی و مدیریت
+            </div>
+
             <button
+              id="admin-tab-btn-dashboard"
               onClick={() => setActiveTab('dashboard')}
-              className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+              className={`btn-admin-sidebar-tab btn-admin-tab-dashboard w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition cursor-pointer text-xs font-semibold ${
                 activeTab === 'dashboard'
-                  ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
-                  : 'border-transparent text-slate-300 hover:text-white'
+                  ? 'bg-[#0077d9] text-white shadow-md font-bold'
+                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
               }`}
             >
-              <LayoutDashboard className="w-4 h-4 text-white" />
-              داشبورد و وضعیت
+              <div className="flex items-center gap-2.5">
+                <LayoutDashboard className="w-4.5 h-4.5 text-slate-200" />
+                <span>داشبورد و وضعیت</span>
+              </div>
             </button>
 
             <button
+              id="admin-tab-btn-contents"
               onClick={() => setActiveTab('contents')}
-              className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+              className={`btn-admin-sidebar-tab btn-admin-tab-contents w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition cursor-pointer text-xs font-semibold ${
                 activeTab === 'contents'
-                  ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
-                  : 'border-transparent text-slate-300 hover:text-white'
+                  ? 'bg-[#0077d9] text-white shadow-md font-bold'
+                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
               }`}
             >
-              <Layers className="w-4 h-4 text-white" />
-              مدیریت محتوا
-              {pendingCount > 0 && (
-                <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px] animate-pulse">
-                  {pendingCount} در انتظار تایید
-                </span>
-              )}
-              {trashCount > 0 && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-600 text-white font-bold">
-                  {trashCount} سطل
-                </span>
-              )}
+              <div className="flex items-center gap-2.5">
+                <Layers className="w-4.5 h-4.5 text-slate-200" />
+                <span>مدیریت محتوا</span>
+              </div>
+              <div className="flex items-center gap-1">
+                {pendingCount > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px] animate-pulse">
+                    {pendingCount}
+                  </span>
+                )}
+                {trashCount > 0 && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-600 text-white font-bold">
+                    {trashCount}
+                  </span>
+                )}
+              </div>
             </button>
 
             <button
               id="composio-tab-btn"
               onClick={() => setActiveTab('composio')}
-              className={`composio-tab-btn pb-3 px-3.5 border-b-2 flex items-center gap-2 transition whitespace-nowrap cursor-pointer ring-1 ring-amber-500/30 ${
+              className={`btn-admin-sidebar-tab composio-tab-btn btn-admin-tab-composio w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition cursor-pointer text-xs font-semibold ring-1 ring-amber-500/30 ${
                 activeTab === 'composio'
-                  ? 'border-amber-500 bg-amber-500 text-slate-950 font-black rounded-t-xl shadow-lg'
-                  : 'border-transparent text-amber-400 hover:text-white bg-slate-800/80 rounded-t-lg'
+                  ? 'bg-amber-500 text-slate-950 shadow-lg font-black'
+                  : 'text-amber-400 hover:bg-slate-800/80 hover:text-white bg-slate-800/40'
               }`}
             >
-              <Instagram className="w-4 h-4 text-rose-400" />
-              <span>اتصال اینستاگرام (Composio)</span>
+              <div className="flex items-center gap-2.5">
+                <Instagram className="w-4.5 h-4.5 text-rose-400" />
+                <span>اتصال اینستاگرام (Composio)</span>
+              </div>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-600 text-white font-mono font-bold">
                 @esmaeelgray
               </span>
             </button>
 
             <button
+              id="admin-tab-btn-users"
               onClick={() => setActiveTab('users')}
-              className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+              className={`btn-admin-sidebar-tab btn-admin-tab-users w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition cursor-pointer text-xs font-semibold ${
                 activeTab === 'users'
-                  ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
-                  : 'border-transparent text-slate-300 hover:text-white'
+                  ? 'bg-[#0077d9] text-white shadow-md font-bold'
+                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
               }`}
             >
-              <Users className="w-4 h-4 text-white" />
-              مدیریت کاربران و انتشار مستقیم
+              <div className="flex items-center gap-2.5">
+                <Users className="w-4.5 h-4.5 text-slate-200" />
+                <span>مدیریت کاربران و انتشار</span>
+              </div>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-mono font-bold">
                 {usersList.length}
               </span>
             </button>
 
             <button
+              id="admin-tab-btn-database"
               onClick={() => setActiveTab('database')}
-              className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+              className={`btn-admin-sidebar-tab btn-admin-tab-database w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition cursor-pointer text-xs font-semibold ${
                 activeTab === 'database'
-                  ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
-                  : 'border-transparent text-slate-300 hover:text-white'
+                  ? 'bg-[#0077d9] text-white shadow-md font-bold'
+                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
               }`}
             >
-              <Database className="w-4 h-4 text-white" />
-              پایداری داده‌ها و پشتیبان‌گیری
+              <div className="flex items-center gap-2.5">
+                <Database className="w-4.5 h-4.5 text-slate-200" />
+                <span>پایداری داده‌ها و پشتیبان</span>
+              </div>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-600 text-white font-mono font-bold">
-                JSON + Firestore
+                JSON
               </span>
             </button>
 
             <button
+              id="admin-tab-btn-diagnostic"
               onClick={() => setActiveTab('diagnostic')}
-              className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+              className={`btn-admin-sidebar-tab btn-admin-tab-diagnostic w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition cursor-pointer text-xs font-semibold ${
                 activeTab === 'diagnostic'
-                  ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
-                  : 'border-transparent text-slate-300 hover:text-white'
+                  ? 'bg-[#0077d9] text-white shadow-md font-bold'
+                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
               }`}
             >
-              <ShieldAlert className="w-4 h-4 text-white animate-pulse" />
-              تست جامع دیتابیس و همگام‌سازی
+              <div className="flex items-center gap-2.5">
+                <ShieldAlert className="w-4.5 h-4.5 text-slate-200 animate-pulse" />
+                <span>تست جامع دیتابیس</span>
+              </div>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-mono font-bold">
-                Live Ping
+                Live
               </span>
             </button>
 
             <button
+              id="admin-tab-btn-settings"
               onClick={() => setActiveTab('settings')}
-              className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+              className={`btn-admin-sidebar-tab btn-admin-tab-settings w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition cursor-pointer text-xs font-semibold ${
                 activeTab === 'settings'
-                  ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
-                  : 'border-transparent text-slate-300 hover:text-white'
+                  ? 'bg-[#0077d9] text-white shadow-md font-bold'
+                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
               }`}
             >
-              <Settings className="w-4 h-4 text-white" />
-              تنظیمات تایید محتوا
+              <div className="flex items-center gap-2.5">
+                <Settings className="w-4.5 h-4.5 text-slate-200" />
+                <span>تنظیمات تایید محتوا</span>
+              </div>
               <span className={`w-2.5 h-2.5 rounded-full ${siteSettings.requireContentApproval ? 'bg-amber-500' : 'bg-slate-500'}`} />
             </button>
 
             <button
-              id="composio-tab-btn"
-              onClick={() => setActiveTab('composio')}
-              className={`composio-tab-btn pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
-                activeTab === 'composio'
-                  ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
-                  : 'border-transparent text-slate-300 hover:text-white'
-              }`}
-            >
-              <Instagram className="w-4 h-4 text-amber-400" />
-              اتصال اینستاگرام (Composio)
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-mono font-bold">
-                @esmaeelgray
-              </span>
-            </button>
-
-            <button
+              id="admin-tab-btn-feedback"
               onClick={() => setActiveTab('feedback')}
-              className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+              className={`btn-admin-sidebar-tab btn-admin-tab-feedback w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition cursor-pointer text-xs font-semibold ${
                 activeTab === 'feedback'
-                  ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
-                  : 'border-transparent text-slate-300 hover:text-white'
+                  ? 'bg-[#0077d9] text-white shadow-md font-bold'
+                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
               }`}
             >
-              <MessageSquarePlus className="w-4 h-4 text-white" />
-              انتقادات و پیشنهادات
+              <div className="flex items-center gap-2.5">
+                <MessageSquarePlus className="w-4.5 h-4.5 text-slate-200" />
+                <span>انتقادات و پیشنهادات</span>
+              </div>
               {pendingFeedbackCount > 0 && (
-                <span className="w-4 h-4 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px] flex items-center justify-center">
+                <span className="w-4.5 h-4.5 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px] flex items-center justify-center">
                   {pendingFeedbackCount}
                 </span>
               )}
             </button>
 
             <button
+              id="admin-tab-btn-broadcast"
               onClick={() => setActiveTab('broadcast')}
-              className={`pb-3 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+              className={`btn-admin-sidebar-tab btn-admin-tab-broadcast w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition cursor-pointer text-xs font-semibold ${
                 activeTab === 'broadcast'
-                  ? 'border-[#0077d9] bg-[#0077d9] text-white font-bold rounded-t-xl'
-                  : 'border-transparent text-slate-300 hover:text-white'
+                  ? 'bg-[#0077d9] text-white shadow-md font-bold'
+                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
               }`}
             >
-              <Send className="w-4 h-4 text-white" />
-              پیام همگانی
+              <div className="flex items-center gap-2.5">
+                <Send className="w-4.5 h-4.5 text-slate-200" />
+                <span>پیام همگانی</span>
+              </div>
             </button>
-          </div>
-        </div>
+          </aside>
 
-        {/* Tab Body */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-950/40">
+          {/* Tab Body */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-950/40">
           <div className="max-w-7xl mx-auto w-full">
 
             {/* 1. Dashboard Tab */}
@@ -2103,6 +2123,82 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     </div>
                   </div>
                 </div>
+
+                {/* Apify Instagram & CDN Pipeline Card */}
+                <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-700 pb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white shadow-md">
+                        <Key className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
+                          اتصال به Apify (استخراج هوشمند اینستاگرام و انتقال به CDN)
+                        </h4>
+                        <p className="text-xs text-slate-300">دریافت خودکار ویدیوها، عکس‌ها و اسلایدهای اینستاگرام و بارگذاری مستقیم روی CDN</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-200 block">توکن دسترسی API (Apify API Token):</label>
+                      <input
+                        type="password"
+                        value={apifyToken}
+                        onChange={(e) => setApifyToken(e.target.value)}
+                        placeholder="apify_api_..."
+                        className="input-daily w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3.5 py-2 text-xs font-mono outline-none"
+                      />
+                      <p className="text-[11px] text-slate-400">
+                        توکن API خود را می‌توانید از بخش Integrations در پنل کاربری apify.com کپی کنید.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-200 block">شناسه اکتور اسکرپر (Actor ID):</label>
+                      <input
+                        type="text"
+                        value={apifyActor}
+                        onChange={(e) => setApifyActor(e.target.value)}
+                        placeholder="apify~instagram-scraper"
+                        className="input-daily w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3.5 py-2 text-xs font-mono outline-none"
+                      />
+                    </div>
+
+                    {apifyTestResult && (
+                      <div className={`p-3 rounded-xl border text-xs font-sans ${
+                        apifyTestResult.ok
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                          : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                      }`}>
+                        <p className="font-bold">{apifyTestResult.message}</p>
+                        {apifyTestResult.details && (
+                          <p className="text-[11px] opacity-80 mt-1">{apifyTestResult.details}</p>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between pt-1">
+                      <button
+                        type="button"
+                        onClick={handleTestApify}
+                        disabled={isTestingApify || !apifyToken.trim()}
+                        className="btn-admin-apify-test px-3.5 py-2 rounded-xl bg-slate-700 hover:bg-slate-650 text-slate-200 font-bold text-xs transition cursor-pointer disabled:opacity-50"
+                      >
+                        {isTestingApify ? 'در حال تست...' : 'تست اتصال به Apify'}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleSaveApifySettings}
+                        className="btn-admin-apify-save btn-daily-primary px-4 py-2 bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs rounded-xl transition cursor-pointer"
+                      >
+                        {apifySaveSuccess ? 'ذخیره شد ✓' : 'ذخیره تنظیمات Apify'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -2667,7 +2763,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 export default AdminPanelModal;

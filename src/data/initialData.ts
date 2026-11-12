@@ -84,7 +84,8 @@ export const INITIAL_CONTENT: ContentItem[] = [
     dislikesCount: 4,
     commentsCount: 45,
     userReaction: null,
-    sourceDomain: 'instagram.com'
+    sourceDomain: 'instagram.com',
+    hasCustomTitle: true
   },
   {
     id: 'yt-2',
@@ -165,7 +166,8 @@ export const INITIAL_CONTENT: ContentItem[] = [
     dislikesCount: 8,
     commentsCount: 52,
     userReaction: null,
-    sourceDomain: 'instagram.com'
+    sourceDomain: 'instagram.com',
+    hasCustomTitle: true
   },
   {
     id: 'art-3',

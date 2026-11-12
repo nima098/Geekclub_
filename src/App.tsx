@@ -866,15 +866,13 @@ export default function App() {
     setContents((prev) => [newItem, ...prev]);
     api.addContent(newItem);
 
-    const isGenericTitle = !newItem.title || 
+    const isGenericTitle = newItem.platform !== 'instagram' && (!newItem.title || 
       newItem.title === 'ویدیوی یوتیوب' || 
       newItem.title === 'ویدیوی آپارات' || 
-      newItem.title === 'پست اینستاگرام' || 
       newItem.title === 'محتوای اشتراک‌گذاری شده' || 
       newItem.title === 'مقاله وب' ||
       newItem.title.startsWith('مقاله در ') ||
-      newItem.title.startsWith('پست منتخب در') ||
-      newItem.title.startsWith('ویدیوی آموزشی');
+      newItem.title.startsWith('ویدیوی آموزشی'));
 
     const needsThumb = !newItem.thumbnail || 
       (!newItem.thumbnail.includes('upc.geekclub.ir') && !newItem.thumbnail.startsWith('/uploads/')) || 
@@ -955,7 +953,9 @@ export default function App() {
             }
 
             const updates: Partial<ContentItem> = {
-              ...(enriched.title && enriched.title.trim() ? { title: enriched.title.trim() } : {}),
+              ...(newItem.platform === 'instagram'
+                ? (newItem.hasCustomTitle && newItem.title && newItem.title.trim() ? { title: newItem.title.trim() } : { title: '' })
+                : (enriched.title && enriched.title.trim() ? { title: enriched.title.trim() } : {})),
               ...(enriched.description && enriched.description.trim() ? { description: enriched.description.trim() } : {}),
               ...(finalCover ? { thumbnail: finalCover } : {}),
               ...(enriched.videoUrl ? { videoUrl: enriched.videoUrl } : {}),
@@ -1482,7 +1482,7 @@ export default function App() {
         onGoHome={handleGoHome}
       />
       {/* Main Content Area */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-6 lg:pr-64">
         {/* Single Post Permalink Banner */}
         {singlePostId && (
           <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border border-indigo-500/40 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-right">
@@ -1635,7 +1635,7 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-800/80 bg-slate-900/95 backdrop-blur-xl py-8 text-xs text-slate-400 mt-12 shadow-lg shadow-slate-950/20">
+      <footer className="border-t border-slate-800/80 bg-slate-900/95 backdrop-blur-xl py-8 text-xs text-slate-400 mt-12 shadow-lg shadow-slate-950/20 lg:pr-64">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <a
