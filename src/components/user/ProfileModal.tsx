@@ -52,6 +52,7 @@ interface ProfileModalProps {
   onAddProfileComment: (text: string) => void;
   onOpenArticle?: (item: ContentItem) => void;
   onOpenComments?: (item: ContentItem) => void;
+  initialTab?: 'settings' | 'my_contents' | 'inbox' | 'guestbook';
 }
 
 // Preset avatars for quick selection using zero-request SVG Data URIs
@@ -77,9 +78,16 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   profileComments,
   onAddProfileComment,
   onOpenArticle,
-  onOpenComments
+  onOpenComments,
+  initialTab
 }) => {
-  const [activeTab, setActiveTab] = useState<'settings' | 'my_contents' | 'inbox' | 'guestbook'>('my_contents');
+  const [activeTab, setActiveTab] = useState<'settings' | 'my_contents' | 'inbox' | 'guestbook'>(initialTab || 'my_contents');
+
+  React.useEffect(() => {
+    if (isOpen && initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [isOpen, initialTab]);
 
   // Form states
   const [displayName, setDisplayName] = useState(user.displayName);

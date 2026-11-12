@@ -47,7 +47,7 @@ import {
   Copy,
   Bug,
   Terminal,
-  Key
+  Code
 } from 'lucide-react';
 import { 
   signInWithGoogleDrive, 
@@ -76,6 +76,7 @@ import {
   transferExternalUrlToCDN,
   CDNHealthReport
 } from '../../services/cdnService';
+import { InstagramPipelineDebugger } from './InstagramPipelineDebugger';
 
 interface AdminPanelModalProps {
   isOpen: boolean;
@@ -130,6 +131,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [isRunningDMSync, setIsRunningDMSync] = useState(false);
   const [composioSyncResult, setComposioSyncResult] = useState<{ success: boolean; message: string; count?: number } | null>(null);
   const [composioStatus, setComposioStatus] = useState<any>(null);
+  const [isPhpCodeCopied, setIsPhpCodeCopied] = useState(false);
+
+  const handleCopyPhpCode = () => {
+    navigator.clipboard.writeText(PHP_CDN_SCRIPT_CODE);
+    setIsPhpCodeCopied(true);
+    setTimeout(() => setIsPhpCodeCopied(false), 2500);
+  };
 
   const fetchComposioStatus = async () => {
     try {
@@ -1050,28 +1058,25 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           </div>
         </div>
 
-        {/* Main Body: Right Sidebar Navigation + Tab Content Area */}
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-          {/* Right Sidebar (RTL layout places this on the right side) */}
-          <aside 
-            id="admin-sidebar-nav"
-            className="admin-sidebar-nav w-full md:w-64 lg:w-72 bg-slate-900/95 border-b md:border-b-0 md:border-l border-slate-800/80 flex flex-col shrink-0 overflow-y-auto p-3 space-y-1.5 shadow-xl"
+        {/* Main Body Layout: Right Sidebar (admin-sidebar-nav) & Left Content Area */}
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden" dir="rtl">
+          {/* Vertical Right Sidebar Nav */}
+          <nav 
+            id="admin-sidebar-nav" 
+            className="w-full md:w-64 sm:w-72 bg-slate-900/95 border-b md:border-b-0 md:border-l border-slate-800 p-3 sm:p-4 space-y-1.5 shrink-0 overflow-y-auto admin-sidebar-nav"
+            dir="rtl"
           >
-            <div className="px-3 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider hidden md:block border-b border-slate-800/80 mb-1">
-              منوی دسترسی و مدیریت
-            </div>
-
             <button
               id="admin-tab-btn-dashboard"
               onClick={() => setActiveTab('dashboard')}
-              className={`btn-admin-sidebar-tab btn-admin-tab-dashboard w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition cursor-pointer text-xs font-semibold ${
+              className={`btn-admin-sidebar-tab admin-tab-btn-dashboard w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
                 activeTab === 'dashboard'
-                  ? 'bg-[#0077d9] text-white shadow-md font-bold'
-                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                  ? 'bg-[#0077d9] text-white shadow-lg shadow-indigo-600/20 font-bold border border-indigo-400/30'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <LayoutDashboard className="w-4.5 h-4.5 text-slate-200" />
+                <LayoutDashboard className="w-4 h-4 text-white shrink-0" />
                 <span>داشبورد و وضعیت</span>
               </div>
             </button>
@@ -1079,14 +1084,14 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             <button
               id="admin-tab-btn-contents"
               onClick={() => setActiveTab('contents')}
-              className={`btn-admin-sidebar-tab btn-admin-tab-contents w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition cursor-pointer text-xs font-semibold ${
+              className={`btn-admin-sidebar-tab admin-tab-btn-contents w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
                 activeTab === 'contents'
-                  ? 'bg-[#0077d9] text-white shadow-md font-bold'
-                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                  ? 'bg-[#0077d9] text-white shadow-lg shadow-indigo-600/20 font-bold border border-indigo-400/30'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Layers className="w-4.5 h-4.5 text-slate-200" />
+                <Layers className="w-4 h-4 text-white shrink-0" />
                 <span>مدیریت محتوا</span>
               </div>
               <div className="flex items-center gap-1">
@@ -1106,14 +1111,14 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             <button
               id="composio-tab-btn"
               onClick={() => setActiveTab('composio')}
-              className={`btn-admin-sidebar-tab composio-tab-btn btn-admin-tab-composio w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition cursor-pointer text-xs font-semibold ring-1 ring-amber-500/30 ${
+              className={`btn-admin-sidebar-tab composio-tab-btn w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition text-xs font-semibold text-right cursor-pointer ring-1 ring-amber-500/30 ${
                 activeTab === 'composio'
-                  ? 'bg-amber-500 text-slate-950 shadow-lg font-black'
-                  : 'text-amber-400 hover:bg-slate-800/80 hover:text-white bg-slate-800/40'
+                  ? 'bg-amber-500 text-slate-950 font-black shadow-lg border border-amber-400'
+                  : 'text-amber-400 hover:text-white bg-slate-800/80 border border-transparent'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Instagram className="w-4.5 h-4.5 text-rose-400" />
+                <Instagram className="w-4 h-4 text-rose-400 shrink-0" />
                 <span>اتصال اینستاگرام (Composio)</span>
               </div>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-600 text-white font-mono font-bold">
@@ -1124,15 +1129,15 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             <button
               id="admin-tab-btn-users"
               onClick={() => setActiveTab('users')}
-              className={`btn-admin-sidebar-tab btn-admin-tab-users w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition cursor-pointer text-xs font-semibold ${
+              className={`btn-admin-sidebar-tab admin-tab-btn-users w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
                 activeTab === 'users'
-                  ? 'bg-[#0077d9] text-white shadow-md font-bold'
-                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                  ? 'bg-[#0077d9] text-white shadow-lg shadow-indigo-600/20 font-bold border border-indigo-400/30'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Users className="w-4.5 h-4.5 text-slate-200" />
-                <span>مدیریت کاربران و انتشار</span>
+                <Users className="w-4 h-4 text-white shrink-0" />
+                <span>مدیریت کاربران</span>
               </div>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-mono font-bold">
                 {usersList.length}
@@ -1142,70 +1147,70 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             <button
               id="admin-tab-btn-database"
               onClick={() => setActiveTab('database')}
-              className={`btn-admin-sidebar-tab btn-admin-tab-database w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition cursor-pointer text-xs font-semibold ${
+              className={`btn-admin-sidebar-tab admin-tab-btn-database w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
                 activeTab === 'database'
-                  ? 'bg-[#0077d9] text-white shadow-md font-bold'
-                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                  ? 'bg-[#0077d9] text-white shadow-lg shadow-indigo-600/20 font-bold border border-indigo-400/30'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Database className="w-4.5 h-4.5 text-slate-200" />
-                <span>پایداری داده‌ها و پشتیبان</span>
+                <Database className="w-4 h-4 text-white shrink-0" />
+                <span>پایداری و پشتیبان‌گیری</span>
               </div>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-600 text-white font-mono font-bold">
-                JSON
+                JSON + Postgres
               </span>
             </button>
 
             <button
               id="admin-tab-btn-diagnostic"
               onClick={() => setActiveTab('diagnostic')}
-              className={`btn-admin-sidebar-tab btn-admin-tab-diagnostic w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition cursor-pointer text-xs font-semibold ${
+              className={`btn-admin-sidebar-tab admin-tab-btn-diagnostic w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
                 activeTab === 'diagnostic'
-                  ? 'bg-[#0077d9] text-white shadow-md font-bold'
-                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                  ? 'bg-[#0077d9] text-white shadow-lg shadow-indigo-600/20 font-bold border border-indigo-400/30'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <ShieldAlert className="w-4.5 h-4.5 text-slate-200 animate-pulse" />
-                <span>تست جامع دیتابیس</span>
+                <ShieldAlert className="w-4 h-4 text-white animate-pulse shrink-0" />
+                <span>تست جامع و دیباگر</span>
               </div>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-mono font-bold">
-                Live
+                Live Ping
               </span>
             </button>
 
             <button
               id="admin-tab-btn-settings"
               onClick={() => setActiveTab('settings')}
-              className={`btn-admin-sidebar-tab btn-admin-tab-settings w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition cursor-pointer text-xs font-semibold ${
+              className={`btn-admin-sidebar-tab admin-tab-btn-settings w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
                 activeTab === 'settings'
-                  ? 'bg-[#0077d9] text-white shadow-md font-bold'
-                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                  ? 'bg-[#0077d9] text-white shadow-lg shadow-indigo-600/20 font-bold border border-indigo-400/30'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Settings className="w-4.5 h-4.5 text-slate-200" />
-                <span>تنظیمات تایید محتوا</span>
+                <Settings className="w-4 h-4 text-white shrink-0" />
+                <span>تنظیمات، Apify و CDN</span>
               </div>
-              <span className={`w-2.5 h-2.5 rounded-full ${siteSettings.requireContentApproval ? 'bg-amber-500' : 'bg-slate-500'}`} />
+              <span className={`w-2.5 h-2.5 rounded-full ${siteSettings.requireContentApproval ? 'bg-amber-500' : 'bg-emerald-400'}`} />
             </button>
 
             <button
               id="admin-tab-btn-feedback"
               onClick={() => setActiveTab('feedback')}
-              className={`btn-admin-sidebar-tab btn-admin-tab-feedback w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition cursor-pointer text-xs font-semibold ${
+              className={`btn-admin-sidebar-tab admin-tab-btn-feedback w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
                 activeTab === 'feedback'
-                  ? 'bg-[#0077d9] text-white shadow-md font-bold'
-                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                  ? 'bg-[#0077d9] text-white shadow-lg shadow-indigo-600/20 font-bold border border-indigo-400/30'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <MessageSquarePlus className="w-4.5 h-4.5 text-slate-200" />
+                <MessageSquarePlus className="w-4 h-4 text-white shrink-0" />
                 <span>انتقادات و پیشنهادات</span>
               </div>
               {pendingFeedbackCount > 0 && (
-                <span className="w-4.5 h-4.5 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px] flex items-center justify-center">
+                <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px] flex items-center justify-center">
                   {pendingFeedbackCount}
                 </span>
               )}
@@ -1214,22 +1219,22 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             <button
               id="admin-tab-btn-broadcast"
               onClick={() => setActiveTab('broadcast')}
-              className={`btn-admin-sidebar-tab btn-admin-tab-broadcast w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition cursor-pointer text-xs font-semibold ${
+              className={`btn-admin-sidebar-tab admin-tab-btn-broadcast w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
                 activeTab === 'broadcast'
-                  ? 'bg-[#0077d9] text-white shadow-md font-bold'
-                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                  ? 'bg-[#0077d9] text-white shadow-lg shadow-indigo-600/20 font-bold border border-indigo-400/30'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Send className="w-4.5 h-4.5 text-slate-200" />
-                <span>پیام همگانی</span>
+                <Send className="w-4 h-4 text-white shrink-0" />
+                <span>ارسال پیام همگانی</span>
               </div>
             </button>
-          </aside>
+          </nav>
 
-          {/* Tab Body */}
+          {/* Tab Content Area */}
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-950/40">
-          <div className="max-w-7xl mx-auto w-full">
+            <div className="max-w-7xl mx-auto w-full">
 
             {/* 1. Dashboard Tab */}
             {activeTab === 'dashboard' && (
@@ -2002,6 +2007,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   )}
                 </div>
 
+                {/* 5-Stage Instagram Pipeline Debugger */}
+                <InstagramPipelineDebugger />
+
                 <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-3">
                   <div className="flex items-center justify-between border-b border-slate-700 pb-2">
                     <h5 className="text-xs font-bold text-slate-100 flex items-center gap-2">
@@ -2124,78 +2132,198 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   </div>
                 </div>
 
-                {/* Apify Instagram & CDN Pipeline Card */}
+                {/* Apify API Configuration Card */}
                 <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
                   <div className="flex items-center justify-between border-b border-slate-700 pb-3">
                     <div className="flex items-center gap-3">
-                      <div className="p-2.5 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white shadow-md">
-                        <Key className="w-6 h-6 text-white" />
+                      <div className="p-2.5 rounded-xl bg-orange-600 text-white shadow-md">
+                        <Zap className="w-6 h-6" />
                       </div>
                       <div>
                         <h4 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
-                          اتصال به Apify (استخراج هوشمند اینستاگرام و انتقال به CDN)
+                          تنظیمات Apify API Token & Actor
                         </h4>
-                        <p className="text-xs text-slate-300">دریافت خودکار ویدیوها، عکس‌ها و اسلایدهای اینستاگرام و بارگذاری مستقیم روی CDN</p>
+                        <p className="text-xs text-slate-300">اتصال خودکار استخراج‌کننده اینستاگرام برای دریافت عکس‌ها، ریلزها و اسلایدها</p>
                       </div>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={handleTestApify}
+                      disabled={isTestingApify}
+                      className="px-3.5 py-2 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-1.5 transition shadow cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isTestingApify ? 'animate-spin' : ''}`} />
+                      <span>{isTestingApify ? 'در حال تست...' : 'تست اتصال Apify'}</span>
+                    </button>
                   </div>
 
                   <div className="space-y-3">
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-200 block">توکن دسترسی API (Apify API Token):</label>
-                      <input
-                        type="password"
-                        value={apifyToken}
-                        onChange={(e) => setApifyToken(e.target.value)}
-                        placeholder="apify_api_..."
-                        className="input-daily w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3.5 py-2 text-xs font-mono outline-none"
-                      />
-                      <p className="text-[11px] text-slate-400">
-                        توکن API خود را می‌توانید از بخش Integrations در پنل کاربری apify.com کپی کنید.
-                      </p>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-200 block">شناسه اکتور اسکرپر (Actor ID):</label>
-                      <input
-                        type="text"
-                        value={apifyActor}
-                        onChange={(e) => setApifyActor(e.target.value)}
-                        placeholder="apify~instagram-scraper"
-                        className="input-daily w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3.5 py-2 text-xs font-mono outline-none"
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-200 block">توکن Apify API Token:</label>
+                        <input
+                          type="password"
+                          id="apify-api-token-input"
+                          value={apifyToken}
+                          onChange={(e) => setApifyToken(e.target.value)}
+                          placeholder="apify_api_..."
+                          className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3.5 py-2 text-xs font-mono outline-none focus:ring-2 focus:ring-[#0077d9]"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-200 block">شناسه اکتور Apify Actor ID:</label>
+                        <input
+                          type="text"
+                          id="apify-actor-id-input"
+                          value={apifyActor}
+                          onChange={(e) => setApifyActor(e.target.value)}
+                          placeholder="apify~instagram-scraper"
+                          className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3.5 py-2 text-xs font-mono outline-none focus:ring-2 focus:ring-[#0077d9]"
+                        />
+                      </div>
                     </div>
 
                     {apifyTestResult && (
-                      <div className={`p-3 rounded-xl border text-xs font-sans ${
+                      <div className={`p-3 rounded-xl border text-xs font-bold flex flex-col gap-1 ${
                         apifyTestResult.ok
-                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                          : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                          ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                          : 'bg-rose-950/40 border-rose-500/40 text-rose-300'
                       }`}>
-                        <p className="font-bold">{apifyTestResult.message}</p>
-                        {apifyTestResult.details && (
-                          <p className="text-[11px] opacity-80 mt-1">{apifyTestResult.details}</p>
-                        )}
+                        <span>{apifyTestResult.message}</span>
+                        {apifyTestResult.details && <span className="text-[11px] font-mono text-slate-300">{apifyTestResult.details}</span>}
                       </div>
                     )}
 
                     <div className="flex items-center justify-between pt-1">
-                      <button
-                        type="button"
-                        onClick={handleTestApify}
-                        disabled={isTestingApify || !apifyToken.trim()}
-                        className="btn-admin-apify-test px-3.5 py-2 rounded-xl bg-slate-700 hover:bg-slate-650 text-slate-200 font-bold text-xs transition cursor-pointer disabled:opacity-50"
-                      >
-                        {isTestingApify ? 'در حال تست...' : 'تست اتصال به Apify'}
-                      </button>
-
+                      {apifySaveSuccess && (
+                        <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                          <Check className="w-4 h-4" />
+                          تنظیمات Apify ذخیره شد.
+                        </span>
+                      )}
                       <button
                         type="button"
                         onClick={handleSaveApifySettings}
-                        className="btn-admin-apify-save btn-daily-primary px-4 py-2 bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs rounded-xl transition cursor-pointer"
+                        className="mr-auto px-4 py-2 bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs rounded-xl transition cursor-pointer"
                       >
-                        {apifySaveSuccess ? 'ذخیره شد ✓' : 'ذخیره تنظیمات Apify'}
+                        ذخیره تنظیمات Apify
                       </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* PHP CDN Host Settings Card */}
+                <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-700 pb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-xl bg-cyan-600 text-white shadow-md">
+                        <HardDrive className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
+                          تنظیمات هاست اختصاصی CDN (upc.geekclub.ir)
+                        </h4>
+                        <p className="text-xs text-slate-300">انتقال خودکار تصاویر و ویدیوهای دریافتی به سرور CDN اختصاصی</p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleTestCDNHealth}
+                      disabled={isTestingCdn}
+                      className="px-3.5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition shadow cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isTestingCdn ? 'animate-spin' : ''}`} />
+                      <span>{isTestingCdn ? 'در حال تست...' : 'تست اتصال CDN'}</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-200 block">آدرس Endpoint آپلود CDN:</label>
+                        <input
+                          type="text"
+                          id="cdn-endpoint-input"
+                          value={cdnEndpoint}
+                          onChange={(e) => setCdnEndpoint(e.target.value)}
+                          placeholder="https://upc.geekclub.ir/s1/upload.php"
+                          className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3.5 py-2 text-xs font-mono outline-none focus:ring-2 focus:ring-[#0077d9]"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-200 block">توکن امنیتی (X-Api-Token):</label>
+                        <input
+                          type="password"
+                          id="cdn-token-input"
+                          value={cdnToken}
+                          onChange={(e) => setCdnToken(e.target.value)}
+                          placeholder="توکن امنیتی آپلود CDN"
+                          className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3.5 py-2 text-xs font-mono outline-none focus:ring-2 focus:ring-[#0077d9]"
+                        />
+                      </div>
+                    </div>
+
+                    {cdnHealthReport && (
+                      <div className={`p-3 rounded-xl border text-xs font-bold flex flex-col gap-1 ${
+                        cdnHealthReport.ok
+                          ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                          : 'bg-rose-950/40 border-rose-500/40 text-rose-300'
+                      }`}>
+                        <span>{cdnHealthReport.message}</span>
+                        {cdnHealthReport.details && <span className="text-[11px] text-slate-300 font-mono">{cdnHealthReport.details}</span>}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between pt-1">
+                      {cdnSaveSuccess && (
+                        <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                          <Check className="w-4 h-4" />
+                          تنظیمات CDN ذخیره شد.
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          saveCDNConfig({ endpointUrl: cdnEndpoint, apiToken: cdnToken });
+                          setCdnSaveSuccess(true);
+                          setTimeout(() => setCdnSaveSuccess(false), 2500);
+                        }}
+                        className="mr-auto px-4 py-2 bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs rounded-xl transition cursor-pointer"
+                      >
+                        ذخیره تنظیمات CDN
+                      </button>
+                    </div>
+
+                    {/* PHP script code viewing and copying section */}
+                    <div className="mt-4 pt-4 border-t border-slate-700/80 space-y-3">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div>
+                          <h5 className="text-xs sm:text-sm font-bold text-slate-200 flex items-center gap-1.5">
+                            <Code className="w-4 h-4 text-cyan-400" />
+                            محتوای کدهای فایل upload.php (برای بارگذاری روی هاست CDN در مسیر s1/upload.php)
+                          </h5>
+                          <p className="text-[11px] text-slate-400">این کد را در فایل upload.php در پوشه s1 هاست خود قرار دهید و توکن امنیتی را با توکن بالا مطابقت دهید.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleCopyPhpCode}
+                          className="px-3.5 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 font-bold text-xs rounded-xl flex items-center gap-1.5 transition cursor-pointer shadow shrink-0"
+                        >
+                          {isPhpCodeCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-cyan-400" />}
+                          <span>{isPhpCodeCopied ? 'کپی شد!' : 'کپی کل کد PHP'}</span>
+                        </button>
+                      </div>
+
+                      <div className="relative">
+                        <textarea
+                          readOnly
+                          value={PHP_CDN_SCRIPT_CODE}
+                          className="w-full h-52 bg-slate-950 border border-slate-700/80 text-emerald-300 font-mono text-[11px] p-3.5 rounded-xl outline-none select-all resize-y"
+                          onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -322,6 +322,7 @@ export default function App() {
   const [isUsernameModalOpen, setIsUsernameModalOpen] = useState(false);
   const [isDomainHelpModalOpen, setIsDomainHelpModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [profileModalTab, setProfileModalTab] = useState<'settings' | 'my_contents' | 'inbox' | 'guestbook'>('my_contents');
   const [activeCommentsItem, setActiveCommentsItem] = useState<ContentItem | null>(null);
   const [activeArticleItem, setActiveArticleItem] = useState<ContentItem | null>(null);
   const [sharedIncomingUrl, setSharedIncomingUrl] = useState('');
@@ -854,7 +855,13 @@ export default function App() {
       publishedAt: 'همین الان',
       userReaction: 'like',
       approvalStatus: isAutoApproved ? 'approved' : 'pending',
-      authorUid: user?.uid
+      authorUid: user?.uid,
+      sharedBy: itemData.sharedBy || (user ? {
+        name: user.displayName,
+        username: user.username || user.displayName?.replace(/\s+/g, '_').toLowerCase(),
+        avatar: user.photoURL,
+        uid: user.uid
+      } : undefined)
     };
 
     // Auto-reset active filters so the new content is immediately visible at the top
@@ -866,13 +873,15 @@ export default function App() {
     setContents((prev) => [newItem, ...prev]);
     api.addContent(newItem);
 
-    const isGenericTitle = newItem.platform !== 'instagram' && (!newItem.title || 
+    const isGenericTitle = !newItem.title || 
       newItem.title === 'ویدیوی یوتیوب' || 
       newItem.title === 'ویدیوی آپارات' || 
+      newItem.title === 'پست اینستاگرام' || 
       newItem.title === 'محتوای اشتراک‌گذاری شده' || 
       newItem.title === 'مقاله وب' ||
       newItem.title.startsWith('مقاله در ') ||
-      newItem.title.startsWith('ویدیوی آموزشی'));
+      newItem.title.startsWith('پست منتخب در') ||
+      newItem.title.startsWith('ویدیوی آموزشی');
 
     const needsThumb = !newItem.thumbnail || 
       (!newItem.thumbnail.includes('upc.geekclub.ir') && !newItem.thumbnail.startsWith('/uploads/')) || 
@@ -953,9 +962,7 @@ export default function App() {
             }
 
             const updates: Partial<ContentItem> = {
-              ...(newItem.platform === 'instagram'
-                ? (newItem.hasCustomTitle && newItem.title && newItem.title.trim() ? { title: newItem.title.trim() } : { title: '' })
-                : (enriched.title && enriched.title.trim() ? { title: enriched.title.trim() } : {})),
+              ...(enriched.title && enriched.title.trim() ? { title: enriched.title.trim() } : {}),
               ...(enriched.description && enriched.description.trim() ? { description: enriched.description.trim() } : {}),
               ...(finalCover ? { thumbnail: finalCover } : {}),
               ...(enriched.videoUrl ? { videoUrl: enriched.videoUrl } : {}),
@@ -1445,9 +1452,9 @@ export default function App() {
   const getGridClasses = () => {
     switch (viewMode) {
       case 'grid3':
-        return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
+        return 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6';
       case 'grid2':
-        return 'grid grid-cols-1 md:grid-cols-2 gap-6';
+        return 'grid grid-cols-1 sm:grid-cols-2 gap-6';
       case 'compact':
         return 'flex flex-col gap-4';
     }
@@ -1461,7 +1468,10 @@ export default function App() {
         onOpenAddModal={() => setIsAddModalOpen(true)}
         onStartGoogleLogin={handleDirectGoogleLogin}
         isLoggingIn={isLoggingInWithGoogle}
-        onOpenProfileModal={() => setIsProfileModalOpen(true)}
+        onOpenProfileModal={(tab) => {
+          if (tab) setProfileModalTab(tab);
+          setIsProfileModalOpen(true);
+        }}
         onOpenFeedbackModal={() => setIsFeedbackModalOpen(true)}
         onOpenRSSModal={isAdmin ? () => setIsRSSModalOpen(true) : undefined}
         onOpenAdminModal={() => {
@@ -1481,41 +1491,9 @@ export default function App() {
         onToggleTheme={handleToggleTheme}
         onGoHome={handleGoHome}
       />
-      {/* Main Content Area */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-6">
-        {/* Single Post Permalink Banner */}
-        {singlePostId && (
-          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border border-indigo-500/40 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-right">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center justify-center shrink-0">
-                <Bookmark className="w-5 h-5 text-indigo-400" />
-              </div>
-              <div>
-                <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-                  در حال مشاهده لینک اختصاصی مطلب
-                  <span className="text-[10px] bg-indigo-500/30 text-indigo-200 border border-indigo-500/40 px-2.5 py-0.5 rounded-full font-mono">
-                    Single Post
-                  </span>
-                </h3>
-                <p className="text-xs text-slate-300 mt-0.5">
-                  شما در حال مشاهده مستقیم این مطلب هستید. برای مشاهده تمام اخبار و ویدیوها روی دکمه بازگشت کلیک کنید.
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                setSinglePostId(null);
-                window.history.pushState({}, '', '/');
-              }}
-              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-2 transition cursor-pointer shrink-0 shadow-lg shadow-indigo-600/30 active:scale-95"
-            >
-              <span>مشاهده همه مطالب سایت</span>
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-        {/* Filter Bar (Search, Platforms, Categories, Sort, View Modes) */}
+      {/* Main Content Area: Right Sidebar (FilterBar) + Left Feed Area */}
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 flex-1 w-full flex flex-col lg:flex-row gap-6 items-start" dir="rtl">
+        {/* Right Sidebar (Search, Platforms, Categories, Sort, View Modes) */}
         <FilterBar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
@@ -1540,102 +1518,138 @@ export default function App() {
           trashCount={trashCount}
         />
 
-        {/* Trash Notice Banner when Admin is viewing Trash */}
-        {showTrashOnly && (
-          <div className="p-4 sm:p-5 rounded-2xl bg-rose-950/60 border border-rose-800/80 text-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-rose-600/30 text-rose-300 shrink-0 border border-rose-500/40">
-                <Trash2 className="w-5 h-5 text-rose-400" />
+        {/* Left Area: Main Feed Content & Grid */}
+        <div className="feed-main-container flex-1 min-w-0 w-full space-y-6">
+          {/* Single Post Permalink Banner */}
+          {singlePostId && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border border-indigo-500/40 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-right">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center justify-center shrink-0">
+                  <Bookmark className="w-5 h-5 text-indigo-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                    در حال مشاهده لینک اختصاصی مطلب
+                    <span className="text-[10px] bg-indigo-500/30 text-indigo-200 border border-indigo-500/40 px-2.5 py-0.5 rounded-full font-mono">
+                      Single Post
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    شما در حال مشاهده مستقیم این مطلب هستید. برای مشاهده تمام اخبار و ویدیوها روی دکمه بازگشت کلیک کنید.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setSinglePostId(null);
+                  window.history.pushState({}, '', '/');
+                }}
+                className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-2 transition cursor-pointer shrink-0 shadow-lg shadow-indigo-600/30 active:scale-95"
+              >
+                <span>مشاهده همه مطالب سایت</span>
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Trash Notice Banner when Admin is viewing Trash */}
+          {showTrashOnly && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-rose-950/60 border border-rose-800/80 text-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-rose-600/30 text-rose-300 shrink-0 border border-rose-500/40">
+                  <Trash2 className="w-5 h-5 text-rose-400" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-sm font-bold text-rose-100 flex items-center gap-2">
+                    <span>سطل زباله محتواها</span>
+                    <span className="px-2 py-0.5 rounded-full bg-rose-500/30 text-rose-200 text-xs font-mono">
+                      {trashCount} مورد
+                    </span>
+                  </h4>
+                  <p className="text-xs text-rose-300/90 leading-relaxed">
+                    محتواهای منتقل شده به سطل زباله از صفحه اصلی پنهان هستند. در صورت تمایل می‌توانید هر مورد را با دکمه «بازگردانی» به صفحه اصلی بازگردانید یا با «حذف دائمی» کاملاً پاک کنید.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowTrashOnly(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs font-bold transition cursor-pointer shrink-0 border border-slate-700/80 shadow-md"
+              >
+                بازگشت به فید اصلی سایت
+              </button>
+            </div>
+          )}
+
+          {/* Content Grid */}
+          {isInitialLoading && filteredContents.length === 0 ? (
+            <div className={getGridClasses()}>
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <div key={n} className="rounded-3xl border border-slate-800/80 bg-slate-900/60 p-4 space-y-4 animate-pulse">
+                  <div className="w-full h-48 bg-slate-800/80 rounded-2xl" />
+                  <div className="space-y-2">
+                    <div className="h-4 bg-slate-800 rounded-lg w-3/4" />
+                    <div className="h-3 bg-slate-800/60 rounded-lg w-1/2" />
+                  </div>
+                  <div className="flex items-center gap-3 pt-2">
+                    <div className="w-8 h-8 rounded-full bg-slate-800" />
+                    <div className="h-3 bg-slate-800 rounded w-24" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filteredContents.length > 0 ? (
+            <div className={getGridClasses()}>
+              {filteredContents.map((item) => (
+                <ContentCard
+                  key={item.id}
+                  item={item}
+                  viewMode={viewMode}
+                  currentUser={user}
+                  onLike={handleLike}
+                  onDislike={handleDislike}
+                  onOpenComments={(targetItem) => setActiveCommentsItem(targetItem)}
+                  onOpenArticleReader={(targetItem) => {
+                    setActiveArticleItem(targetItem);
+                    const cat = targetItem.category || 'tech';
+                    window.history.pushState({}, '', `/${cat}/post-${targetItem.id}`);
+                  }}
+                  onToggleSave={handleToggleSave}
+                  onShare={handleShare}
+                  onTagClick={(tag) => setSearchQuery(tag)}
+                  onDeleteContent={(id) => handleToggleSoftDelete(id, true)}
+                  onRestoreContent={(id) => handleToggleSoftDelete(id, false)}
+                  onPermanentDelete={handlePermanentDelete}
+                />
+              ))}
+            </div>
+          ) : (
+            /* Empty State */
+            <div className="text-center py-16 px-4 bg-slate-900/40 border border-dashed border-slate-800 rounded-3xl space-y-4">
+              <div className="w-16 h-16 rounded-3xl bg-slate-800/80 text-slate-400 flex items-center justify-center mx-auto shadow-inner">
+                <SearchX className="w-8 h-8 text-slate-500" />
               </div>
               <div className="space-y-1">
-                <h4 className="text-sm font-bold text-rose-100 flex items-center gap-2">
-                  <span>سطل زباله محتواها</span>
-                  <span className="px-2 py-0.5 rounded-full bg-rose-500/30 text-rose-200 text-xs font-mono">
-                    {trashCount} مورد
-                  </span>
-                </h4>
-                <p className="text-xs text-rose-300/90 leading-relaxed">
-                  محتواهای منتقل شده به سطل زباله از صفحه اصلی پنهان هستند. در صورت تمایل می‌توانید هر مورد را با دکمه «بازگردانی» به صفحه اصلی بازگردانید یا با «حذف دائمی» کاملاً پاک کنید.
+                <h3 className="text-lg font-bold text-slate-200">
+                  هیچ محتوایی مطابق با فیلترهای انتخابی یافت نشد
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto">
+                  عبارت جستجو یا دسته‌بندی را تغییر دهید یا فیلترها را ریست کنید تا تمام موارد نمایش داده شوند.
                 </p>
               </div>
+              <button
+                onClick={handleResetFilters}
+                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 transition cursor-pointer"
+              >
+                پاک کردن همه فیلترها
+              </button>
             </div>
-            <button
-              onClick={() => setShowTrashOnly(false)}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs font-bold transition cursor-pointer shrink-0 border border-slate-700/80 shadow-md"
-            >
-              بازگشت به فید اصلی سایت
-            </button>
-          </div>
-        )}
-
-        {/* Content Grid */}
-        {isInitialLoading && filteredContents.length === 0 ? (
-          <div className={getGridClasses()}>
-            {[1, 2, 3, 4, 5, 6].map((n) => (
-              <div key={n} className="rounded-3xl border border-slate-800/80 bg-slate-900/60 p-4 space-y-4 animate-pulse">
-                <div className="w-full h-48 bg-slate-800/80 rounded-2xl" />
-                <div className="space-y-2">
-                  <div className="h-4 bg-slate-800 rounded-lg w-3/4" />
-                  <div className="h-3 bg-slate-800/60 rounded-lg w-1/2" />
-                </div>
-                <div className="flex items-center gap-3 pt-2">
-                  <div className="w-8 h-8 rounded-full bg-slate-800" />
-                  <div className="h-3 bg-slate-800 rounded w-24" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : filteredContents.length > 0 ? (
-          <div className={getGridClasses()}>
-            {filteredContents.map((item) => (
-              <ContentCard
-                key={item.id}
-                item={item}
-                viewMode={viewMode}
-                currentUser={user}
-                onLike={handleLike}
-                onDislike={handleDislike}
-                onOpenComments={(targetItem) => setActiveCommentsItem(targetItem)}
-                onOpenArticleReader={(targetItem) => {
-                  setActiveArticleItem(targetItem);
-                  const cat = targetItem.category || 'tech';
-                  window.history.pushState({}, '', `/${cat}/post-${targetItem.id}`);
-                }}
-                onToggleSave={handleToggleSave}
-                onShare={handleShare}
-                onTagClick={(tag) => setSearchQuery(tag)}
-                onDeleteContent={(id) => handleToggleSoftDelete(id, true)}
-                onRestoreContent={(id) => handleToggleSoftDelete(id, false)}
-                onPermanentDelete={handlePermanentDelete}
-              />
-            ))}
-          </div>
-        ) : (
-          /* Empty State */
-          <div className="text-center py-16 px-4 bg-slate-900/40 border border-dashed border-slate-800 rounded-3xl space-y-4">
-            <div className="w-16 h-16 rounded-3xl bg-slate-800/80 text-slate-400 flex items-center justify-center mx-auto shadow-inner">
-              <SearchX className="w-8 h-8 text-slate-500" />
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-lg font-bold text-slate-200">
-                هیچ محتوایی مطابق با فیلترهای انتخابی یافت نشد
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto">
-                عبارت جستجو یا دسته‌بندی را تغییر دهید یا فیلترها را ریست کنید تا تمام موارد نمایش داده شوند.
-              </p>
-            </div>
-            <button
-              onClick={handleResetFilters}
-              className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 transition cursor-pointer"
-            >
-              پاک کردن همه فیلترها
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-800/80 bg-slate-900/95 backdrop-blur-xl py-8 text-xs text-slate-400 mt-12 shadow-lg shadow-slate-950/20 lg:pr-64">
+      <footer className="border-t border-slate-800/80 bg-slate-900/95 backdrop-blur-xl py-8 text-xs text-slate-400 mt-12 shadow-lg shadow-slate-950/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <a
@@ -1747,6 +1761,7 @@ export default function App() {
           onClose={() => setIsProfileModalOpen(false)}
           user={user}
           contents={contents}
+          initialTab={profileModalTab}
           onUpdateUser={handleUpdateUser}
           inbox={inbox}
           onMarkMessageRead={handleMarkMessageRead}

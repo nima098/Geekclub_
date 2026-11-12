@@ -202,3 +202,51 @@ html.light div#root:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > d
   color: #0f172a !important;
 }
 
+/* ContentCard Buttons & Media Elements */
+.content-card-article {
+  /* Container style for content items */
+}
+
+.content-card-media-container {
+  /* Media wrapper style */
+}
+
+.content-card-media-item {
+  /* Specific media slide / frame element */
+}
+
+.btn-media-play {
+  /* Play overlay button */
+}
+
+.btn-close-video {
+  /* Video player close button */
+}
+
+.btn-slide-prev,
+.btn-slide-next {
+  /* Carousel navigation buttons */
+}
+
+.btn-slide-dot {
+  /* Carousel pagination dot buttons */
+}
+
+.btn-reaction-like,
+.btn-reaction-dislike {
+  /* Like / Dislike reaction buttons */
+}
+
+.btn-action-comment,
+.btn-action-bookmark,
+.btn-action-share {
+  /* Card action buttons */
+}
+
+.btn-admin-delete,
+.btn-admin-restore,
+.btn-admin-perm-delete {
+  /* Admin management action buttons */
+}
+
+

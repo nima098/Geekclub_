@@ -305,6 +305,10 @@
         "handle": "@codewith_sara",
         "isVerified": true
       },
+      "sharedBy": {
+        "name": "سارا رضایی",
+        "username": "codewith_sara"
+      },
       "category": "programming",
       "tags": [
         "جاوااسکریپت",

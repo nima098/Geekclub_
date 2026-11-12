@@ -664,6 +664,32 @@ export const api = {
     }
   },
 
+  // 23.5. Run full 5-stage Instagram Pipeline Debugger
+  async runInstagramPipelineDebug(options?: {
+    url?: string;
+    apifyToken?: string;
+    apifyActor?: string;
+    cdnEndpoint?: string;
+    cdnToken?: string;
+    simulate12hCleanup?: boolean;
+    simulateIfNoKeys?: boolean;
+  }): Promise<any> {
+    try {
+      const res = await fetch('/api/debug-instagram-pipeline', {
+        method: 'POST',
+        headers: await getAdminHeaders(),
+        body: JSON.stringify(options || {})
+      });
+      return await res.json();
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err.message,
+        message: 'خطا در برقراری ارتباط با خط لوله دیباگ اینستاگرام'
+      };
+    }
+  },
+
   // 24. Abort all stuck/hanging Apify runs to release 5 concurrent limit
   async abortAllApifyRuns(): Promise<any> {
     try {

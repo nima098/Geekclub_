@@ -163,6 +163,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
     if (parsed.platform === 'instagram') {
       setDescription('');
       if (!thumbnail.trim()) setThumbnail(FALLBACK_IMAGES.instagram);
+      if (!title.trim()) setTitle('پست اینستاگرام');
       if (!authorName.trim()) setAuthorName('پیج اینستاگرام');
       if (!readingOrWatchTime.trim()) setReadingOrWatchTime(url.includes('reel') ? 'ریلز اینستاگرام' : 'پست اینستاگرام');
       if (!tagsInput.trim()) setTagsInput('اینستاگرام, رسانه');
@@ -178,11 +179,11 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
           setFetchedMeta(meta);
           setDetectedPlatform(meta.platform);
           setEmbedUrl(meta.embedUrl);
+          if (meta.title) setTitle(meta.title);
           if (meta.platform === 'instagram') {
             setDescription('');
-          } else {
-            if (meta.title) setTitle(meta.title);
-            if (meta.description) setDescription(meta.description);
+          } else if (meta.description) {
+            setDescription(meta.description);
           }
           if (meta.thumbnail) {
             setThumbnail(meta.thumbnail);
@@ -208,11 +209,11 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
 
   useEffect(() => {
     if (fetchedMeta) {
+      if (fetchedMeta.title) setTitle(fetchedMeta.title);
       if (fetchedMeta.platform === 'instagram') {
         setDescription('');
-      } else {
-        if (fetchedMeta.title) setTitle(fetchedMeta.title);
-        if (fetchedMeta.description) setDescription(fetchedMeta.description);
+      } else if (fetchedMeta.description) {
+        setDescription(fetchedMeta.description);
       }
       if (fetchedMeta.thumbnail) setThumbnail(fetchedMeta.thumbnail);
       if (fetchedMeta.authorName) setAuthorName(fetchedMeta.authorName);
@@ -263,10 +264,10 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
   // Manually apply fetched metadata into input fields
   const handleApplyFetchedMetadata = () => {
     if (!fetchedMeta) return;
+    setTitle(fetchedMeta.title);
     if (fetchedMeta.platform === 'instagram') {
       setDescription('');
     } else {
-      setTitle(fetchedMeta.title);
       setDescription(fetchedMeta.description);
     }
     setAuthorName(fetchedMeta.authorName);
@@ -325,16 +326,16 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
         return;
       }
 
-      // Title fallback: For Instagram, never set a default title unless user explicitly wrote one
-      const finalTitle = finalPlatform === 'instagram'
-        ? title.trim()
-        : (title.trim() || fetchedMeta?.title || (
-            finalPlatform === 'youtube'
-              ? 'ویدیوی یوتیوب'
-              : finalPlatform === 'aparat'
-              ? 'ویدیوی آپارات'
-              : `مقاله در ${parsed.sourceDomain}`
-          ));
+      // Title fallback
+      const finalTitle = title.trim() || fetchedMeta?.title || (
+        finalPlatform === 'youtube'
+          ? 'ویدیوی یوتیوب'
+          : finalPlatform === 'instagram'
+          ? 'پست اینستاگرام'
+          : finalPlatform === 'aparat'
+          ? 'ویدیوی آپارات'
+          : `مقاله در ${parsed.sourceDomain}`
+      );
 
       // Description fallback (Instagram videos leave description empty by default unless user enters text)
       const finalDescription = finalPlatform === 'instagram'
@@ -418,8 +419,14 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
         author: {
           name: finalAuthorName,
           avatar: user?.photoURL || getAuthorAvatar(finalAuthorName),
-          handle: `@${finalAuthorName.replace(/\s+/g, '_').toLowerCase()}`,
+          handle: user?.username ? (user.username.startsWith('@') ? user.username : `@${user.username}`) : `@${finalAuthorName.replace(/\s+/g, '_').toLowerCase()}`,
           isVerified: false
+        },
+        sharedBy: {
+          name: user?.displayName || finalAuthorName,
+          username: user?.username ? user.username.replace(/^@/, '') : finalAuthorName.replace(/\s+/g, '_').toLowerCase(),
+          avatar: user?.photoURL || getAuthorAvatar(finalAuthorName),
+          uid: user?.uid
         },
         category: finalCategory,
         tags: finalTags,
@@ -432,7 +439,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
         mediaType: fetchedMeta?.mediaType || (fetchedMeta?.slides && fetchedMeta.slides.length > 1 ? 'carousel' : 'image'),
         images: fetchedMeta?.images || [],
         apifyFetched: Boolean(fetchedMeta?.data?.apify),
-        hasCustomTitle: finalPlatform === 'instagram' ? Boolean(title.trim()) : true
+        hasCustomTitle: Boolean(title.trim())
       });
 
       // Reset form

@@ -102,6 +102,29 @@ export interface ContentItem {
   slides?: MediaSlide[];
   apifyFetched?: boolean;
   hasCustomTitle?: boolean;
+  sharedBy?: {
+    name?: string;
+    username?: string;
+    avatar?: string;
+    uid?: string;
+  };
+}
+
+export function shouldDisplayTitle(item: ContentItem): boolean {
+  if (item.platform !== 'instagram') return true;
+  if (item.hasCustomTitle) return true;
+  const title = (item.title || '').trim();
+  if (!title) return false;
+  if (
+    title === 'پست اینستاگرام' ||
+    title === 'ریلز اینستاگرام' ||
+    title === 'پست منتخب در اینستاگرام' ||
+    title.startsWith('ریلز اینستاگرام (') ||
+    title.startsWith('پست اینستاگرام (')
+  ) {
+    return false;
+  }
+  return true;
 }
 
 export interface UserProfile {

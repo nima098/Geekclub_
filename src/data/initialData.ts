@@ -76,6 +76,11 @@ export const INITIAL_CONTENT: ContentItem[] = [
       handle: '@codewith_sara',
       isVerified: true
     },
+    sharedBy: {
+      name: 'سارا رضایی',
+      username: 'codewith_sara',
+      avatar: getAuthorAvatar('کد با سارا')
+    },
     category: 'programming',
     tags: ['جاوااسکریپت', 'ترفند کدنویسی', 'فرانت‌اند', 'تایپ‌اسکریپت'],
     publishedAt: 'دیروز',
@@ -84,8 +89,7 @@ export const INITIAL_CONTENT: ContentItem[] = [
     dislikesCount: 4,
     commentsCount: 45,
     userReaction: null,
-    sourceDomain: 'instagram.com',
-    hasCustomTitle: true
+    sourceDomain: 'instagram.com'
   },
   {
     id: 'yt-2',
@@ -166,8 +170,7 @@ export const INITIAL_CONTENT: ContentItem[] = [
     dislikesCount: 8,
     commentsCount: 52,
     userReaction: null,
-    sourceDomain: 'instagram.com',
-    hasCustomTitle: true
+    sourceDomain: 'instagram.com'
   },
   {
     id: 'art-3',

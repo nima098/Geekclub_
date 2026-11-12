@@ -18,7 +18,7 @@ import {
   Layers,
   Check
 } from 'lucide-react';
-import { ContentItem, MediaSlide } from '../../types/content';
+import { ContentItem, MediaSlide, shouldDisplayTitle } from '../../types/content';
 import { handleImageError, getPlatformFallbackImage, resolveCoverImageUrl } from '../../utils/imageHelper';
 
 interface ArticleReaderModalProps {
@@ -300,9 +300,11 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
 
           {/* Content Header: Title & Meta */}
           <div className="space-y-4">
-            <h1 className="text-xl sm:text-2xl font-black text-slate-100 leading-relaxed">
-              {item.title}
-            </h1>
+            {shouldDisplayTitle(item) && (
+              <h1 className="text-xl sm:text-2xl font-black text-slate-100 leading-relaxed">
+                {item.title}
+              </h1>
+            )}
 
             {/* Author & Published Time Bar */}
             <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-slate-800/40 border border-slate-800">

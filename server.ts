@@ -67,16 +67,11 @@ app.get(['/sw.js', '/service-worker.js', '/registerSW.js', '/workbox-*.js'], (_r
   `);
 });
 
-// AI Studio port constraint: dev server must run on port 3000 (host 0.0.0.0).
-// Ignore PORT=8080 which is reserved for the container's nginx proxy.
-let PORT = 3000;
-const portArgIndex = process.argv.indexOf('--port');
-if (portArgIndex !== -1 && process.argv[portArgIndex + 1]) {
-  const p = parseInt(process.argv[portArgIndex + 1], 10);
-  if (!isNaN(p) && p !== 8080) {
-    PORT = p;
-  }
-}
+// In AI Studio / Cloud Run, Nginx binds to 8080 and proxies to port 3000.
+// The Node app must always bind to port 3000 (never 8080 which belongs to Nginx).
+const PORT = process.env.APP_PORT
+  ? parseInt(process.env.APP_PORT, 10)
+  : (process.env.PORT && process.env.PORT !== '8080' ? parseInt(process.env.PORT, 10) : (process.env.DEFAULT_APP_PORT ? parseInt(process.env.DEFAULT_APP_PORT, 10) : 3000));
 const IS_VERCEL = Boolean(process.env.VERCEL || process.env.NOW_BUILDER);
 
 const DB_PATH = IS_VERCEL
@@ -542,10 +537,45 @@ function createDatabaseBackup(): { success: boolean; filename: string; path: str
   }
 }
 
-// 12-hour automated background backup scheduler
+// Function to clean temporary disk uploads older than 12 hours
+function cleanOldTempUploads(dirPath: string, maxAgeMs: number = 12 * 60 * 60 * 1000) {
+  try {
+    if (!fs.existsSync(dirPath)) return;
+    const now = Date.now();
+    const items = fs.readdirSync(dirPath);
+    for (const item of items) {
+      const fullPath = path.join(dirPath, item);
+      try {
+        const stat = fs.statSync(fullPath);
+        if (stat.isDirectory()) {
+          cleanOldTempUploads(fullPath, maxAgeMs);
+          // Remove empty directory if clean
+          if (fs.readdirSync(fullPath).length === 0) {
+            fs.rmdirSync(fullPath);
+          }
+        } else if (now - stat.mtimeMs > maxAgeMs) {
+          fs.unlinkSync(fullPath);
+          console.log(`[12h Hard Disk Cleanup] Deleted expired temporary file (>12h old): ${fullPath}`);
+        }
+      } catch (err: any) {
+        console.warn(`[12h Cleanup Notice] Error checking file ${fullPath}:`, err.message);
+      }
+    }
+  } catch (err: any) {
+    console.warn('[12h Cleanup Notice] Error scanning upload directory:', err.message);
+  }
+}
+
+// 12-hour automated background backup & disk cleanup scheduler
 setInterval(() => {
   createDatabaseBackup();
+  cleanOldTempUploads(UPLOADS_DIR);
 }, 12 * 60 * 60 * 1000);
+
+// Run initial cleanup on startup
+setTimeout(() => {
+  cleanOldTempUploads(UPLOADS_DIR);
+}, 10000);
 
 function saveDatabase(db: DatabaseSchema) {
   cachedDb = db;
@@ -919,6 +949,9 @@ async function downloadAndCacheVideo(
           const cdnData = await cdnResp.json() as any;
           if (cdnData.status && cdnData.url) {
             console.log(`[Video Pipeline SUCCESS] Video transferred to CDN (${cleanPlatform}/${cleanSource}): ${cdnData.url}`);
+            if (fs.existsSync(localFilePath)) {
+              try { fs.unlinkSync(localFilePath); } catch {}
+            }
             return cdnData.url;
           }
         }
@@ -1285,8 +1318,17 @@ async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMe
         }
       }
 
-      // For Instagram, do not generate a default title
-      const title = '';
+      // Determine clean title from caption or author
+      let title = '';
+      if (caption) {
+        const firstLine = caption.split('\n')[0].replace(/#[\w\u0600-\u06FF]+/g, '').trim();
+        if (firstLine.length > 5) {
+          title = firstLine.length > 90 ? firstLine.substring(0, 87) + '...' : firstLine;
+        }
+      }
+      if (!title) {
+        title = cdnPrimaryVideo ? `ویدیوی اینستاگرام از @${ownerUsername}` : `پست اینستاگرام از @${ownerUsername}`;
+      }
 
       const finalMediaType = cdnSlides.length > 1 ? 'carousel' : (cdnSlides[0]?.type || (cdnPrimaryVideo ? 'video' : 'image'));
 
@@ -1395,8 +1437,16 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
     }
   }
 
-  // For Instagram, do not generate a default title
-  title = '';
+  // Clean title from caption
+  if (caption) {
+    const firstLine = caption.split('\n')[0].replace(/#[\w\u0600-\u06FF]+/g, '').trim();
+    if (firstLine.length > 5) {
+      title = firstLine.length > 90 ? firstLine.substring(0, 87) + '...' : firstLine;
+    }
+  }
+  if (!title) {
+    title = authorName ? `پست اینستاگرام از @${authorName}` : 'پست اینستاگرام';
+  }
 
   const cleanUser = authorName ? authorName.replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase() : 'general';
   const cdnFolder = `instagram/${cleanUser}`;
@@ -1472,7 +1522,7 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
     return {
       success: true,
       platform: 'instagram',
-      title: '',
+      title: isReel ? `ریلز اینستاگرام (${shortcode})` : `پست اینستاگرام (${shortcode})`,
       description: `محتوای اشتراک‌گذاری شده از اینستاگرام. برای مشاهده تعاملی روی کارت کلیک نمایید.`,
       authorName: 'اینستاگرام',
       author: 'اینستاگرام',
@@ -1658,7 +1708,7 @@ async function enrichDatabaseContent(id: string, url: string) {
     if (!item) {
       item = {
         id: id || `content-${Date.now()}`,
-        title: meta.platform === 'instagram' ? '' : (meta.title || 'محتوای اشتراک‌گذاری شده'),
+        title: meta.title || 'محتوای اشتراک‌گذاری شده',
         description: meta.description || '',
         url,
         platform: meta.platform || 'article',
@@ -1693,10 +1743,8 @@ async function enrichDatabaseContent(id: string, url: string) {
     let changed = false;
 
     if (meta.title && meta.title.trim() && meta.title !== item.title) {
-      if (item.platform !== 'instagram') {
-        item.title = meta.title.trim();
-        changed = true;
-      }
+      item.title = meta.title.trim();
+      changed = true;
     }
     if (meta.description && meta.description.trim() && (!item.description || item.description.includes('به اشتراک گذاشته شده') || item.description.length < 20)) {
       item.description = meta.description.trim();
@@ -2464,6 +2512,34 @@ app.post('/api/debug/apify-test', requireAdminAuth, async (req: Request, res: Re
       errorResponse: err.response?.data,
       message: 'خطا در اجرای اکتور آپایفای: ' + (err.response?.data?.error?.message || err.message)
     });
+  }
+});
+
+// 2.85. ALL /api/debug-instagram-pipeline - Full Instagram Pipeline Debugger
+app.all('/api/debug-instagram-pipeline', async (req: Request, res: Response) => {
+  const targetUrl = (req.method === 'POST' ? req.body?.url : req.query?.url) || 'https://www.instagram.com/reel/DC2G5oMoQ-Y/';
+  const db = loadDatabase();
+  const apifyToken = req.body?.apifyToken || req.query?.apifyToken || process.env.APIFY_API_TOKEN || db.settings?.apifyApiToken || null;
+  const apifyActor = req.body?.apifyActor || req.query?.apifyActor || process.env.APIFY_ACTOR_ID || db.settings?.apifyActorId || null;
+  const cdnEndpoint = req.body?.cdnEndpoint || req.query?.cdnEndpoint || process.env.CDN_ENDPOINT || 'https://upc.geekclub.ir/s1/upload.php';
+  const cdnToken = req.body?.cdnToken || req.query?.cdnToken || process.env.CDN_SECRET || db.settings?.cdnSecret || null;
+  const simulate12hCleanup = req.body?.simulate12hCleanup !== false;
+  const simulateIfNoKeys = req.body?.simulateIfNoKeys !== false;
+
+  try {
+    const { runFullInstagramPipelineDebug } = await import('./api/debug-instagram-pipeline.js');
+    const report = await runFullInstagramPipelineDebug({
+      url: targetUrl,
+      apifyToken,
+      apifyActor,
+      cdnEndpoint,
+      cdnToken,
+      simulate12hCleanup,
+      simulateIfNoKeys
+    });
+    return res.json(report);
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -3974,10 +4050,7 @@ async function startServer() {
   }
 
   if (!IS_VERCEL) {
-    // Run initial cover enrichment asynchronously with a delay so it does not block boot
-    setTimeout(() => {
-      syncPlatformCoverImages().catch((err) => console.warn('Sync cover images warning:', err));
-    }, 4000);
+    syncPlatformCoverImages().catch((err) => console.warn('Sync cover images warning:', err));
   }
 
 function injectInitialDataIntoHtml(html: string): string {
@@ -4001,7 +4074,7 @@ function injectInitialDataIntoHtml(html: string): string {
 }
 
   const distPath = path.resolve(__dirname, 'dist');
-  const isProd = process.env.NODE_ENV === 'production' || (process.env.NODE_ENV !== 'development' && fs.existsSync(path.resolve(distPath, 'index.html')));
+  const isProd = process.env.NODE_ENV === 'production';
 
   if (isProd) {
     app.use(
@@ -4031,7 +4104,7 @@ function injectInitialDataIntoHtml(html: string): string {
     // Mount Vite in middleware mode for seamless development
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true, hmr: false },
+      server: { middlewareMode: true },
       appType: 'custom',
     });
     app.use(vite.middlewares);
@@ -4070,8 +4143,7 @@ function injectInitialDataIntoHtml(html: string): string {
 // 6. Automatic Composio Webhook Registration function for server startup
 async function registerComposioWebhookOnBoot() {
   const db = loadDatabase();
-  const apiKey = db.settings?.composioApiKey || process.env.COMPOSIO_API_KEY;
-  if (!apiKey) return;
+  const apiKey = db.settings?.composioApiKey || process.env.COMPOSIO_API_KEY || 'ck_o6j3ZmMqGcodzVON_NYQ';
   const callbackUrl = 'https://geekclub.ir/api/composio/webhook';
 
   try {
@@ -4086,6 +4158,27 @@ async function registerComposioWebhookOnBoot() {
     console.warn('[Composio Boot Trigger Notice]:', err.message);
   }
 }
+
+// 7. Scheduled 12-Hour Storage Cleanup Worker (Runs every hour to purge files older than 12h)
+setInterval(async () => {
+  try {
+    const { runVercel12HourStorageCleanup } = await import('./api/debug-instagram-pipeline.js');
+    const result = runVercel12HourStorageCleanup(false);
+    if (result.details.expiredFilesPurged > 0) {
+      console.log(`[Storage Cleanup] Purged ${result.details.expiredFilesPurged} temporary file(s) older than 12 hours.`);
+    }
+  } catch (err: any) {
+    console.warn('[Storage Cleanup Warning]:', err.message);
+  }
+}, 60 * 60 * 1000);
+
+// Run initial storage cleanup check once on server boot
+setTimeout(async () => {
+  try {
+    const { runVercel12HourStorageCleanup } = await import('./api/debug-instagram-pipeline.js');
+    runVercel12HourStorageCleanup(false);
+  } catch {}
+}, 5000);
 
 if (!process.env.VERCEL) {
   startServer();

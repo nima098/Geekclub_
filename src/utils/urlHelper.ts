@@ -257,7 +257,7 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
     }
 
     if (!title) {
-      title = '';
+      title = cleanUrl.includes('reel') ? 'ریلز ویدیویی در اینستاگرام' : 'پست منتخب در اینستاگرام';
     }
     if (!description) {
       description = `محتوای به اشتراک گذاشته شده در اینستاگرام توسط ${authorName}. برای مشاهده تعاملی روی کارت کلیک نمایید.`;

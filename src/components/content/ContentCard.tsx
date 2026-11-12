@@ -22,7 +22,7 @@ import {
   Layers,
   Film
 } from 'lucide-react';
-import { ContentItem, ViewMode, UserProfile, MediaSlide } from '../../types/content';
+import { ContentItem, ViewMode, UserProfile, MediaSlide, shouldDisplayTitle } from '../../types/content';
 import { handleImageError, getPlatformFallbackImage, resolveCoverImageUrl } from '../../utils/imageHelper';
 
 interface ContentCardProps {
@@ -90,28 +90,28 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     switch (item.platform) {
       case 'youtube':
         return {
-          icon: <Youtube className="w-3.5 h-3.5 text-white" />,
+          icon: <Youtube className="w-5 h-5 text-white" />,
           label: 'یوتیوب',
           badgeBg: 'gc-chip-platform-youtube px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs font-bold shadow-md',
           accentColor: 'hover:border-red-500/60'
         };
       case 'instagram':
         return {
-          icon: <Instagram className="w-3.5 h-3.5 text-white" />,
+          icon: <Instagram className="w-5 h-5 text-white" />,
           label: 'اینستاگرام',
           badgeBg: 'gc-chip-platform-instagram px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs font-bold shadow-md',
           accentColor: 'hover:border-pink-500/60'
         };
       case 'article':
         return {
-          icon: <Newspaper className="w-3.5 h-3.5 text-white" />,
+          icon: <Newspaper className="w-5 h-5 text-white" />,
           label: 'مقاله وب',
           badgeBg: 'gc-chip-platform-article px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs font-bold shadow-md',
           accentColor: 'hover:border-emerald-500/60'
         };
       case 'aparat':
         return {
-          icon: <Video className="w-3.5 h-3.5 text-white" />,
+          icon: <Video className="w-5 h-5 text-white" />,
           label: 'آپارات',
           badgeBg: 'gc-chip-platform-aparat px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs font-bold shadow-md',
           accentColor: 'hover:border-rose-500/60'
@@ -120,6 +120,16 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   };
 
   const meta = getPlatformMeta();
+
+  // Resolve username of the person who shared the content
+  const sharerUsername = 
+    item.sharedBy?.username
+      ? (item.sharedBy.username.startsWith('@') ? item.sharedBy.username : `@${item.sharedBy.username}`)
+      : (item.author.handle 
+          ? (item.author.handle.startsWith('@') ? item.author.handle : `@${item.author.handle}`)
+          : (item.author.name?.startsWith('@') ? item.author.name : `@${(item.author.name || 'user').replace(/\s+/g, '_').toLowerCase()}`));
+
+  const sharerDisplayName = item.sharedBy?.name || item.author.name;
 
   return (
     <article id={item.id} className={`group flex flex-col bg-slate-900/95 backdrop-blur-xl border border-slate-800/80 rounded-[1.75rem] overflow-hidden shadow-xl transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1 ${meta.accentColor} ${
@@ -414,7 +424,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
 
       {/* Content Body */}
       <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between bg-slate-900/95 backdrop-blur-xl">
-        <div className="flex flex-col flex-1">
+        <div className="space-y-3">
           {/* Author & Published Info - Unboxed Text Metadata */}
           <div className="flex items-center justify-between gap-2 mb-2.5">
             <div className="flex items-center gap-2.5">
@@ -426,22 +436,22 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               />
               <div className="text-right">
                 <div className="flex items-center gap-1">
-                  <span className="text-xs font-bold text-slate-200">
-                    {item.author.name}
+                  <span className="content-card-author-name text-xs font-bold text-slate-200">
+                    {sharerDisplayName || sharerUsername}
                   </span>
                   {item.author.isVerified && (
-                    <span className="w-3.5 h-3.5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-[9px] font-bold">
+                    <span className="w-3.5 h-3.5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-[9px] font-bold" title="حساب تایید شده">
                       ✓
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  {item.sourceDomain && (
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-indigo-300 border border-slate-700/60 font-medium">
-                      {item.sourceDomain}
-                    </span>
-                  )}
-                </div>
+                <span className="content-card-source-platform text-[10px] text-slate-400 flex items-center gap-1.5 text-right">
+                  <span className="font-mono dir-ltr">{sharerUsername}</span>
+                  <span>•</span>
+                  <span className="inline-flex items-center text-slate-300" title={meta?.label}>
+                    {meta?.icon}
+                  </span>
+                </span>
               </div>
             </div>
 
@@ -450,12 +460,8 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             </span>
           </div>
 
-          {/* Title - For Instagram, only render if user explicitly wrote a title */}
-          {Boolean(
-            item.title &&
-            item.title.trim() &&
-            (item.platform === 'instagram' ? item.hasCustomTitle === true : true)
-          ) && (
+          {/* Title */}
+          {shouldDisplayTitle(item) && (
             <h3 
               className="text-base sm:text-lg font-black text-slate-100 group-hover:text-indigo-300 transition-colors line-clamp-2 leading-relaxed cursor-pointer"
               onClick={() => onOpenArticleReader(item)}
@@ -465,12 +471,15 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           )}
 
           {/* Description */}
-          <p className="text-xs sm:text-sm text-slate-400 line-clamp-3 mt-2 mb-auto leading-relaxed sm:leading-loose">
+          <p className="text-xs sm:text-sm text-slate-400 line-clamp-3 mt-2 leading-relaxed sm:leading-loose">
             {item.description}
           </p>
+        </div>
 
-          {/* Tags - High-Contrast Chip Badges pinned right above the separator */}
-          <div className="flex flex-wrap gap-1.5 pt-4 mt-2">
+        {/* Tags & Actions Bottom Block */}
+        <div className="mt-auto pt-6">
+          {/* Tags - High-Contrast Chip Badges with maximum spacing */}
+          <div className="flex flex-wrap gap-1.5 mb-3.5">
             {item.tags.map((tag) => (
               <button
                 key={tag}
@@ -481,125 +490,125 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               </button>
             ))}
           </div>
-        </div>
 
-        {/* M3 Joined Reaction Bar & Action Controls */}
-        <div className="pt-3.5 mt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
-          {/* M3 Segmented Reaction Controls (Like / Dislike) */}
-          <div className="flex items-center gap-1 bg-slate-800/80 border border-slate-700/60 rounded-2xl p-1">
-            {/* Like */}
-            <button
-              onClick={() => onLike(item.id)}
-              className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                item.userReaction === 'like'
-                  ? 'gc-reaction-like-active'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-750'
-              }`}
-              title="پسندیدم (لایک)"
-            >
-              <ThumbsUp className={`w-3.5 h-3.5 ${item.userReaction === 'like' ? 'fill-white text-white' : ''}`} />
-              <span className="font-mono">{item.likesCount}</span>
-            </button>
+          {/* M3 Joined Reaction Bar & Action Controls */}
+          <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-1.5">
+            {/* M3 Segmented Reaction Controls (Like / Dislike) */}
+            <div className="flex items-center gap-0.5 bg-slate-800/80 border border-slate-700/60 rounded-xl p-0.5">
+              {/* Like */}
+              <button
+                onClick={() => onLike(item.id)}
+                className={`px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                  item.userReaction === 'like'
+                    ? 'gc-reaction-like-active'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-750'
+                }`}
+                title="پسندیدم (لایک)"
+              >
+                <ThumbsUp className={`w-3.5 h-3.5 ${item.userReaction === 'like' ? 'fill-white text-white' : ''}`} />
+                <span className="font-mono">{item.likesCount}</span>
+              </button>
 
-            {/* Separator */}
-            <span className="w-px h-3.5 bg-slate-700/80 mx-0.5"></span>
+              {/* Separator */}
+              <span className="w-px h-3 bg-slate-700/80 mx-0.25"></span>
 
-            {/* Dislike */}
-            <button
-              onClick={() => onDislike(item.id)}
-              className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                item.userReaction === 'dislike'
-                  ? 'gc-reaction-dislike-active'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-750'
-              }`}
-              title="نپسندیدم (دیس‌لایک)"
-            >
-              <ThumbsDown className={`w-3.5 h-3.5 ${item.userReaction === 'dislike' ? 'fill-white text-white' : ''}`} />
-              <span className="font-mono">{item.dislikesCount}</span>
-            </button>
-          </div>
+              {/* Dislike */}
+              <button
+                onClick={() => onDislike(item.id)}
+                className={`px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                  item.userReaction === 'dislike'
+                    ? 'gc-reaction-dislike-active'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-750'
+                }`}
+                title="نپسندیدم (دیس‌لایک)"
+              >
+                <ThumbsDown className={`w-3.5 h-3.5 ${item.userReaction === 'dislike' ? 'fill-white text-white' : ''}`} />
+                <span className="font-mono">{item.dislikesCount}</span>
+              </button>
+            </div>
 
-          {/* Action Buttons: Comments, Bookmark, Share */}
-          <div className="flex items-center gap-1.5">
-            {/* Comments button */}
-            <button
-              onClick={() => onOpenComments(item)}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-indigo-300 border border-slate-700/60 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
-              title="مشاهده و ثبت نظر"
-            >
-              <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
-              <span className="font-mono">{item.commentsCount}</span>
-            </button>
+            {/* Action Buttons: Comments, Bookmark, Share */}
+            <div className="flex items-center gap-1">
+              {/* Comments button */}
+              <button
+                onClick={() => onOpenComments(item)}
+                className="px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-indigo-300 border border-slate-700/60 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                title="مشاهده و ثبت نظر"
+              >
+                <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
+                <span className="font-mono">{item.commentsCount}</span>
+              </button>
 
-            {/* Bookmark button */}
-            <button
-              onClick={() => onToggleSave(item.id)}
-              className={`p-1.5 rounded-xl border transition cursor-pointer ${
-                item.saved
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                  : 'bg-slate-800/80 hover:bg-slate-750 text-slate-400 hover:text-white border-slate-700/60'
-              }`}
-              title={item.saved ? 'حذف از ذخیره‌ها' : 'ذخیره محتوا'}
-            >
-              <Bookmark className={`w-4 h-4 ${item.saved ? 'fill-amber-400 text-amber-400' : ''}`} />
-            </button>
+              {/* Bookmark button */}
+              <button
+                onClick={() => onToggleSave(item.id)}
+                className={`p-1.5 rounded-xl border transition cursor-pointer ${
+                  item.saved
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                    : 'bg-slate-800/80 hover:bg-slate-750 text-slate-400 hover:text-white border-slate-700/60'
+                }`}
+                title={item.saved ? 'حذف از ذخیره‌ها' : 'ذخیره محتوا'}
+              >
+                <Bookmark className={`w-4 h-4 ${item.saved ? 'fill-amber-400 text-amber-400' : ''}`} />
+              </button>
 
-            {/* Share button */}
-            <button
-              onClick={handleShare}
-              className="p-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-400 hover:text-white border border-slate-700/60 transition cursor-pointer"
-              title="کپی لینک اشتراک"
-            >
-              {isCopied ? (
-                <Check className="w-4 h-4 text-emerald-400" />
-              ) : (
-                <Share2 className="w-4 h-4" />
+              {/* Share button */}
+              <button
+                onClick={handleShare}
+                className="p-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-400 hover:text-white border border-slate-700/60 transition cursor-pointer"
+                title="کپی لینک اشتراک"
+              >
+                {isCopied ? (
+                  <Check className="w-4 h-4 text-emerald-400" />
+                ) : (
+                  <Share2 className="w-4 h-4" />
+                )}
+              </button>
+
+              {/* Admin-Only Delete button (Moves content to Trash Bin) */}
+              {isAdmin && onDeleteContent && !(item.isDeleted || item.isArchived) && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteContent(item.id);
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 active:scale-95 text-rose-400 hover:text-rose-300 border border-slate-700/60 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm group"
+                  title="حذف و انتقال به سطل زباله (مخصوص مدیریت)"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-400 group-hover:scale-110 transition-transform" />
+                  <span>حذف</span>
+                </button>
               )}
-            </button>
 
-            {/* Admin-Only Delete button (Moves content to Trash Bin) */}
-            {isAdmin && onDeleteContent && !(item.isDeleted || item.isArchived) && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteContent(item.id);
-                }}
-                className="px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 active:scale-95 text-rose-400 hover:text-rose-300 border border-slate-700/60 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm group"
-                title="حذف و انتقال به سطل زباله (مخصوص مدیریت)"
-              >
-                <Trash2 className="w-3.5 h-3.5 text-rose-400 group-hover:scale-110 transition-transform" />
-                <span>حذف</span>
-              </button>
-            )}
+              {/* Restore button (When viewing Trash as Admin) */}
+              {isAdmin && (item.isDeleted || item.isArchived) && onRestoreContent && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRestoreContent(item.id);
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 hover:text-emerald-100 border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+                  title="بازگردانی محتوا از سطل زباله به صفحه اصلی"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>بازگردانی</span>
+                </button>
+              )}
 
-            {/* Restore button (When viewing Trash as Admin) */}
-            {isAdmin && (item.isDeleted || item.isArchived) && onRestoreContent && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRestoreContent(item.id);
-                }}
-                className="px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 hover:text-emerald-100 border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm"
-                title="بازگردانی محتوا از سطل زباله به صفحه اصلی"
-              >
-                <RotateCcw className="w-3.5 h-3.5 text-emerald-400" />
-                <span>بازگردانی</span>
-              </button>
-            )}
-
-            {/* Permanent Delete button (When viewing Trash as Admin) */}
-            {isAdmin && (item.isDeleted || item.isArchived) && onPermanentDelete && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onPermanentDelete(item.id);
-                }}
-                className="p-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 hover:text-rose-100 border border-rose-500/40 transition cursor-pointer"
-                title="حذف دائمی از دیتابیس"
-              >
-                <Trash2 className="w-4 h-4 text-rose-400" />
-              </button>
-            )}
+              {/* Permanent Delete button (When viewing Trash as Admin) */}
+              {isAdmin && (item.isDeleted || item.isArchived) && onPermanentDelete && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPermanentDelete(item.id);
+                  }}
+                  className="p-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 hover:text-rose-100 border border-rose-500/40 transition cursor-pointer"
+                  title="حذف دائمی از دیتابیس"
+                >
+                  <Trash2 className="w-4 h-4 text-rose-400" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

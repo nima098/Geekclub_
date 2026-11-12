@@ -108,7 +108,7 @@ export default defineConfig(() => {
     ],
     resolve: {
       alias: {
-        '@': path.resolve(process.cwd(), '.'),
+        '@': process.cwd(),
       },
     },
     server: {
