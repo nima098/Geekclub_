@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import type { Request, Response } from 'express';
 import axios from 'axios';
@@ -125,8 +126,28 @@ if (!process.env.ADMIN_SECRET_KEY && !process.env.ADMIN_KEY) {
   );
 }
 const CDN_SECRET = process.env.CDN_SECRET || '';
+function getCdnSecret(): string {
+  const fromEnv = (process.env.CDN_SECRET || '').trim();
+  if (fromEnv) return fromEnv;
+  try {
+    const db = loadDatabase();
+    return String(db.settings?.cdnSecret || '').trim();
+  } catch {
+    return '';
+  }
+}
+function getCdnEndpoint(): string {
+  const fromEnv = (process.env.CDN_ENDPOINT || '').trim();
+  if (fromEnv) return fromEnv;
+  try {
+    const db = loadDatabase();
+    return String(db.settings?.cdnEndpoint || 'https://upc.geekclub.ir/s1/upload.php').trim() || 'https://upc.geekclub.ir/s1/upload.php';
+  } catch {
+    return 'https://upc.geekclub.ir/s1/upload.php';
+  }
+}
 if (!CDN_SECRET) {
-  console.warn('[Security] CDN_SECRET is not set. Uploads to the external CDN are disabled (files stay on local storage).');
+  console.warn('[Security] CDN_SECRET env var is not set at startup; checking database settings dynamically or storing locally.');
 }
 const RSS_FEED_KEY = process.env.RSS_FEED_KEY || '';
 
@@ -883,22 +904,24 @@ async function downloadAndCacheImage(
       localUrl = imageUrl.startsWith('http') ? `/api/proxy-image?url=${encodeURIComponent(imageUrl)}` : imageUrl;
     }
 
-    // Upload optimized image to upc.geekclub.ir CDN (only if CDN_SECRET is configured)
-    if (CDN_SECRET) {
+    // Upload optimized image to upc.geekclub.ir CDN (only if CDN secret is configured)
+    const activeCdnSecret = getCdnSecret();
+    if (activeCdnSecret) {
       try {
         const fileBlob = new Blob([new Uint8Array(finalBuffer)], { type: mimeType });
         const formData = new FormData();
         formData.append('file', fileBlob, filename);
-        formData.append('api_token', CDN_SECRET);
+        formData.append('api_token', activeCdnSecret);
         formData.append('folder', `${cleanPlatform}/${cleanSource}`);
 
-        const cdnResp = await fetch('https://upc.geekclub.ir/s1/upload.php', {
+        const cdnResp = await fetch(getCdnEndpoint(), {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${CDN_SECRET}`,
-            'X-Api-Token': CDN_SECRET
+            'Authorization': `Bearer ${activeCdnSecret}`,
+            'X-Api-Token': activeCdnSecret
           },
-          body: formData
+          body: formData,
+          signal: AbortSignal.timeout(15000)
         });
 
         if (cdnResp.ok) {
@@ -972,22 +995,24 @@ async function downloadAndCacheVideo(
       localUrl = videoUrl;
     }
 
-    // Transfer video to CDN (upc.geekclub.ir) - only if CDN_SECRET is configured
-    if (CDN_SECRET) {
+    // Transfer video to CDN (upc.geekclub.ir) - only if CDN secret is configured
+    const activeCdnSecret = getCdnSecret();
+    if (activeCdnSecret) {
       try {
         const fileBlob = new Blob([new Uint8Array(buffer)], { type: 'video/mp4' });
         const formData = new FormData();
         formData.append('file', fileBlob, filename);
-        formData.append('api_token', CDN_SECRET);
+        formData.append('api_token', activeCdnSecret);
         formData.append('folder', `${cleanPlatform}/${cleanSource}`);
 
-        const cdnResp = await fetch('https://upc.geekclub.ir/s1/upload.php', {
+        const cdnResp = await fetch(getCdnEndpoint(), {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${CDN_SECRET}`,
-            'X-Api-Token': CDN_SECRET
+            'Authorization': `Bearer ${activeCdnSecret}`,
+            'X-Api-Token': activeCdnSecret
           },
-          body: formData
+          body: formData,
+          signal: AbortSignal.timeout(25000)
         });
 
         if (cdnResp.ok) {
@@ -1066,6 +1091,27 @@ export interface ExtractedMetaResult {
   error?: string;
 }
 
+function extractInstagramShortcode(rawUrl: string): string {
+  if (!rawUrl) return '';
+  const clean = rawUrl.trim();
+  const match = clean.match(/(?:instagram\.com|instagr\.am)\/(?:[^\/\s]+\/)*(?:p|reel|reels|tv|share\/p|share\/reel|share)\/([a-zA-Z0-9_-]+)/i) ||
+                clean.match(/(?:instagram\.com|instagr\.am)\/(?:p|reel|reels|tv)\/([a-zA-Z0-9_-]+)/i) ||
+                clean.match(/(?:instagram\.com|instagr\.am)\/([a-zA-Z0-9_-]{5,})/i);
+  return match ? match[1] : '';
+}
+
+const inFlightExtractors = new Map<string, Promise<ExtractedMetaResult>>();
+const recentExtractCache = new Map<string, { data: ExtractedMetaResult; expiresAt: number }>();
+
+function getExtractCacheKey(rawUrl: string): string {
+  const clean = rawUrl.trim().startsWith('http') ? rawUrl.trim() : `https://${rawUrl.trim()}`;
+  const igCode = extractInstagramShortcode(clean);
+  if (igCode && (clean.includes('instagram.com') || clean.includes('instagr.am'))) {
+    return `ig:${igCode}`;
+  }
+  return clean.split('#')[0].replace(/\/$/, '').toLowerCase();
+}
+
 export async function extractMetadataForUrl(targetUrl: string): Promise<ExtractedMetaResult> {
   if (!targetUrl) {
     return {
@@ -1085,6 +1131,150 @@ export async function extractMetadataForUrl(targetUrl: string): Promise<Extracte
   }
 
   const cleanUrl = targetUrl.trim().startsWith('http') ? targetUrl.trim() : `https://${targetUrl.trim()}`;
+  const cacheKey = getExtractCacheKey(cleanUrl);
+  const cached = recentExtractCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+  const existingInFlight = inFlightExtractors.get(cacheKey);
+  if (existingInFlight) {
+    return existingInFlight;
+  }
+
+  const job = extractMetadataForUrlInternal(cleanUrl).then((res) => {
+    if (res && res.success && !res.data?.instantFallback) {
+      recentExtractCache.set(cacheKey, { data: res, expiresAt: Date.now() + 5 * 60_000 });
+      if (recentExtractCache.size > 200) {
+        const firstKey = recentExtractCache.keys().next().value;
+        if (firstKey) recentExtractCache.delete(firstKey);
+      }
+    }
+    return res;
+  }).finally(() => {
+    inFlightExtractors.delete(cacheKey);
+  });
+
+  inFlightExtractors.set(cacheKey, job);
+  return job;
+}
+
+function normalizeApifyActorId(rawActorId: string): string {
+  const cleaned = String(rawActorId || '').trim() || 'apify~instagram-scraper';
+  // Apify API v2 /v2/acts/{actorId} requires "~" instead of "/" (e.g. apify~instagram-post-scraper)
+  return cleaned.includes('/') ? cleaned.replace(/\//g, '~') : cleaned;
+}
+
+async function runApifyActorWithAutoInput(
+  rawActorId: string,
+  token: string,
+  targetUrl: string,
+  options: { timeoutSec?: number; resultsLimit?: number; isProfileUrl?: boolean } = {}
+): Promise<any[]> {
+  const actorId = normalizeApifyActorId(rawActorId);
+  const timeoutSec = options.timeoutSec ?? 45;
+  const resultsLimit = options.resultsLimit ?? 1;
+  const isProfileUrl = options.isProfileUrl ?? false;
+  const actorEndpoint = `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items?token=${encodeURIComponent(token)}&timeout=${timeoutSec}`;
+  const httpTimeoutMs = (timeoutSec + 10) * 1000;
+
+  const lowerActor = actorId.toLowerCase();
+  const prefersUsername =
+    lowerActor.includes('post-scraper') ||
+    lowerActor.includes('reel-scraper') ||
+    lowerActor.includes('profile-scraper') ||
+    isProfileUrl;
+
+  const usernameExtract = (() => {
+    try {
+      const u = new URL(targetUrl);
+      const seg = u.pathname.split('/').filter(Boolean)[0] || '';
+      if (seg && !['p', 'reel', 'reels', 'tv', 'share', 'stories'].includes(seg.toLowerCase())) {
+        return seg.replace(/^@+/, '');
+      }
+    } catch {}
+    return '';
+  })();
+
+  const candidates: Array<{ key: string; payload: Record<string, any> }> = [];
+  if (prefersUsername) {
+    candidates.push({ key: 'username_url_array', payload: { username: [targetUrl], resultsLimit } });
+    if (usernameExtract) {
+      candidates.push({ key: 'username_handle_array', payload: { username: [usernameExtract], resultsLimit } });
+    }
+    candidates.push(
+      { key: 'directUrls_minimal', payload: { directUrls: [targetUrl], resultsLimit } },
+      { key: 'directUrls_posts', payload: { directUrls: [targetUrl], resultsType: 'posts', resultsLimit } },
+      { key: 'startUrls', payload: { startUrls: [{ url: targetUrl }], resultsLimit } },
+      { key: 'urls', payload: { urls: [targetUrl], resultsLimit } },
+      { key: 'username_string', payload: { username: targetUrl } }
+    );
+  } else {
+    candidates.push(
+      { key: 'directUrls_posts', payload: { directUrls: [targetUrl], resultsType: 'posts', resultsLimit } },
+      { key: 'username_url_array', payload: { username: [targetUrl], resultsLimit } },
+      { key: 'directUrls_minimal', payload: { directUrls: [targetUrl], resultsLimit } },
+      { key: 'startUrls', payload: { startUrls: [{ url: targetUrl }], resultsLimit } },
+      { key: 'urls', payload: { urls: [targetUrl], resultsLimit } },
+      { key: 'username_string', payload: { username: targetUrl } }
+    );
+  }
+
+  const triedKeys = new Set<string>();
+  let nextIdx = 0;
+  let lastErr: any = null;
+
+  for (let attempt = 0; attempt < 4; attempt++) {
+    while (nextIdx < candidates.length && triedKeys.has(candidates[nextIdx].key)) {
+      nextIdx++;
+    }
+    if (nextIdx >= candidates.length) break;
+
+    const candidate = candidates[nextIdx++];
+    triedKeys.add(candidate.key);
+
+    try {
+      const resp = await axios.post(actorEndpoint, candidate.payload, {
+        timeout: httpTimeoutMs,
+        headers: { 'Content-Type': 'application/json' }
+      });
+      return Array.isArray(resp.data) ? resp.data : [];
+    } catch (err: any) {
+      lastErr = err;
+      const status = err?.response?.status;
+      const errType = err?.response?.data?.error?.type || '';
+      const errMsg = String(err?.response?.data?.error?.message || err?.message || '');
+
+      if (status === 400 || errType === 'invalid-input') {
+        console.warn(`[Apify Schema Notice] Actor ${actorId} rejected "${candidate.key}": ${errMsg}. Retrying with adapted schema...`);
+        let prioritizedKey: string | null = null;
+        if (/input\.username|field username|username is required/i.test(errMsg)) {
+          prioritizedKey = /must be string|expected string/i.test(errMsg) ? 'username_string' : 'username_url_array';
+        } else if (/input\.startUrls|startUrls/i.test(errMsg)) {
+          prioritizedKey = 'startUrls';
+        } else if (/input\.urls\b/i.test(errMsg)) {
+          prioritizedKey = 'urls';
+        } else if (/input\.directUrls|directUrls|resultsType.*not allowed|unexpected.*resultsType/i.test(errMsg)) {
+          prioritizedKey = 'directUrls_minimal';
+        }
+
+        if (prioritizedKey && !triedKeys.has(prioritizedKey)) {
+          const foundIdx = candidates.findIndex((c) => c.key === prioritizedKey);
+          if (foundIdx >= 0) {
+            const [picked] = candidates.splice(foundIdx, 1);
+            candidates.splice(nextIdx, 0, picked);
+          }
+        }
+        continue;
+      }
+
+      throw err;
+    }
+  }
+
+  throw lastErr || new Error('Apify actor execution failed after input schema retries');
+}
+
+async function extractMetadataForUrlInternal(cleanUrl: string): Promise<ExtractedMetaResult> {
 
   // 1. YouTube metadata extraction & cover download + CDN transfer
   const ytMatch = cleanUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
@@ -1264,23 +1454,43 @@ export async function extractMetadataForUrl(targetUrl: string): Promise<Extracte
     };
   }
 
-function extractInstagramShortcode(rawUrl: string): string {
-  if (!rawUrl) return '';
-  const clean = rawUrl.trim();
-  const match = clean.match(/(?:instagram\.com|instagr\.am)\/(?:[^\/\s]+\/)*(?:p|reel|reels|tv|share\/p|share\/reel|share)\/([a-zA-Z0-9_-]+)/i) ||
-                clean.match(/(?:instagram\.com|instagr\.am)\/(?:p|reel|reels|tv)\/([a-zA-Z0-9_-]+)/i) ||
-                clean.match(/(?:instagram\.com|instagr\.am)\/([a-zA-Z0-9_-]{5,})/i);
-  return match ? match[1] : '';
-}
-
 // Helper to fetch Instagram post details and media files using Apify API
 async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMetaResult | null> {
   const db = loadDatabase();
-  const token = process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN || db.settings?.apifyApiToken;
-  const actorId = process.env.APIFY_ACTOR_ID || db.settings?.apifyActorId || 'apify~instagram-scraper';
+  const token = String(
+    process.env.APIFY_API_TOKEN ||
+    process.env.APIFY_TOKEN ||
+    db.settings?.apifyApiToken ||
+    db.settings?.apifyToken ||
+    ''
+  ).trim();
+  const actorId = normalizeApifyActorId(
+    process.env.APIFY_ACTOR_ID ||
+    db.settings?.apifyActorId ||
+    'apify~instagram-scraper'
+  );
 
-  const shortcode = extractInstagramShortcode(instagramUrl);
-  const cleanDirectUrl = shortcode ? `https://www.instagram.com/p/${shortcode}/` : instagramUrl.split('?')[0];
+  let resolvedUrl = instagramUrl.trim();
+  if (/instagram\.com\/share\//i.test(resolvedUrl)) {
+    try {
+      const shareRes = await safeAxiosGet(resolvedUrl, {
+        timeout: 8000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      });
+      const finalResolved = shareRes?.request?.res?.responseUrl;
+      if (typeof finalResolved === 'string' && finalResolved.includes('instagram.com') && !finalResolved.includes('/share/')) {
+        resolvedUrl = finalResolved;
+      }
+    } catch {}
+  }
+
+  const shortcode = extractInstagramShortcode(resolvedUrl);
+  const isReelUrl = /\/(?:reel|reels)\//i.test(resolvedUrl);
+  const cleanDirectUrl = (shortcode && !/\/share\//i.test(resolvedUrl))
+    ? `https://www.instagram.com/${isReelUrl ? 'reel' : 'p'}/${shortcode}/`
+    : resolvedUrl.split('?')[0];
 
   console.log(`[Apify Pipeline] Checking Instagram URL via Apify: ${cleanDirectUrl} (shortcode: ${shortcode || 'unknown'})`);
   if (!token) {
@@ -1289,29 +1499,12 @@ async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMe
   }
 
   try {
-    const actorEndpoint = `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items?token=${token}&timeout=25`;
     console.log(`[Apify Pipeline] Executing Apify actor ${actorId} for ${cleanDirectUrl}...`);
-
-    const apifyResponse = await axios.post(
-      actorEndpoint,
-      {
-        directUrls: [cleanDirectUrl],
-        urls: [cleanDirectUrl],
-        startUrls: [{ url: cleanDirectUrl }],
-        resultsType: 'posts',
-        resultsLimit: 1,
-        searchLimit: 1
-      },
-      {
-        timeout: 35000,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    const items = apifyResponse.data;
-    if (Array.isArray(items) && items.length > 0) {
+    const items = await runApifyActorWithAutoInput(actorId, token, cleanDirectUrl, {
+      timeoutSec: 45,
+      resultsLimit: 1
+    });
+    if (Array.isArray(items) && items.length > 0 && !items[0]?.error) {
       const item = items[0];
       console.log(`[Apify Pipeline SUCCESS] Dataset item received for ${instagramUrl}:`, {
         id: item.id || item.shortCode,
@@ -1326,7 +1519,6 @@ async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMe
       const ownerUsername = item.ownerUsername || item.owner_username || item.owner?.username || 'instagram';
       const cleanUsername = ownerUsername.replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase() || 'general';
       const ownerFullName = item.ownerFullName || item.owner_fullname || item.owner?.full_name || `@${ownerUsername}`;
-      const igCdnFolder = `instagram/${cleanUsername}`;
 
       // Extract raw slides (videos, photos, mixed carousel) from Apify dataset
       const rawSlidesInput: Array<{ type: 'video' | 'image'; videoUrl?: string; imageUrl?: string }> = [];
@@ -1369,43 +1561,69 @@ async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMe
 
       console.log(`[Apify Pipeline] Extracted ${rawSlidesInput.length} media slide(s) for ${instagramUrl}`);
 
-      // Process and cache all slides onto local server & transfer to CDN under s1/instagram/{cleanUsername}/
+      // Cache slides in parallel with bounded timeout so slow external CDNs never discard Apify metadata
       const cdnSlides: MediaSlide[] = [];
       const cdnImages: string[] = [];
       let cdnPrimaryVideo = rawVideoUrl;
-      let cdnPrimaryThumb = rawDisplayUrl;
+      let cdnPrimaryThumb = '';
 
       const nowPfx = Date.now();
-      for (let i = 0; i < Math.min(rawSlidesInput.length, 10); i++) {
-        const slide = rawSlidesInput[i];
-        if (slide.type === 'video' && slide.videoUrl) {
-          const cachedVideo = await downloadAndCacheVideo(slide.videoUrl, `ig_vid_slide_${nowPfx}_${i}`, igCdnFolder);
-          let cachedThumb = '';
-          if (slide.imageUrl) {
-            cachedThumb = await downloadAndCacheImage(slide.imageUrl, `ig_thumb_slide_${nowPfx}_${i}`, igCdnFolder);
+      const targetSlides = rawSlidesInput.slice(0, 8);
+      const slideResults = await Promise.allSettled(
+        targetSlides.map(async (slide, i) => {
+          if (slide.type === 'video' && slide.videoUrl) {
+            const [cachedVideo, cachedThumb] = await Promise.all([
+              Promise.race([
+                downloadAndCacheVideo(slide.videoUrl, `ig_vid_slide_${nowPfx}_${i}`, 'instagram', cleanUsername),
+                new Promise<string>((resolve) => setTimeout(() => resolve(slide.videoUrl || ''), 20000))
+              ]),
+              slide.imageUrl
+                ? Promise.race([
+                    downloadAndCacheImage(slide.imageUrl, `ig_thumb_slide_${nowPfx}_${i}`, 'instagram', cleanUsername),
+                    new Promise<string>((resolve) => setTimeout(() => resolve(`/api/proxy-image?url=${encodeURIComponent(slide.imageUrl!)}`), 12000))
+                  ])
+                : Promise.resolve('')
+            ]);
+            const resolvedThumb = cachedThumb || (slide.imageUrl ? `/api/proxy-image?url=${encodeURIComponent(slide.imageUrl)}` : '');
+            return {
+              type: 'video' as const,
+              url: cachedVideo || slide.videoUrl,
+              thumbnail: resolvedThumb || cachedVideo || slide.videoUrl,
+              thumbOnly: resolvedThumb
+            };
+          } else if (slide.imageUrl) {
+            const cachedImg = await Promise.race([
+              downloadAndCacheImage(slide.imageUrl, `ig_img_slide_${nowPfx}_${i}`, 'instagram', cleanUsername),
+              new Promise<string>((resolve) => setTimeout(() => resolve(`/api/proxy-image?url=${encodeURIComponent(slide.imageUrl!)}`), 12000))
+            ]);
+            const finalImg = cachedImg || `/api/proxy-image?url=${encodeURIComponent(slide.imageUrl)}`;
+            return {
+              type: 'image' as const,
+              url: finalImg,
+              thumbnail: finalImg,
+              thumbOnly: finalImg
+            };
           }
-          cdnSlides.push({
-            type: 'video',
-            url: cachedVideo || slide.videoUrl,
-            thumbnail: cachedThumb || slide.imageUrl || cachedVideo || slide.videoUrl
-          });
-          if (!cdnPrimaryVideo) cdnPrimaryVideo = cachedVideo || slide.videoUrl;
-          if (!cdnPrimaryThumb && (cachedThumb || slide.imageUrl)) cdnPrimaryThumb = cachedThumb || slide.imageUrl || '';
-        } else if (slide.imageUrl) {
-          const cachedImg = await downloadAndCacheImage(slide.imageUrl, `ig_img_slide_${nowPfx}_${i}`, igCdnFolder);
-          const finalImg = cachedImg || slide.imageUrl;
-          cdnSlides.push({
-            type: 'image',
-            url: finalImg,
-            thumbnail: finalImg
-          });
-          cdnImages.push(finalImg);
-          if (!cdnPrimaryThumb) cdnPrimaryThumb = finalImg;
+          return null;
+        })
+      );
+
+      for (const res of slideResults) {
+        if (res.status === 'fulfilled' && res.value) {
+          const val = res.value;
+          cdnSlides.push({ type: val.type, url: val.url, thumbnail: val.thumbnail });
+          if (val.type === 'video') {
+            if (!cdnPrimaryVideo || cdnPrimaryVideo === rawVideoUrl) cdnPrimaryVideo = val.url;
+            if (!cdnPrimaryThumb && val.thumbOnly) cdnPrimaryThumb = val.thumbOnly;
+          } else {
+            cdnImages.push(val.url);
+            if (!cdnPrimaryThumb) cdnPrimaryThumb = val.url;
+          }
         }
       }
 
-      if (!cdnPrimaryThumb) {
-        cdnPrimaryThumb = rawDisplayUrl || 'https://upc.geekclub.ir/s1/contents/2026/10/gc_20261020_230335_da3d8448.jpg';
+      if (!cdnPrimaryThumb && rawDisplayUrl) {
+        cdnPrimaryThumb = await downloadAndCacheImage(rawDisplayUrl, `ig_cover_${nowPfx}`, 'instagram', cleanUsername);
       }
 
       // Determine clean title from caption or author
@@ -1437,7 +1655,7 @@ async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMe
         mediaType: finalMediaType,
         images: cdnImages.length > 0 ? cdnImages : (cdnPrimaryThumb ? [cdnPrimaryThumb] : []),
         slides: cdnSlides,
-        embedUrl: instagramUrl.replace(/\/$/, '') + '/embed',
+        embedUrl: cleanDirectUrl.replace(/\/$/, '') + '/embed',
         readingOrWatchTime: cdnSlides.length > 1 ? `${cdnSlides.length} اسلاید اینستاگرام` : (cdnPrimaryVideo ? 'ویدیو اینستاگرام' : 'پست اینستاگرام'),
         tags: ['اینستاگرام', 'ویدیو', 'رسانه', ownerUsername].filter(Boolean),
         data: {
@@ -1449,6 +1667,8 @@ async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMe
           slidesCount: cdnSlides.length
         }
       };
+    } else {
+      console.warn(`[Apify Pipeline Notice] Empty or error dataset returned by Apify for ${cleanDirectUrl}:`, JSON.stringify(items)?.substring(0, 300));
     }
   } catch (err: any) {
     console.error(`[Apify Pipeline Error] ${err.message}`, err.response?.data || '');
@@ -1456,7 +1676,15 @@ async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMe
   return null;
 }
 
-// Helper to fetch Instagram via public bridge services & embed frames (VPS-friendly)
+function decodeInstagramEscapedUrl(raw: string): string {
+  return raw
+    .replace(/\\u0026/gi, '&')
+    .replace(/\\\//g, '/')
+    .replace(/&amp;/g, '&')
+    .trim();
+}
+
+// Helper to fetch Instagram via public embed frames & OG meta (VPS-friendly, zero third-party dead DNS)
 async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<ExtractedMetaResult | null> {
   const shortcode = extractInstagramShortcode(instagramUrl);
   if (!shortcode) return null;
@@ -1468,64 +1696,118 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
   let authorName = '';
   let rawThumb = '';
   let rawVideo = '';
+  const isReel = /\/(?:reel|reels)\//i.test(instagramUrl);
 
-  // Tier 1: Try VXInstagram API bridge
-  try {
-    const vxRes = await axios.get(`https://api.vxinstagram.com/p/${shortcode}`, { timeout: 7000 });
-    if (vxRes.data) {
-      const d = vxRes.data;
-      if (d.text || d.caption) caption = d.text || d.caption;
-      if (d.user_name || d.user_screen_name) authorName = d.user_name || d.user_screen_name;
-      if (d.media_urls && Array.isArray(d.media_urls) && d.media_urls.length > 0) {
-        rawThumb = d.media_urls[0];
-        if (d.media_urls.some((u: string) => u.includes('.mp4'))) {
-          rawVideo = d.media_urls.find((u: string) => u.includes('.mp4')) || '';
-        }
+  const parseEmbedHtml = (html: string) => {
+    if (!html) return;
+    if (!rawThumb) {
+      const imgMatch =
+        html.match(/class=["']EmbeddedMediaImage["'][^>]*src=["']([^"']+)["']/i) ||
+        html.match(/<img[^>]+src=["'](https:\/\/[^"']+(?:fbcdn|cdninstagram)[^"']+)["']/i) ||
+        html.match(/"display_url"\s*:\s*"([^"]+)"/i) ||
+        html.match(/"thumbnail_src"\s*:\s*"([^"]+)"/i);
+      if (imgMatch && imgMatch[1]) {
+        rawThumb = decodeInstagramEscapedUrl(imgMatch[1]);
       }
     }
-  } catch (err: any) {
-    console.warn(`[Instagram Bridge] VXInstagram API query notice:`, err.message);
-  }
-
-  // Tier 2: Try Instagram Public Embed Captioned Frame Parsing
-  if (!rawThumb || !caption) {
-    try {
-      const embedRes = await axios.get(`https://www.instagram.com/p/${shortcode}/embed/captioned/`, {
-        timeout: 7000,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        }
-      });
-      const html = typeof embedRes.data === 'string' ? embedRes.data : '';
-
-      // Extract image
-      const imgMatch = html.match(/class=["']EmbeddedMediaImage["'][^>]*src=["']([^"']+)["']/i) ||
-                       html.match(/<img[^>]+src=["'](https:\/\/[^"']+(?:fbcdn|cdninstagram)[^"']+)["']/i);
-      if (imgMatch && imgMatch[1]) {
-        rawThumb = imgMatch[1].replace(/&amp;/g, '&');
-      }
-
-      // Extract video
-      const vidMatch = html.match(/<video[^>]+src=["']([^"']+)["']/i);
+    if (!rawVideo) {
+      const vidMatch =
+        html.match(/<video[^>]+src=["']([^"']+)["']/i) ||
+        html.match(/"video_url"\s*:\s*"([^"]+)"/i);
       if (vidMatch && vidMatch[1]) {
-        rawVideo = vidMatch[1].replace(/&amp;/g, '&');
+        rawVideo = decodeInstagramEscapedUrl(vidMatch[1]);
       }
-
-      // Extract author
-      const authorMatch = html.match(/class=["']UsernameText["'][^>]*>([^<]+)</i) ||
-                          html.match(/instagram\.com\/([a-zA-Z0-9_.]+)\/["']/i);
-      if (authorMatch && authorMatch[1]) {
+    }
+    if (!authorName) {
+      const authorMatch =
+        html.match(/class=["']UsernameText["'][^>]*>([^<]+)</i) ||
+        html.match(/"username"\s*:\s*"([a-zA-Z0-9_.]+)"/i) ||
+        html.match(/instagram\.com\/([a-zA-Z0-9_.]+)\/["']/i);
+      if (authorMatch && authorMatch[1] && !['p', 'reel', 'reels', 'tv', 'explore', 'accounts'].includes(authorMatch[1].toLowerCase())) {
         authorName = authorMatch[1].trim();
       }
-
-      // Extract caption
+    }
+    if (!caption) {
       const captionMatch = html.match(/class=["']Caption["'][^>]*>(.*?)<\/div>/is);
       if (captionMatch && captionMatch[1]) {
-        caption = captionMatch[1].replace(/<[^>]+>/g, '').trim();
+        caption = captionMatch[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
       }
-    } catch (err: any) {
-      console.warn(`[Instagram Bridge] Embed captioned frame parsing notice:`, err.message);
     }
+  };
+
+  // Tier 1: Instagram Public Embed Captioned Frame
+  try {
+    const embedRes = await axios.get(`https://www.instagram.com/p/${shortcode}/embed/captioned/`, {
+      timeout: 7000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9,fa;q=0.8'
+      }
+    });
+    if (typeof embedRes.data === 'string') {
+      parseEmbedHtml(embedRes.data);
+    }
+  } catch (err: any) {
+    console.warn(`[Instagram Bridge] Embed captioned frame notice:`, err.message);
+  }
+
+  // Tier 2: Plain /embed/ endpoint (sometimes succeeds when captioned fails or omits media)
+  if (!rawThumb || !rawVideo) {
+    try {
+      const plainEmbedRes = await axios.get(`https://www.instagram.com/p/${shortcode}/embed/`, {
+        timeout: 7000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept-Language': 'en-US,en;q=0.9'
+        }
+      });
+      if (typeof plainEmbedRes.data === 'string') {
+        parseEmbedHtml(plainEmbedRes.data);
+      }
+    } catch {}
+  }
+
+  // Tier 3: Direct post page OpenGraph tags via social crawler User-Agent
+  if (!rawThumb || !caption) {
+    try {
+      const directRes = await axios.get(`https://www.instagram.com/${isReel ? 'reel' : 'p'}/${shortcode}/`, {
+        timeout: 7000,
+        headers: {
+          'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        }
+      });
+      const html = typeof directRes.data === 'string' ? directRes.data : '';
+      if (html) {
+        if (!rawThumb) {
+          const ogImg =
+            html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
+            html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i) ||
+            html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i);
+          if (ogImg && ogImg[1] && !ogImg[1].includes('rsrc.php')) {
+            rawThumb = decodeInstagramEscapedUrl(ogImg[1]);
+          }
+        }
+        if (!rawVideo) {
+          const ogVid =
+            html.match(/<meta[^>]+property=["']og:video(?::secure_url)?["'][^>]+content=["']([^"']+)["']/i) ||
+            html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:video(?::secure_url)?["']/i);
+          if (ogVid && ogVid[1]) {
+            rawVideo = decodeInstagramEscapedUrl(ogVid[1]);
+          }
+        }
+        if (!caption) {
+          const ogDesc =
+            html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i) ||
+            html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:description["']/i) ||
+            html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i);
+          if (ogDesc && ogDesc[1] && !/Log in|Instagram/i.test(ogDesc[1].slice(0, 25))) {
+            caption = ogDesc[1].replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16))).trim();
+          }
+        }
+        parseEmbedHtml(html);
+      }
+    } catch {}
   }
 
   // Clean title from caption
@@ -1540,16 +1822,15 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
   }
 
   const cleanUser = authorName ? authorName.replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase() : 'general';
-  const cdnFolder = `instagram/${cleanUser}`;
 
   let cdnThumb = '';
   if (rawThumb) {
-    cdnThumb = await downloadAndCacheImage(rawThumb, `ig_bridge_cover_${shortcode}`, cdnFolder);
+    cdnThumb = await downloadAndCacheImage(rawThumb, `ig_bridge_cover_${shortcode}`, 'instagram', cleanUser);
   }
 
   let cdnVideo = '';
   if (rawVideo) {
-    cdnVideo = await downloadAndCacheVideo(rawVideo, `ig_bridge_vid_${shortcode}`, cdnFolder);
+    cdnVideo = await downloadAndCacheVideo(rawVideo, `ig_bridge_vid_${shortcode}`, 'instagram', cleanUser);
   }
 
   if (cdnThumb || cdnVideo || caption) {
@@ -1584,14 +1865,16 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
   // 3. Instagram metadata extraction
   if (cleanUrl.includes('instagram.com') || cleanUrl.includes('instagr.am')) {
     const db = loadDatabase();
-    const hasApifyToken = Boolean(process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN || db.settings?.apifyApiToken);
+    const hasApifyToken = Boolean(
+      (process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN || db.settings?.apifyApiToken || db.settings?.apifyToken || '').trim()
+    );
 
-    // If Apify is configured, prioritize Apify extraction with full 25s timeout
+    // If Apify is configured, prioritize Apify extraction with full 75s timeout (actor run + parallel media download)
     if (hasApifyToken) {
       try {
         console.log(`[Instagram Pipeline] Priority Tier 1: Executing Apify extraction for ${cleanUrl}...`);
         const apifyPromise = fetchInstagramViaApify(cleanUrl);
-        const apifyTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Apify timeout')), 25000));
+        const apifyTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Apify timeout after 75s')), 75000));
         const apifyResult: any = await Promise.race([apifyPromise, apifyTimeout]);
         if (apifyResult && apifyResult.success) {
           console.log(`[Instagram Pipeline SUCCESS] Apify extracted details for ${cleanUrl}`);
@@ -1602,31 +1885,19 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
       }
     }
 
-    // Fallback Tier: Fast Public Bridges (VXInstagram / embed captioned)
+    // Fallback Tier: Public Instagram embed & OpenGraph parser
     try {
       const bridgePromise = fetchInstagramViaPublicBridges(cleanUrl);
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Bridge timeout')), 6000));
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Bridge timeout')), 18000));
       const bridgeResult: any = await Promise.race([bridgePromise, timeoutPromise]);
-      if (bridgeResult && bridgeResult.success && bridgeResult.title) {
+      if (bridgeResult && bridgeResult.success && (bridgeResult.thumbnail || bridgeResult.videoUrl)) {
         return bridgeResult;
       }
     } catch (err: any) {
       console.warn('Instagram Public Bridge fast notice:', err.message);
     }
 
-    // Secondary Apify attempt if not tried above
-    if (!hasApifyToken) {
-      try {
-        const apifyPromise = fetchInstagramViaApify(cleanUrl);
-        const apifyTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Apify timeout')), 15000));
-        const apifyResult: any = await Promise.race([apifyPromise, apifyTimeout]);
-        if (apifyResult && apifyResult.success) {
-          return apifyResult;
-        }
-      } catch {}
-    }
-
-    // Fast Instant Fallback (Guarantees response in < 2 seconds)
+    // Fast Instant Fallback
     const shortcode = extractInstagramShortcode(cleanUrl) || 'post';
     const isReel = cleanUrl.includes('reel');
 
@@ -1645,6 +1916,7 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
       tags: ['اینستاگرام', 'رسانه'],
       data: {
         instantFallback: true,
+        hasApifyToken,
         shortcode
       }
     };
@@ -1875,6 +2147,11 @@ async function enrichDatabaseContent(id: string, url: string) {
     }
 
     let changed = false;
+
+    if (meta.data?.instantFallback) {
+      console.warn(`[Background Enrich] Extraction returned instantFallback for ${id} (${url}) — keeping existing cover without overwriting.`);
+      return item;
+    }
 
     if (meta.title && meta.title.trim() && meta.title !== item.title) {
       item.title = meta.title.trim();
@@ -2608,27 +2885,15 @@ app.post('/api/debug/apify-test', requireAdminAuth, async (req: Request, res: Re
       });
     }
 
+    const normalizedActorId = normalizeApifyActorId(actorId);
     const cleanDirectUrl = `https://www.instagram.com/p/${shortcode}/`;
-    logs.push(`[Apify Test] Normalized target URL: ${cleanDirectUrl} (Shortcode: ${shortcode})`);
+    logs.push(`[Apify Test] Normalized target URL: ${cleanDirectUrl} (Shortcode: ${shortcode}, Actor: ${normalizedActorId})`);
+    logs.push(`[Apify Test] Requesting endpoint: https://api.apify.com/v2/acts/${normalizedActorId}/run-sync-get-dataset-items`);
 
-    const actorEndpoint = `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items?token=${token}&timeout=30`;
-    logs.push(`[Apify Test] Requesting endpoint: https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items`);
-
-    const apifyResponse = await axios.post(
-      actorEndpoint,
-      {
-        directUrls: [cleanDirectUrl],
-        resultsType: 'posts',
-        resultsLimit: 1,
-        searchLimit: 1
-      },
-      {
-        timeout: 35000,
-        headers: { 'Content-Type': 'application/json' }
-      }
-    );
-
-    const items = apifyResponse.data;
+    const items = await runApifyActorWithAutoInput(normalizedActorId, token, cleanDirectUrl, {
+      timeoutSec: 30,
+      resultsLimit: 1
+    });
     const durationMs = Date.now() - startTime;
     logs.push(`[Apify Test] Response received in ${durationMs}ms. Items count: ${Array.isArray(items) ? items.length : 'non-array'}`);
 
@@ -2901,8 +3166,15 @@ app.get('/api/site-settings', async (req: Request, res: Response) => {
 
 app.post('/api/site-settings', requireAdminAuth, (req: Request, res: Response) => {
   const db = loadDatabase();
-  db.settings = { ...(db.settings || {}), ...req.body };
+  const incoming = { ...(req.body || {}) };
+  if (typeof incoming.apifyApiToken === 'string') incoming.apifyApiToken = incoming.apifyApiToken.trim();
+  if (typeof incoming.apifyToken === 'string') incoming.apifyToken = incoming.apifyToken.trim();
+  if (typeof incoming.apifyActorId === 'string') incoming.apifyActorId = incoming.apifyActorId.trim() || 'apify~instagram-scraper';
+  if (typeof incoming.cdnSecret === 'string') incoming.cdnSecret = incoming.cdnSecret.trim();
+  if (typeof incoming.cdnEndpoint === 'string') incoming.cdnEndpoint = incoming.cdnEndpoint.trim();
+  db.settings = { ...(db.settings || {}), ...incoming };
   saveDatabase(db);
+  recentExtractCache.clear();
   res.json({ success: true, data: db.settings });
 });
 
@@ -2944,23 +3216,18 @@ async function syncComposioInstagramForAccount(targetUsername: string = 'esmaeel
 
   // 2. Multi-tier Fallback Scraper Pipeline (Apify / Bridge)
   if (fetchedPosts.length === 0) {
-    const apifyToken = process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN || db.settings?.apifyApiToken;
+    const apifyToken = String(process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN || db.settings?.apifyApiToken || db.settings?.apifyToken || '').trim();
     if (apifyToken) {
       try {
-        console.log(`[Composio Scraper] Ingesting posts for @${cleanUsername} via Apify scraper...`);
-        const apifyResponse = await axios.post(
-          `https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=${apifyToken}`,
-          {
-            directUrls: [`https://www.instagram.com/${cleanUsername}/`],
-            resultsType: 'posts',
-            resultsLimit: 6
-          },
-          { timeout: 45000 }
+        const actorId = normalizeApifyActorId(process.env.APIFY_ACTOR_ID || db.settings?.apifyActorId || 'apify~instagram-scraper');
+        console.log(`[Composio Scraper] Ingesting posts for @${cleanUsername} via Apify scraper (${actorId})...`);
+        fetchedPosts = await runApifyActorWithAutoInput(
+          actorId,
+          apifyToken,
+          `https://www.instagram.com/${cleanUsername}/`,
+          { timeoutSec: 40, resultsLimit: 6, isProfileUrl: true }
         );
-        if (Array.isArray(apifyResponse.data)) {
-          fetchedPosts = apifyResponse.data;
-          console.log(`[Composio Scraper SUCCESS] Received ${fetchedPosts.length} posts for @${cleanUsername}`);
-        }
+        console.log(`[Composio Scraper SUCCESS] Received ${fetchedPosts.length} posts for @${cleanUsername}`);
       } catch (err: any) {
         console.warn(`[Composio Scraper Warning] Scraper pipeline failed for @${cleanUsername}:`, err.message);
       }
@@ -4153,7 +4420,9 @@ ${itemsXml}
 async function syncPlatformCoverImages() {
   try {
     const db = loadDatabase();
+    let processed = 0;
     for (const item of db.contents) {
+      if (item.apifyFetched) continue;
       const isGenericTitle = !item.title || 
         item.title === 'ویدیوی یوتیوب' || 
         item.title === 'ویدیوی آپارات' || 
@@ -4163,12 +4432,14 @@ async function syncPlatformCoverImages() {
         item.title.startsWith('مقاله در ');
 
       const needsThumb = !item.thumbnail || 
-        !item.thumbnail.includes('upc.geekclub.ir') || 
+        (!item.thumbnail.includes('upc.geekclub.ir') && !item.thumbnail.startsWith('/uploads/')) || 
         item.thumbnail.startsWith('data:') ||
         item.thumbnail.includes('unsplash');
 
       if (isGenericTitle || needsThumb) {
         await enrichDatabaseContent(item.id, item.url);
+        processed++;
+        if (processed >= 5) break;
       }
     }
   } catch (err: any) {

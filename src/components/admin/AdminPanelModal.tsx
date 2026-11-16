@@ -713,47 +713,75 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   };
 
   const handleSaveApifySettings = async () => {
+    const cleanToken = apifyToken.trim();
+    const cleanActor = (apifyActor || 'apify~instagram-scraper').trim() || 'apify~instagram-scraper';
+    setApifyToken(cleanToken);
+    setApifyActor(cleanActor);
+
     onUpdateSiteSettings({
       ...siteSettings,
-      apifyApiToken: apifyToken,
-      apifyActorId: apifyActor,
+      apifyApiToken: cleanToken,
+      apifyActorId: cleanActor,
       enableApifyInstagram: true
     });
     try {
-      await fetch('/api/site-settings', {
+      const res = await fetch('/api/site-settings', {
         method: 'POST',
         headers: await getAdminHeaders(),
         body: JSON.stringify({
-          apifyApiToken: apifyToken,
-          apifyActorId: apifyActor,
+          apifyApiToken: cleanToken,
+          apifyActorId: cleanActor,
           enableApifyInstagram: true
         })
       });
-    } catch {}
-    setApifySaveSuccess(true);
-    setTimeout(() => setApifySaveSuccess(false), 2500);
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        setApifyTestResult({
+          ok: false,
+          message: errBody.error || `خطا در ذخیره توکن Apify روی سرور (کد ${res.status})`,
+          details: 'لطفاً با کلید ادمین معتبر وارد شوید و مجدداً ذخیره کنید.'
+        });
+        return;
+      }
+      setApifySaveSuccess(true);
+      setTimeout(() => setApifySaveSuccess(false), 2500);
+    } catch (err: any) {
+      setApifyTestResult({
+        ok: false,
+        message: 'خطا در ارتباط با سرور هنگام ذخیره تنظیمات Apify',
+        details: err?.message
+      });
+    }
   };
 
   const handleSaveCdnSettings = async () => {
-    saveCDNConfig({ endpointUrl: cdnEndpoint, apiToken: cdnToken });
+    const cleanCdnToken = cdnToken.trim();
+    const cleanCdnEndpoint = cdnEndpoint.trim();
+    saveCDNConfig({ endpointUrl: cleanCdnEndpoint, apiToken: cleanCdnToken });
     const updated = {
       ...siteSettings,
-      cdnSecret: cdnToken,
-      cdnEndpoint: cdnEndpoint
+      cdnSecret: cleanCdnToken,
+      cdnEndpoint: cleanCdnEndpoint
     };
     onUpdateSiteSettings(updated);
     try {
-      await fetch('/api/site-settings', {
+      const res = await fetch('/api/site-settings', {
         method: 'POST',
         headers: await getAdminHeaders(),
         body: JSON.stringify({
-          cdnSecret: cdnToken,
-          cdnEndpoint: cdnEndpoint
+          cdnSecret: cleanCdnToken,
+          cdnEndpoint: cleanCdnEndpoint
         })
       });
-    } catch {}
-    setCdnSaveSuccess(true);
-    setTimeout(() => setCdnSaveSuccess(false), 2500);
+      if (!res.ok) {
+        alert(`خطا در ذخیره تنظیمات CDN روی سرور (کد ${res.status})`);
+        return;
+      }
+      setCdnSaveSuccess(true);
+      setTimeout(() => setCdnSaveSuccess(false), 2500);
+    } catch {
+      alert('خطا در ارتباط با سرور هنگام ذخیره تنظیمات CDN');
+    }
   };
 
   const handleStartImageMigration = async () => {

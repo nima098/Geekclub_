@@ -929,18 +929,19 @@ export default function App() {
             console.warn('POST /api/contents/:id/enrich fetch error:', err);
           }
 
-          // 2. If enriched data is still generic or missing real title, call /api/extract-metadata directly
+          // 2. If enriched call failed completely or didn't return data, call /api/extract-metadata directly
           const hasRealTitle = enriched?.title && 
             !['ویدیوی یوتیوب', 'ویدیوی آپارات', 'پست اینستاگرام', 'محتوای اشتراک‌گذاری شده', 'مقاله وب'].includes(enriched.title) &&
-            !enriched.title.startsWith('مقاله در ');
+            !enriched.title.startsWith('مقاله در ') &&
+            !enriched.data?.instantFallback;
 
-          if (!enriched || !hasRealTitle || !enriched.thumbnail) {
+          if (!enriched) {
             try {
               const metaRes = await fetch(`/api/extract-metadata?url=${encodeURIComponent(newItem.url)}`);
               if (metaRes.ok) {
                 const metaData = await metaRes.json();
-                if (metaData.success && (metaData.title || metaData.thumbnail)) {
-                  enriched = { ...enriched, ...metaData };
+                if (metaData.success && !metaData.data?.instantFallback && (metaData.title || metaData.thumbnail)) {
+                  enriched = { ...metaData };
                 }
               }
             } catch (err) {
@@ -948,8 +949,8 @@ export default function App() {
             }
           }
 
-          // 3. Fallback to client-side oEmbed/heuristic parsing if server extraction was incomplete
-          if (!enriched || !enriched.title || !hasRealTitle) {
+          // 3. Fallback to client-side oEmbed/heuristic parsing for non-Instagram links if server extraction was incomplete
+          if (newItem.platform !== 'instagram' && (!enriched || !enriched.title || !hasRealTitle)) {
             try {
               const localMeta = await fetchMetadataFromUrl(newItem.url);
               if (localMeta && (localMeta.title || localMeta.thumbnail)) {

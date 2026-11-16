@@ -113,10 +113,11 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
   const cleanUrl = rawUrl.trim();
   const parsed = parseContentUrl(cleanUrl);
 
-  // 1. PRIMARY STEP: Use Server-side Proxy (/api/extract-metadata) with strict 3s timeout
+  // 1. PRIMARY STEP: Use Server-side Proxy (/api/extract-metadata) - allow up to 65s for Instagram (Apify + CDN media)
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const requestTimeoutMs = parsed.platform === 'instagram' ? 65000 : 12000;
+    const timeoutId = setTimeout(() => controller.abort(), requestTimeoutMs);
     const res = await fetch(`/api/extract-metadata?url=${encodeURIComponent(cleanUrl)}`, {
       signal: controller.signal
     });
@@ -250,36 +251,11 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
     readingOrWatchTime = cleanUrl.includes('reel') ? 'ریلز اینستاگرام' : 'پست اینستاگرام';
     authorName = 'پیج اینستاگرام';
 
-    let slides: MediaSlide[] = [];
-    let videoUrl = '';
-    let mediaType: 'video' | 'image' | 'carousel' = 'image';
-    let images: string[] = [];
-
-    let igHandle = '';
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000);
-      const res = await fetch(`/api/extract-metadata?url=${encodeURIComponent(cleanUrl)}`, {
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.title) title = data.title;
-        if (data.description) description = data.description;
-        if (data.authorName) authorName = data.authorName;
-        if (data.sourceHandle) igHandle = data.sourceHandle;
-        if (data.thumbnail) thumbnail = data.thumbnail;
-        if (data.videoUrl) videoUrl = data.videoUrl;
-        if (data.mediaType) mediaType = data.mediaType;
-        if (data.slides && data.slides.length > 0) slides = data.slides;
-        if (data.images && data.images.length > 0) images = data.images;
-        if (data.readingOrWatchTime) readingOrWatchTime = data.readingOrWatchTime;
-      }
-    } catch {
-      // Graceful fallback
-    }
+    const slides: MediaSlide[] = [];
+    const videoUrl = '';
+    const mediaType: 'video' | 'image' | 'carousel' = 'image';
+    const images: string[] = [];
+    const igHandle = '';
 
     if (!title) {
       title = cleanUrl.includes('reel') ? 'ریلز ویدیویی در اینستاگرام' : 'پست منتخب در اینستاگرام';

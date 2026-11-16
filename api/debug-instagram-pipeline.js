@@ -156,29 +156,41 @@ export async function fetchFromApifyScraper(shortcode, canonicalUrl, customToken
   
   // Try retrieving Apify Token from multiple sources
   const apifyToken = customToken || process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN || dbSettings.apifyApiToken || '';
-  const actorId = customActor || process.env.APIFY_ACTOR_ID || dbSettings.apifyActorId || 'apify~instagram-scraper';
+  const rawActorId = customActor || process.env.APIFY_ACTOR_ID || dbSettings.apifyActorId || 'apify~instagram-scraper';
+  const actorId = rawActorId.includes('/') ? rawActorId.replace(/\//g, '~') : rawActorId;
 
   if (!apifyToken) {
-    // If Apify token is missing, attempt Public Bridge fallback
-    console.warn('[Debug Pipeline] APIFY_API_TOKEN is not configured in process.env or settings. Testing via Public Bridge fallback...');
+    // If Apify token is missing, attempt Public Embed fallback
+    console.warn('[Debug Pipeline] APIFY_API_TOKEN is not configured in process.env or settings. Testing via Public Embed fallback...');
     try {
-      const vxRes = await axios.get(`https://api.vxinstagram.com/p/${shortcode}`, { timeout: 6000 });
-      if (vxRes.data) {
-        const d = vxRes.data;
-        const mediaUrl = (d.media_urls && d.media_urls.find(u => u.includes('.mp4'))) || d.media_urls?.[0] || '';
+      const embedRes = await axios.get(`https://www.instagram.com/p/${shortcode}/embed/captioned/`, {
+        timeout: 6000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      });
+      const html = typeof embedRes.data === 'string' ? embedRes.data : '';
+      const imgMatch = html.match(/class=["']EmbeddedMediaImage["'][^>]*src=["']([^"']+)["']/i) ||
+                       html.match(/<img[^>]+src=["'](https:\/\/[^"']+(?:fbcdn|cdninstagram)[^"']+)["']/i);
+      const vidMatch = html.match(/<video[^>]+src=["']([^"']+)["']/i);
+      const authorMatch = html.match(/class=["']UsernameText["'][^>]*>([^<]+)</i);
+      const captionMatch = html.match(/class=["']Caption["'][^>]*>(.*?)<\/div>/is);
+      const mediaUrl = (vidMatch?.[1] || imgMatch?.[1] || '').replace(/&amp;/g, '&');
+
+      if (mediaUrl) {
         return {
           success: true,
           step: 2,
           name: 'دریافت اطلاعات از Apify API (از طریق پل جایگزین)',
           durationMs: Date.now() - startTime,
           usedApify: false,
-          warning: 'توکن APIFY_API_TOKEN ثبت نشده بود؛ داده‌ها از پل اضطراری VXInstagram دریافت شد.',
+          warning: 'توکن APIFY_API_TOKEN ثبت نشده بود؛ داده‌ها از صفحه Embed عمومی اینستاگرام دریافت شد.',
           details: {
-            ownerUsername: d.user_name || d.user_screen_name || 'instagram_creator',
-            captionSnippet: (d.caption || d.text || 'پست اینستاگرام').slice(0, 150),
-            mediaUrl: mediaUrl,
-            isVideo: mediaUrl.includes('.mp4'),
-            directUrlsExtracted: d.media_urls || []
+            ownerUsername: authorMatch?.[1]?.trim() || 'instagram_creator',
+            captionSnippet: (captionMatch?.[1]?.replace(/<[^>]+>/g, ' ').trim() || 'پست اینستاگرام').slice(0, 150),
+            mediaUrl,
+            isVideo: Boolean(vidMatch?.[1]),
+            directUrlsExtracted: [mediaUrl]
           }
         };
       }
@@ -219,23 +231,40 @@ export async function fetchFromApifyScraper(shortcode, canonicalUrl, customToken
   }
 
   try {
-    const actorEndpoint = `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items?token=${apifyToken}&timeout=30`;
-    
-    const apifyResponse = await axios.post(
-      actorEndpoint,
-      {
-        directUrls: [canonicalUrl],
-        resultsType: 'posts',
-        resultsLimit: 1,
-        searchLimit: 1
-      },
-      {
-        timeout: 45000,
-        headers: { 'Content-Type': 'application/json' }
-      }
-    );
+    const actorEndpoint = `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items?token=${encodeURIComponent(apifyToken)}&timeout=30`;
+    const prefersUsername = /post-scraper|reel-scraper|profile-scraper/i.test(actorId);
+    const payloads = prefersUsername
+      ? [
+          { username: [canonicalUrl], resultsLimit: 1 },
+          { directUrls: [canonicalUrl], resultsLimit: 1 },
+          { directUrls: [canonicalUrl], resultsType: 'posts', resultsLimit: 1 },
+          { startUrls: [{ url: canonicalUrl }], resultsLimit: 1 }
+        ]
+      : [
+          { directUrls: [canonicalUrl], resultsType: 'posts', resultsLimit: 1 },
+          { username: [canonicalUrl], resultsLimit: 1 },
+          { directUrls: [canonicalUrl], resultsLimit: 1 },
+          { startUrls: [{ url: canonicalUrl }], resultsLimit: 1 }
+        ];
 
-    const items = apifyResponse.data;
+    let items = null;
+    let lastErr = null;
+    for (const payload of payloads) {
+      try {
+        const apifyResponse = await axios.post(actorEndpoint, payload, {
+          timeout: 45000,
+          headers: { 'Content-Type': 'application/json' }
+        });
+        items = apifyResponse.data;
+        lastErr = null;
+        break;
+      } catch (err) {
+        lastErr = err;
+        if (err?.response?.status === 400) continue;
+        throw err;
+      }
+    }
+    if (lastErr) throw lastErr;
     if (!Array.isArray(items) || items.length === 0) {
       return {
         success: false,
