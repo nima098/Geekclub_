@@ -258,7 +258,7 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
     const domainLower = (item.sourceDomain || '').toLowerCase().replace(/^www\./, '');
 
     if (item.platform === 'instagram' || urlLower.includes('instagram.com') || domainLower.includes('instagram')) {
-      return 'بازکردن در اینستاگرام';
+      return 'این صفحه را فالو کنید';
     }
     if (item.platform === 'youtube' || urlLower.includes('youtube.com') || urlLower.includes('youtu.be') || domainLower.includes('youtube')) {
       return 'بازکردن در یوتیوب';
@@ -306,19 +306,16 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Top Header Bar */}
-        <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 backdrop-blur-xl shrink-0 gap-3">
-          <div className="flex items-center gap-2 shrink-0">
+        <div className="p-3 sm:p-3.5 border-b border-slate-800 flex items-center justify-start bg-slate-900/90 backdrop-blur-xl shrink-0">
+          <div className="flex items-center shrink-0">
             <button
+              type="button"
               onClick={onClose}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition cursor-pointer flex items-center gap-1.5"
-             
+              aria-label="بستن"
+              className="w-9 h-9 p-0 m-0 leading-none text-center rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition cursor-pointer inline-flex items-center justify-center shrink-0"
             >
-              <X className="w-5 h-5" />
-              <span className="text-xs font-semibold"></span>
+              <X className="w-5 h-5 block m-0 shrink-0" />
             </button>
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
           </div>
         </div>
 
@@ -418,11 +415,13 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
                               className="w-full h-full object-contain"
                             />
                             <button
+                              type="button"
                               onClick={() => setIsPlayingIgVideo(false)}
-                              className="absolute bottom-4 left-4 z-20 p-2 rounded-xl bg-black/80 hover:bg-black text-white text-xs transition cursor-pointer backdrop-blur-md border border-white/20"
+                              aria-label="بستن پخش ویدیو"
+                              className="absolute bottom-4 left-4 z-20 w-8 h-8 p-0 m-0 leading-none text-center rounded-xl bg-black/80 hover:bg-black text-white text-xs transition cursor-pointer backdrop-blur-md border border-white/20 inline-flex items-center justify-center shrink-0"
                               title="بستن پخش ویدیو"
                             >
-                              <X className="w-4 h-4" />
+                              <X className="w-4 h-4 block m-0 shrink-0" />
                             </button>
                           </div>
                         ) : (
@@ -499,9 +498,7 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
                           handleFetchAllSlides();
                         }
                       }}
-                      className={`absolute left-3 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-full bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700 shadow-xl backdrop-blur-md transition active:scale-95 cursor-pointer ${
-                        hasMultipleSlides ? 'opacity-95 hover:opacity-100' : 'opacity-65 hover:opacity-100'
-                      }`}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white border border-slate-700 shadow-xl transition active:scale-95 cursor-pointer"
                       title={hasMultipleSlides ? 'اسلاید قبلی' : 'بررسی اسلایدهای بیشتر'}
                     >
                       <ChevronLeft className="w-5 h-5" />
@@ -517,9 +514,7 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
                           handleFetchAllSlides();
                         }
                       }}
-                      className={`absolute right-3 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-full bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700 shadow-xl backdrop-blur-md transition active:scale-95 cursor-pointer ${
-                        hasMultipleSlides ? 'opacity-95 hover:opacity-100' : 'opacity-65 hover:opacity-100'
-                      }`}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white border border-slate-700 shadow-xl transition active:scale-95 cursor-pointer"
                       title={hasMultipleSlides ? 'اسلاید بعدی' : 'بررسی اسلایدهای بیشتر'}
                     >
                       <ChevronRight className="w-5 h-5" />
@@ -609,17 +604,18 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
               <button
                 type="button"
                 onClick={() => setIsZoomed(false)}
-                className="absolute top-4 left-4 z-10 p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700 cursor-pointer"
+                aria-label="بستن بزرگ‌نمایی"
+                className="absolute top-4 left-4 z-10 w-10 h-10 p-0 m-0 leading-none text-center rounded-xl bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700 cursor-pointer inline-flex items-center justify-center shrink-0"
                 title="بستن بزرگ‌نمایی"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5 block m-0 shrink-0" />
               </button>
               {hasMultipleSlides && (
                 <>
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); goToPrevSlide(); }}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700 cursor-pointer"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-slate-900 hover:bg-slate-800 text-white border border-slate-700 cursor-pointer"
                     title="اسلاید قبلی"
                   >
                     <ChevronLeft className="w-6 h-6" />
@@ -627,7 +623,7 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); goToNextSlide(); }}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700 cursor-pointer"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-slate-900 hover:bg-slate-800 text-white border border-slate-700 cursor-pointer"
                     title="اسلاید بعدی"
                   >
                     <ChevronRight className="w-6 h-6" />
@@ -769,11 +765,15 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
               href={item.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-3.5 py-2 rounded-xl bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-[#0077d9]/20 transition cursor-pointer active:scale-95"
+              className={
+                item.platform === 'instagram' || (item.url || '').toLowerCase().includes('instagram.com')
+                  ? 'px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer no-underline active:scale-95'
+                  : 'px-3.5 py-2 rounded-xl bg-[#0077d9] hover:bg-[#0062b3] text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-[#0077d9]/20 transition cursor-pointer no-underline active:scale-95'
+              }
               title={getSourceButtonLabel()}
             >
               <ExternalLink className="w-4 h-4" />
-              <span>{getSourceButtonLabel()}</span>
+              <span className="text-xs font-bold">{getSourceButtonLabel()}</span>
             </a>
 
             <button

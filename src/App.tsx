@@ -994,9 +994,24 @@ export default function App() {
               ? 'carousel'
               : (enriched.mediaType || newItem.mediaType);
 
+            const isGenericEnrichedIgDesc = Boolean(
+              newItem.platform === 'instagram' &&
+              enriched.description && (
+                enriched.description.includes('محتوای اشتراک‌گذاری شده از صفحه') ||
+                enriched.description.includes('محتوای به اشتراک گذاشته شده از اینستاگرام') ||
+                enriched.description.includes('محتوای اشتراک‌گذاری شده از اینستاگرام')
+              )
+            );
+            const canApplyDesc = Boolean(
+              enriched.description &&
+              enriched.description.trim() &&
+              !isGenericEnrichedIgDesc &&
+              (newItem.platform !== 'instagram' || !newItem.description.trim())
+            );
+
             const updates: Partial<ContentItem> = {
               ...(newItem.platform !== 'instagram' && !newItem.hasCustomTitle && enriched.title && enriched.title.trim() ? { title: enriched.title.trim() } : {}),
-              ...(newItem.platform !== 'instagram' && enriched.description && enriched.description.trim() ? { description: enriched.description.trim() } : {}),
+              ...(canApplyDesc ? { description: enriched.description.trim() } : {}),
               ...(finalCover ? { thumbnail: finalCover } : {}),
               ...(enriched.videoUrl ? { videoUrl: enriched.videoUrl } : {}),
               ...(resolvedMediaType ? { mediaType: resolvedMediaType } : {}),

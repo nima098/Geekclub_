@@ -2308,7 +2308,9 @@ async function enrichDatabaseContent(id: string, url: string) {
       item = {
         id: id || `content-${Date.now()}`,
         title: meta.platform === 'instagram' ? '' : (meta.title || 'محتوای اشتراک‌گذاری شده'),
-        description: meta.platform === 'instagram' ? '' : (meta.description || ''),
+        description: (meta.platform === 'instagram' && (!meta.description || meta.description.includes('محتوای اشتراک‌گذاری شده از صفحه') || meta.description.includes('محتوای به اشتراک گذاشته شده از اینستاگرام') || meta.description.includes('محتوای اشتراک‌گذاری شده از اینستاگرام')))
+          ? ''
+          : (meta.description || ''),
         url,
         platform: meta.platform || 'article',
         embedUrl: meta.embedUrl || url,
@@ -2352,7 +2354,14 @@ async function enrichDatabaseContent(id: string, url: string) {
       item.title = meta.title.trim();
       changed = true;
     }
-    if (item.platform !== 'instagram' && meta.description && meta.description.trim() && (!item.description || item.description.includes('به اشتراک گذاشته شده') || item.description.length < 20)) {
+    const isGenericMetaDesc = Boolean(
+      meta.description && (
+        meta.description.includes('محتوای اشتراک‌گذاری شده از صفحه') ||
+        meta.description.includes('محتوای به اشتراک گذاشته شده از اینستاگرام') ||
+        meta.description.includes('محتوای اشتراک‌گذاری شده از اینستاگرام')
+      )
+    );
+    if (meta.description && meta.description.trim() && !isGenericMetaDesc && (!item.description || item.description.includes('به اشتراک گذاشته شده') || item.description.length < 20)) {
       item.description = meta.description.trim();
       changed = true;
     }

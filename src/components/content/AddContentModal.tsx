@@ -66,6 +66,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
   const [title, setTitle] = useState('');
   const [userEditedTitle, setUserEditedTitle] = useState(false);
   const [description, setDescription] = useState('');
+  const [userEditedDescription, setUserEditedDescription] = useState(false);
   
   // Category state with Auto-detect and Suggestion / Autocomplete
   const [categoryInput, setCategoryInput] = useState('');
@@ -149,6 +150,21 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const extractUsableDescription = (platform: Platform | null | undefined, rawDesc?: string): string => {
+    const clean = (rawDesc || '').trim();
+    if (!clean) return '';
+    if (platform === 'instagram') {
+      if (
+        clean.includes('محتوای اشتراک‌گذاری شده از صفحه') ||
+        clean.includes('محتوای به اشتراک گذاشته شده از اینستاگرام') ||
+        clean.includes('محتوای اشتراک‌گذاری شده از اینستاگرام')
+      ) {
+        return '';
+      }
+    }
+    return clean;
+  };
+
   // Debounced URL parser and metadata fetcher
   useEffect(() => {
     if (!url.trim()) {
@@ -162,7 +178,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
     setDetectedPlatform(parsed.platform);
     setEmbedUrl(parsed.embedUrl);
     if (parsed.platform === 'instagram') {
-      setDescription('');
+      if (!userEditedDescription) setDescription('');
       if (!userEditedTitle) setTitle('');
       if (!thumbnail.trim()) setThumbnail(FALLBACK_IMAGES.instagram);
       if (!authorName.trim()) setAuthorName('پیج اینستاگرام');
@@ -180,12 +196,13 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
           setFetchedMeta(meta);
           setDetectedPlatform(meta.platform);
           setEmbedUrl(meta.embedUrl);
+          const usableDesc = extractUsableDescription(meta.platform, meta.description);
           if (meta.platform === 'instagram') {
             if (!userEditedTitle) setTitle('');
-            setDescription('');
+            if (usableDesc && !userEditedDescription) setDescription(usableDesc);
           } else {
             if (meta.title && !userEditedTitle) setTitle(meta.title);
-            if (meta.description) setDescription(meta.description);
+            if (usableDesc && !userEditedDescription) setDescription(usableDesc);
           }
           if (meta.thumbnail) {
             setThumbnail(meta.thumbnail);
@@ -211,12 +228,13 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
 
   useEffect(() => {
     if (fetchedMeta) {
+      const usableDesc = extractUsableDescription(fetchedMeta.platform, fetchedMeta.description);
       if (fetchedMeta.platform === 'instagram') {
         if (!userEditedTitle) setTitle('');
-        setDescription('');
+        if (usableDesc && !userEditedDescription) setDescription(usableDesc);
       } else {
         if (fetchedMeta.title && !userEditedTitle) setTitle(fetchedMeta.title);
-        if (fetchedMeta.description) setDescription(fetchedMeta.description);
+        if (usableDesc && !userEditedDescription) setDescription(usableDesc);
       }
       if (fetchedMeta.thumbnail) setThumbnail(fetchedMeta.thumbnail);
       if (fetchedMeta.authorName) setAuthorName(fetchedMeta.authorName);
@@ -267,9 +285,10 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
   // Manually apply fetched metadata into input fields
   const handleApplyFetchedMetadata = () => {
     if (!fetchedMeta) return;
+    const usableDesc = extractUsableDescription(fetchedMeta.platform, fetchedMeta.description);
     if (fetchedMeta.platform === 'instagram') {
       if (!userEditedTitle) setTitle('');
-      setDescription('');
+      if (usableDesc) setDescription(usableDesc);
     } else {
       setTitle(fetchedMeta.title);
       setDescription(fetchedMeta.description);
@@ -341,9 +360,10 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
               : `مقاله در ${parsed.sourceDomain}`
           ));
 
-      // Description fallback (Instagram videos leave description empty by default unless user enters text)
+      // Description fallback (use Instagram caption when extracted, otherwise keep empty unless user typed text)
+      const usableMetaDesc = extractUsableDescription(finalPlatform, fetchedMeta?.description);
       const finalDescription = finalPlatform === 'instagram'
-        ? description.trim()
+        ? (description.trim() || usableMetaDesc)
         : (description.trim() || fetchedMeta?.description || (
             finalPlatform === 'youtube'
               ? 'ویدیوی به اشتراک گذاشته شده از یوتیوب.'
@@ -472,6 +492,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
       setTitle('');
       setUserEditedTitle(false);
       setDescription('');
+      setUserEditedDescription(false);
       setCategoryInput('');
       setSelectedCategory('auto');
       setTagsInput('');
@@ -550,10 +571,12 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
           </div>
 
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition cursor-pointer"
+            aria-label="بستن"
+            className="w-9 h-9 p-0 m-0 leading-none text-center rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition cursor-pointer inline-flex items-center justify-center shrink-0"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 block m-0 shrink-0" />
           </button>
         </div>
 
@@ -691,7 +714,10 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
             <textarea
               rows={2}
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                setUserEditedDescription(Boolean(e.target.value.trim()));
+              }}
               placeholder={fetchedMeta?.description ? `پیش‌فرض از پلتفرم: ${fetchedMeta.description.slice(0, 80)}...` : 'توضیحات دلخواه یا خالی بگذارید تا خودکار پر شود...'}
               className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-100 placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none"
             />

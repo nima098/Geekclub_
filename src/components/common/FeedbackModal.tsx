@@ -94,10 +94,12 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
           </div>
 
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition cursor-pointer"
+            aria-label="بستن"
+            className="w-9 h-9 p-0 m-0 leading-none text-center rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition cursor-pointer inline-flex items-center justify-center shrink-0"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 block m-0 shrink-0" />
           </button>
         </div>
 
