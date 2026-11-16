@@ -193,15 +193,18 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
                     onClick={() => setIsPlayingIgVideo(true)}
                   >
                     <img
-                      src={activeSlide.thumbnail || item.thumbnail}
+                      src={resolveCoverImageUrl(activeSlide.thumbnail || activeSlide.url || item.thumbnail, 'instagram', 'modal')}
                       alt=""
                       aria-hidden="true"
+                      decoding="async"
                       className="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-60 select-none pointer-events-none"
+                      onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
                     />
                     <div className="absolute inset-0 bg-black/30 pointer-events-none z-10" />
                     <img
-                      src={activeSlide.thumbnail || item.thumbnail}
+                      src={resolveCoverImageUrl(activeSlide.thumbnail || activeSlide.url || item.thumbnail, 'instagram', 'modal')}
                       alt={item.title}
+                      decoding="async"
                       className="w-full max-h-[550px] object-contain relative z-10 opacity-95 hover:opacity-100 transition drop-shadow-md"
                       onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
                     />
@@ -215,16 +218,18 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
               ) : (
                 <div className="relative w-full h-full min-h-[320px] sm:min-h-[460px] flex items-center justify-center bg-slate-950 overflow-hidden">
                   <img
-                    src={resolveCoverImageUrl(activeSlide.url || activeSlide.thumbnail || item.thumbnail, 'instagram')}
+                    src={resolveCoverImageUrl(activeSlide.url || activeSlide.thumbnail || item.thumbnail, 'instagram', 'modal')}
                     alt=""
                     aria-hidden="true"
+                    decoding="async"
                     className="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-60 select-none pointer-events-none"
                     onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
                   />
                   <div className="absolute inset-0 bg-black/30 pointer-events-none z-10" />
                   <img
-                    src={resolveCoverImageUrl(activeSlide.url || activeSlide.thumbnail || item.thumbnail, 'instagram')}
+                    src={resolveCoverImageUrl(activeSlide.url || activeSlide.thumbnail || item.thumbnail, 'instagram', 'modal')}
                     alt={`${item.title} - اسلاید ${activeSlideIndex + 1}`}
+                    decoding="async"
                     className="w-full max-h-[550px] object-contain relative z-10 drop-shadow-md"
                     onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
                   />
@@ -289,10 +294,11 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
 
           {/* 4. Article Featured Image */}
           {item.platform === 'article' && item.thumbnail && (
-            <div className="rounded-2xl overflow-hidden aspect-video max-h-72 w-full border border-slate-800 shadow-xl">
+            <div className="rounded-2xl overflow-hidden aspect-video max-h-80 w-full border border-slate-800 shadow-xl">
               <img
-                src={resolveCoverImageUrl(item.thumbnail)}
+                src={resolveCoverImageUrl(item.thumbnail, 'article', 'modal')}
                 alt={item.title}
+                decoding="async"
                 className="w-full h-full object-cover"
                 onError={(e) => handleImageError(e, getPlatformFallbackImage('article', item.url), 'article', item.id)}
               />

@@ -409,6 +409,12 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
         finalCategory = fetchedMeta?.category || inferCategoryFromContent(finalTitle, finalDescription, finalTags);
       }
 
+      const extractedSourceHandle = fetchedMeta?.sourceHandle || (
+        finalPlatform !== 'article' && fetchedMeta?.authorName && /^[a-zA-Z0-9_.-]{2,}$/.test(fetchedMeta.authorName.replace(/^@+/, '').trim())
+          ? `@${fetchedMeta.authorName.replace(/^@+/, '').trim()}`
+          : undefined
+      );
+
       onAdd({
         title: finalTitle,
         description: finalDescription,
@@ -419,7 +425,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
         author: {
           name: finalAuthorName,
           avatar: user?.photoURL || getAuthorAvatar(finalAuthorName),
-          handle: user?.username ? (user.username.startsWith('@') ? user.username : `@${user.username}`) : `@${finalAuthorName.replace(/\s+/g, '_').toLowerCase()}`,
+          handle: extractedSourceHandle || parsed.sourceDomain,
           isVerified: false
         },
         sharedBy: {
@@ -428,6 +434,8 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
           avatar: user?.photoURL || getAuthorAvatar(finalAuthorName),
           uid: user?.uid
         },
+        sourceName: fetchedMeta?.sourceName || '',
+        sourceHandle: extractedSourceHandle || '',
         category: finalCategory,
         tags: finalTags,
         readingOrWatchTime: finalDuration,

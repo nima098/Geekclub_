@@ -20,6 +20,8 @@ export interface ExtractedMetadata {
   category: Category;
   readingOrWatchTime: string;
   sourceDomain: string;
+  sourceName?: string;
+  sourceHandle?: string;
   slides?: MediaSlide[];
   videoUrl?: string;
   mediaType?: 'video' | 'image' | 'carousel';
@@ -142,7 +144,14 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
           tags: Array.isArray(data.tags) && data.tags.length > 0 ? data.tags : ['محتوا', 'فناوری'],
           category: data.category || inferredCat,
           readingOrWatchTime: data.readingOrWatchTime || (platform === 'youtube' ? 'ویدیو یوتیوب' : '۵ دقیقه'),
-          sourceDomain: parsed.sourceDomain
+          sourceDomain: parsed.sourceDomain,
+          sourceName: data.sourceName || '',
+          sourceHandle: data.sourceHandle || '',
+          videoUrl: data.videoUrl || '',
+          mediaType: data.mediaType,
+          images: data.images,
+          slides: data.slides,
+          data: data.data
         };
       }
     }
@@ -170,6 +179,7 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
     category = 'tech';
     readingOrWatchTime = cleanUrl.includes('shorts') ? '۶۰ ثانیه شورت' : 'ویدیو یوتیوب';
 
+    let ytHandle = '';
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3500);
@@ -185,6 +195,11 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
         if (data.title) title = data.title;
         if (data.author_name) authorName = data.author_name;
         if (data.thumbnail_url) thumbnail = data.thumbnail_url;
+        if (typeof data.author_url === 'string') {
+          const hm = data.author_url.match(/youtube\.com\/@([a-zA-Z0-9_.-]+)/i) ||
+                     data.author_url.match(/youtube\.com\/(?:user|c)\/([a-zA-Z0-9_.-]+)/i);
+          if (hm?.[1]) ytHandle = `@${hm[1]}`;
+        }
       }
     } catch {
       // Graceful fallback
@@ -221,7 +236,9 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
       tags,
       category: inferredCat,
       readingOrWatchTime,
-      sourceDomain: 'youtube.com'
+      sourceDomain: 'youtube.com',
+      sourceName: authorName,
+      sourceHandle: ytHandle
     };
   }
 
@@ -238,6 +255,7 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
     let mediaType: 'video' | 'image' | 'carousel' = 'image';
     let images: string[] = [];
 
+    let igHandle = '';
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 12000);
@@ -251,6 +269,7 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
         if (data.title) title = data.title;
         if (data.description) description = data.description;
         if (data.authorName) authorName = data.authorName;
+        if (data.sourceHandle) igHandle = data.sourceHandle;
         if (data.thumbnail) thumbnail = data.thumbnail;
         if (data.videoUrl) videoUrl = data.videoUrl;
         if (data.mediaType) mediaType = data.mediaType;
@@ -282,6 +301,8 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
       category: inferredIgCat,
       readingOrWatchTime,
       sourceDomain: 'instagram.com',
+      sourceName: authorName,
+      sourceHandle: igHandle,
       slides,
       videoUrl,
       mediaType,
@@ -345,6 +366,7 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
   category = 'tech';
   readingOrWatchTime = '۶ دقیقه مطالعه';
   authorName = parsed.sourceDomain;
+  let articleSiteName = '';
 
   // 1. Call server proxy route (/api/extract-metadata) to bypass browser CORS and fetch real meta description, title, image
   try {
@@ -363,6 +385,7 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
         if (metaData.description) description = metaData.description;
         if (metaData.image) thumbnail = metaData.image;
         if (metaData.author) authorName = metaData.author;
+        if (metaData.sourceName) articleSiteName = metaData.sourceName;
       }
     }
   } catch (err) {
@@ -383,6 +406,12 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
         const data = await res.json();
         if (data && data.contents && typeof data.contents === 'string') {
           const html = data.contents;
+
+          if (!articleSiteName) {
+            const sm = html.match(/<meta\s+property=["']og:site_name["']\s+content=["']([^"']+)["']/i) ||
+                       html.match(/<meta\s+content=["']([^"']+)["']\s+property=["']og:site_name["']/i);
+            if (sm && sm[1]) articleSiteName = sm[1].trim();
+          }
 
           if (!title) {
             const tm = html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i) ||
@@ -427,6 +456,7 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
         if (!title && data.title) title = data.title;
         if (data.author_name) authorName = data.author_name;
         if (data.thumbnail_url) thumbnail = data.thumbnail_url;
+        if (!articleSiteName && data.provider_name) articleSiteName = data.provider_name;
       }
     } catch {
       // Graceful fallback
@@ -453,6 +483,7 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
     tags,
     category: inferredArtCat,
     readingOrWatchTime,
-    sourceDomain: parsed.sourceDomain
+    sourceDomain: parsed.sourceDomain,
+    sourceName: articleSiteName
   };
 }

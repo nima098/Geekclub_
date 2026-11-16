@@ -157,11 +157,24 @@ export const getPlatformFallbackImage = (platform?: Platform | string, rawUrl?: 
   return FALLBACK_IMAGES.article;
 };
 
+export type ImageRenderVariant = 'card' | 'modal' | 'original';
+
+const IMAGE_VARIANT_PARAMS: Record<Exclude<ImageRenderVariant, 'original'>, { w: number; q: number }> = {
+  card: { w: 540, q: 76 },
+  modal: { w: 1280, q: 88 }
+};
+
 /**
- * Resolves cover image URL to ensure broken host prefixes like upc.geekclub.ir/uploads/
- * are converted into reliable local /uploads/ URLs or proxied if external.
+ * Resolves cover image URL with optional size/quality optimization preset:
+ * - 'card': Compressed & fast-loading WebP (540px max width, q=76) for feed/list cards
+ * - 'modal': High-resolution WebP (1280px max width, q=88) proportional to popup viewer size
+ * - 'original': Direct/proxied URL without forced downscaling
  */
-export const resolveCoverImageUrl = (url?: string | null, platform?: Platform | string): string => {
+export const resolveCoverImageUrl = (
+  url?: string | null,
+  platform?: Platform | string,
+  variant: ImageRenderVariant = 'card'
+): string => {
   if (!url || typeof url !== 'string' || !url.trim() || url === 'null' || url === 'undefined') {
     return getPlatformFallbackImage(platform);
   }
@@ -171,16 +184,42 @@ export const resolveCoverImageUrl = (url?: string | null, platform?: Platform | 
     clean = clean.substring(clean.indexOf('/uploads/'));
   }
 
-  if (!clean.startsWith('http://') && !clean.startsWith('https://') && !clean.startsWith('data:')) {
+  if (clean.startsWith('data:') || clean.startsWith('blob:')) {
+    return clean;
+  }
+
+  if (!clean.startsWith('http://') && !clean.startsWith('https://') && !clean.startsWith('/api/proxy-image')) {
     if (clean.startsWith('uploads/')) {
       clean = '/' + clean;
     } else if (!clean.startsWith('/')) {
       clean = '/' + clean;
     }
+  }
+
+  if (clean.endsWith('.svg')) {
     return clean;
   }
 
-  return getProxiedImageUrl(clean);
+  if (variant === 'original') {
+    return getProxiedImageUrl(clean);
+  }
+
+  const { w, q } = IMAGE_VARIANT_PARAMS[variant];
+
+  if (clean.startsWith('/api/proxy-image')) {
+    try {
+      const parsed = new URL(clean, 'http://localhost');
+      const targetUrl = parsed.searchParams.get('url');
+      if (targetUrl) {
+        return `/api/proxy-image?url=${encodeURIComponent(targetUrl)}&w=${w}&q=${q}`;
+      }
+    } catch {
+      return clean;
+    }
+    return clean;
+  }
+
+  return `/api/proxy-image?url=${encodeURIComponent(clean)}&w=${w}&q=${q}`;
 };
 
 /**
@@ -191,7 +230,7 @@ export const handleImageError = (
   e: React.SyntheticEvent<HTMLImageElement, Event>,
   fallbackUrl?: string,
   platform?: Platform | string,
-  itemId?: string
+  _itemId?: string
 ) => {
   const target = e.currentTarget;
   const currentSrc = target.src;
@@ -207,7 +246,15 @@ export const handleImageError = (
     return;
   }
 
-  // 3. If failed on upc.geekclub.ir/uploads/, the file exists locally on the website!
+  // 3. If optimized proxy failed, immediately fall back to safe offline SVG (no retry loop)
+  if (currentSrc.includes('/api/proxy-image')) {
+    target.src = (fallbackUrl && fallbackUrl.startsWith('data:'))
+      ? fallbackUrl
+      : getPlatformFallbackImage(platform);
+    return;
+  }
+
+  // 4. If failed on upc.geekclub.ir/uploads/, the file exists locally on the website!
   // Strip the domain and retry with local /uploads/
   if (currentSrc.includes('upc.geekclub.ir/uploads/')) {
     const localRel = currentSrc.substring(currentSrc.indexOf('/uploads/'));
@@ -215,21 +262,21 @@ export const handleImageError = (
     return;
   }
 
-  // 4. If failed on local /uploads/ (already retried or direct local path), immediately fallback to offline SVG
+  // 5. If failed on local /uploads/ (already retried or direct local path), immediately fallback to offline SVG
   if (currentSrc.includes('/uploads/')) {
     const safeSvg = fallbackUrl || getPlatformFallbackImage(platform);
     target.src = safeSvg;
     return;
   }
 
-  // 5. If failed on upc.geekclub.ir CDN (e.g. broken s1 link), fallback to safe SVG
+  // 6. If failed on upc.geekclub.ir CDN (e.g. broken s1 link), fallback to safe SVG
   if (currentSrc.includes('upc.geekclub.ir')) {
     const safeSvg = fallbackUrl || getPlatformFallbackImage(platform);
     target.src = safeSvg;
     return;
   }
 
-  // 6. If failed on external URL, fallback directly to offline SVG Data URI
+  // 7. If failed on external URL, fallback directly to offline SVG Data URI
   const safeSvg = (fallbackUrl && fallbackUrl.startsWith('data:')) 
     ? fallbackUrl 
     : getPlatformFallbackImage(platform);

@@ -310,7 +310,7 @@ export default function App() {
   const [selectedPlatform, setSelectedPlatform] = useState<Platform | 'all'>('all');
   const [selectedCategory, setSelectedCategory] = useState<Category>('all');
   const [sortOption, setSortOption] = useState<SortOption>('newest');
-  const [viewMode, setViewMode] = useState<ViewMode>('grid3');
+  const [viewMode, setViewMode] = useState<ViewMode>('grid4');
   const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [showTrashOnly, setShowTrashOnly] = useState(false);
 
@@ -985,11 +985,15 @@ export default function App() {
               ...(enriched.slides && enriched.slides.length > 0 ? { slides: enriched.slides } : {}),
               ...(enriched.readingOrWatchTime ? { readingOrWatchTime: enriched.readingOrWatchTime } : {}),
               ...(enriched.embedUrl ? { embedUrl: enriched.embedUrl } : {}),
-              ...(enriched.authorName && (!newItem.author?.name || newItem.author.name === 'کاربر گیک کلاب') ? {
+              ...(enriched.sourceName ? { sourceName: enriched.sourceName } : {}),
+              ...(enriched.sourceHandle ? { sourceHandle: enriched.sourceHandle } : {}),
+              ...((enriched.authorName || enriched.sourceHandle) ? {
                 author: {
                   ...newItem.author,
-                  name: enriched.authorName,
-                  handle: `@${enriched.authorName.replace(/\s+/g, '_').toLowerCase()}`
+                  name: (!newItem.author?.name || newItem.author.name === 'کاربر گیک کلاب' || newItem.author.name === 'پیج اینستاگرام')
+                    ? (enriched.authorName || newItem.author?.name || 'کاربر گیک کلاب')
+                    : newItem.author.name,
+                  handle: enriched.sourceHandle || newItem.author?.handle || `@${(enriched.authorName || 'geek').replace(/\s+/g, '_').toLowerCase()}`
                 }
               } : {}),
               needsEnrichment: false
@@ -1626,6 +1630,7 @@ export default function App() {
                   item={item}
                   viewMode={viewMode}
                   currentUser={user}
+                  usersList={usersList}
                   onLike={handleLike}
                   onDislike={handleDislike}
                   onOpenComments={(targetItem) => setActiveCommentsItem(targetItem)}

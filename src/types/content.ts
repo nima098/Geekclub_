@@ -102,6 +102,9 @@ export interface ContentItem {
   slides?: MediaSlide[];
   apifyFetched?: boolean;
   hasCustomTitle?: boolean;
+  sourceName?: string;
+  sourceHandle?: string;
+  data?: any;
   sharedBy?: {
     name?: string;
     username?: string;

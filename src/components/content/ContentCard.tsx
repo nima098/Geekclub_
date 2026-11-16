@@ -24,11 +24,13 @@ import {
 } from 'lucide-react';
 import { ContentItem, ViewMode, UserProfile, MediaSlide, shouldDisplayTitle } from '../../types/content';
 import { handleImageError, getPlatformFallbackImage, resolveCoverImageUrl } from '../../utils/imageHelper';
+import { resolveContentSource } from '../../utils/sourceHelper';
 
 interface ContentCardProps {
   item: ContentItem;
   viewMode: ViewMode;
   currentUser?: UserProfile | null;
+  usersList?: UserProfile[];
   onLike: (id: string) => void;
   onDislike: (id: string) => void;
   onOpenComments: (item: ContentItem) => void;
@@ -45,6 +47,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   item,
   viewMode,
   currentUser,
+  usersList,
   onLike,
   onDislike,
   onOpenComments,
@@ -90,28 +93,28 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     switch (item.platform) {
       case 'youtube':
         return {
-          icon: <Youtube className="w-5 h-5 text-white" />,
+          icon: <Youtube className="w-4 h-4 shrink-0 text-slate-100" />,
           label: 'یوتیوب',
           badgeBg: 'gc-chip-platform-youtube px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs font-bold shadow-md',
           accentColor: 'hover:border-red-500/60'
         };
       case 'instagram':
         return {
-          icon: <Instagram className="w-5 h-5 text-white" />,
+          icon: <Instagram className="w-4 h-4 shrink-0 text-slate-100" />,
           label: 'اینستاگرام',
           badgeBg: 'gc-chip-platform-instagram px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs font-bold shadow-md',
           accentColor: 'hover:border-pink-500/60'
         };
       case 'article':
         return {
-          icon: <Newspaper className="w-5 h-5 text-white" />,
+          icon: <Newspaper className="w-4 h-4 shrink-0 text-slate-100" />,
           label: 'مقاله وب',
           badgeBg: 'gc-chip-platform-article px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs font-bold shadow-md',
           accentColor: 'hover:border-emerald-500/60'
         };
       case 'aparat':
         return {
-          icon: <Video className="w-5 h-5 text-white" />,
+          icon: <Video className="w-4 h-4 shrink-0 text-slate-100" />,
           label: 'آپارات',
           badgeBg: 'gc-chip-platform-aparat px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs font-bold shadow-md',
           accentColor: 'hover:border-rose-500/60'
@@ -121,15 +124,30 @@ export const ContentCard: React.FC<ContentCardProps> = ({
 
   const meta = getPlatformMeta();
 
-  // Resolve username of the person who shared the content
-  const sharerUsername = 
-    item.sharedBy?.username
-      ? (item.sharedBy.username.startsWith('@') ? item.sharedBy.username : `@${item.sharedBy.username}`)
-      : (item.author.handle 
-          ? (item.author.handle.startsWith('@') ? item.author.handle : `@${item.author.handle}`)
-          : (item.author.name?.startsWith('@') ? item.author.name : `@${(item.author.name || 'user').replace(/\s+/g, '_').toLowerCase()}`));
+  // Resolve username and Persian display title of the person who shared the content
+  const allKnownUsers = [
+    ...(currentUser ? [currentUser] : []),
+    ...(usersList || [])
+  ];
+  const targetUid = item.sharedBy?.uid || item.authorUid;
+  const rawSharerUsername = (item.sharedBy?.username || item.author.handle || '').replace(/^@+/, '').trim().toLowerCase();
+  const matchedSharer = allKnownUsers.find((u) =>
+    (targetUid && u.uid === targetUid) ||
+    (rawSharerUsername && u.username && u.username.replace(/^@+/, '').trim().toLowerCase() === rawSharerUsername)
+  );
 
-  const sharerDisplayName = item.sharedBy?.name || item.author.name;
+  const hasPersianText = (value?: string | null): value is string =>
+    Boolean(value && /[\u0600-\u06FF]/.test(value.trim()));
+
+  const sharerPersianTitle =
+    (hasPersianText(matchedSharer?.displayName) ? matchedSharer.displayName.trim() : null) ||
+    (hasPersianText(item.sharedBy?.name) ? item.sharedBy.name.trim() : null) ||
+    (hasPersianText(item.author?.name) ? item.author.name.trim() : null) ||
+    (matchedSharer?.isAdmin || rawSharerUsername === 'admin' || rawSharerUsername === '3dsaz' ? 'مدیر کل سیستم' : null) ||
+    (hasPersianText(matchedSharer?.role) ? matchedSharer.role.replace(/\s*\([^)]*\)/g, '').trim() : null) ||
+    'کاربر گیک کلاب';
+
+  const sourceInfo = resolveContentSource(item, matchedSharer);
 
   return (
     <article id={item.id} className={`group flex flex-col bg-slate-900/95 backdrop-blur-xl border border-slate-800/80 rounded-[1.75rem] overflow-hidden shadow-xl transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1 ${meta.accentColor} ${
@@ -157,9 +175,10 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 onClick={() => onOpenArticleReader(item)}
               >
                 <img
-                  src={resolveCoverImageUrl(item.thumbnail)}
+                  src={resolveCoverImageUrl(item.thumbnail, 'youtube', 'card')}
                   alt={item.title}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover/media:scale-105 opacity-90 group-hover/media:opacity-100"
+                  loading="lazy"
                   decoding="async"
                   onError={(e) => handleImageError(e, getPlatformFallbackImage('youtube', item.url), 'youtube', item.id)}
                 />
@@ -221,9 +240,10 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   >
                     {/* لایه پس‌زمینه محو */}
                     <img
-                      src={resolveCoverImageUrl(activeSlide.thumbnail || activeSlide.url || item.thumbnail, 'instagram')}
+                      src={resolveCoverImageUrl(activeSlide.thumbnail || activeSlide.url || item.thumbnail, 'instagram', 'card')}
                       alt=""
                       aria-hidden="true"
+                      loading="lazy"
                       decoding="async"
                       className="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-60 pointer-events-none"
                       onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
@@ -232,9 +252,10 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                     <div className="absolute inset-0 bg-black/30 pointer-events-none" />
                     {/* تصویر اصلی بدون برش */}
                     <img
-                      src={resolveCoverImageUrl(activeSlide.thumbnail || activeSlide.url || item.thumbnail, 'instagram')}
+                      src={resolveCoverImageUrl(activeSlide.thumbnail || activeSlide.url || item.thumbnail, 'instagram', 'card')}
                       alt={item.title}
                       className="relative z-10 max-h-full max-w-full object-contain transition-transform duration-500 group-hover/ig:scale-105 opacity-95 group-hover/ig:opacity-100 drop-shadow-md"
+                      loading="lazy"
                       decoding="async"
                       onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
                     />
@@ -252,9 +273,10 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 >
                   {/* لایه پس‌زمینه محو */}
                   <img
-                    src={resolveCoverImageUrl(activeSlide.url || activeSlide.thumbnail || item.thumbnail, 'instagram')}
+                    src={resolveCoverImageUrl(activeSlide.url || activeSlide.thumbnail || item.thumbnail, 'instagram', 'card')}
                     alt=""
                     aria-hidden="true"
+                    loading="lazy"
                     decoding="async"
                     className="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-60 pointer-events-none"
                     onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
@@ -263,9 +285,10 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   <div className="absolute inset-0 bg-black/30 pointer-events-none" />
                   {/* تصویر اصلی بدون برش */}
                   <img
-                    src={resolveCoverImageUrl(activeSlide.url || activeSlide.thumbnail || item.thumbnail, 'instagram')}
+                    src={resolveCoverImageUrl(activeSlide.url || activeSlide.thumbnail || item.thumbnail, 'instagram', 'card')}
                     alt={`${item.title} - اسلاید ${activeSlideIndex + 1}`}
                     className="relative z-10 max-h-full max-w-full object-contain transition-transform duration-500 group-hover/ig:scale-105 opacity-95 group-hover/ig:opacity-100 drop-shadow-md"
+                    loading="lazy"
                     decoding="async"
                     onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
                   />
@@ -358,10 +381,11 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 onClick={() => onOpenArticleReader(item)}
               >
                 <img
-                  src={resolveCoverImageUrl(item.thumbnail)}
+                  src={resolveCoverImageUrl(item.thumbnail, 'aparat', 'card')}
                   alt={item.title}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover/media:scale-105 opacity-90 group-hover/media:opacity-100"
                   loading="lazy"
+                  decoding="async"
                   onError={(e) => handleImageError(e, getPlatformFallbackImage('aparat', item.url), 'aparat', item.id)}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-black/30" />
@@ -383,10 +407,11 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             onClick={() => onOpenArticleReader(item)}
           >
             <img
-              src={resolveCoverImageUrl(item.thumbnail)}
+              src={resolveCoverImageUrl(item.thumbnail, 'article', 'card')}
               alt={item.title}
               className="w-full h-full object-cover transition-transform duration-500 group-hover/art:scale-105 opacity-85 group-hover/art:opacity-100"
               loading="lazy"
+              decoding="async"
               onError={(e) => handleImageError(e, getPlatformFallbackImage('article', item.url), 'article', item.id)}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-black/30" />
@@ -429,29 +454,39 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         <div className="space-y-3">
           {/* Author & Published Info - Unboxed Text Metadata */}
           <div className="flex items-center justify-between gap-2 mb-2.5">
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 min-w-0">
               <img
                 src={item.author.avatar}
                 alt={item.author.name}
-                className="w-7 h-7 rounded-full object-cover ring-2 ring-indigo-500/30"
+                className="w-7 h-7 shrink-0 rounded-full object-cover ring-2 ring-indigo-500/30"
                 onError={(e) => handleImageError(e, getPlatformFallbackImage('avatar'))}
               />
-              <div className="text-right">
+              <div className="text-right min-w-0">
                 <div className="flex items-center gap-1">
-                  <span className="content-card-author-name text-xs font-bold text-slate-200">
-                    {sharerDisplayName || sharerUsername}
+                  <span className="content-card-author-name text-xs font-bold text-slate-200 truncate">
+                    {sharerPersianTitle}
                   </span>
                   {item.author.isVerified && (
-                    <span className="w-3.5 h-3.5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-[9px] font-bold" title="حساب تایید شده">
+                    <span className="w-3.5 h-3.5 shrink-0 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-[9px] font-bold" title="حساب تایید شده">
                       ✓
                     </span>
                   )}
                 </div>
-                <span className="content-card-source-platform text-[10px] text-slate-400 flex items-center gap-1.5 text-right">
-                  <span className="font-mono dir-ltr">{sharerUsername}</span>
-                  <span>•</span>
-                  <span className="inline-flex items-center text-slate-300" title={meta?.label}>
+                <span className="content-card-source-platform text-[11px] text-slate-400 flex items-center gap-1.5 text-right mt-0.5">
+                  <span className="inline-flex items-center justify-center shrink-0" title={meta?.label}>
                     {meta?.icon}
+                  </span>
+                  <span className={sourceInfo.isRtl ? 'font-medium text-slate-300 truncate' : 'font-mono dir-ltr text-slate-300 truncate'}>
+                    <a
+                      href={sourceInfo.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="hover:underline hover:opacity-80 transition-opacity cursor-pointer"
+                      title={`مشاهده صفحه ${sourceInfo.label}`}
+                    >
+                      {sourceInfo.label}
+                    </a>
                   </span>
                 </span>
               </div>
@@ -480,13 +515,13 @@ export const ContentCard: React.FC<ContentCardProps> = ({
 
         {/* Tags & Actions Bottom Block */}
         <div className="mt-auto pt-6">
-          {/* Tags - High-Contrast Chip Badges with maximum spacing */}
+          {/* Tags - Matched with Bottom Action Buttons & Centered Text */}
           <div className="flex flex-wrap gap-1.5 mb-3.5">
             {item.tags.map((tag) => (
               <button
                 key={tag}
                 onClick={() => onTagClick(tag)}
-                className="gc-tag-item px-2 py-0.5 rounded-lg text-[11px] font-semibold transition cursor-pointer"
+                className="gc-tag-item inline-flex items-center justify-center text-center px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/60 text-[11px] font-normal leading-none transition cursor-pointer"
               >
                 #{tag}
               </button>

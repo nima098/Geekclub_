@@ -734,6 +734,28 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     setTimeout(() => setApifySaveSuccess(false), 2500);
   };
 
+  const handleSaveCdnSettings = async () => {
+    saveCDNConfig({ endpointUrl: cdnEndpoint, apiToken: cdnToken });
+    const updated = {
+      ...siteSettings,
+      cdnSecret: cdnToken,
+      cdnEndpoint: cdnEndpoint
+    };
+    onUpdateSiteSettings(updated);
+    try {
+      await fetch('/api/site-settings', {
+        method: 'POST',
+        headers: await getAdminHeaders(),
+        body: JSON.stringify({
+          cdnSecret: cdnToken,
+          cdnEndpoint: cdnEndpoint
+        })
+      });
+    } catch {}
+    setCdnSaveSuccess(true);
+    setTimeout(() => setCdnSaveSuccess(false), 2500);
+  };
+
   const handleStartImageMigration = async () => {
     const unmigratedItems = contents.filter(
       (item) => item.thumbnail && !item.thumbnail.includes('upc.geekclub.ir')
@@ -2310,11 +2332,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       )}
                       <button
                         type="button"
-                        onClick={() => {
-                          saveCDNConfig({ endpointUrl: cdnEndpoint, apiToken: cdnToken });
-                          setCdnSaveSuccess(true);
-                          setTimeout(() => setCdnSaveSuccess(false), 2500);
-                        }}
+                        onClick={handleSaveCdnSettings}
                         className="mr-auto px-4 py-2 bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs rounded-xl transition cursor-pointer"
                       >
                         ذخیره تنظیمات CDN

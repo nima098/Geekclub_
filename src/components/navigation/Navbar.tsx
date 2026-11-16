@@ -163,9 +163,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* PWA Install Button */}
-          <PWAInstallButton />
-
           {/* Primary Material Add Content Button */}
           <button
             onClick={onOpenAddModal}

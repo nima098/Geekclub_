@@ -270,27 +270,34 @@ html:not(.light) .gc-admin-portal-footer {
 }
 
 .gc-tag-item {
-  background-color: #1e293b !important;
-  color: #f8fafc !important;
-  border: 1px solid #334155 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center !important;
+  font-weight: 400;
+  line-height: 1 !important;
+  background-color: rgba(30, 41, 59, 0.8) !important;
+  color: #cbd5e1 !important;
+  border: 1px solid rgba(51, 65, 85, 0.6) !important;
   transition: all 0.15s ease-in-out !important;
 }
 
 .gc-tag-item:hover {
-  background-color: #0077d9 !important;
+  background-color: rgba(51, 65, 85, 0.7) !important;
   color: #ffffff !important;
-  border-color: #0077d9 !important;
+  border-color: rgba(71, 85, 105, 0.8) !important;
 }
 
 html.light .gc-tag-item {
-  background-color: #e2e8f0 !important;
-  color: #0f172a !important;
-  border-color: #cbd5e1 !important;
+  background-color: #f1f5f9 !important;
+  color: #475569 !important;
+  border-color: #e2e8f0 !important;
 }
 
 html.light .gc-tag-item:hover {
-  background-color: #0077d9 !important;
-  color: #ffffff !important;
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
 }
 
 /* Focus Mode: Specific Element Selector Rule */

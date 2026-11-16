@@ -652,27 +652,86 @@ app.post('/api/auth/google-verify', rateLimit('google-verify', 30, 60_000), asyn
   }
 });
 
-// 0. GET /api/proxy-image - Direct image proxy for blocked external images
-app.get('/api/proxy-image', rateLimit('proxy-image', 120, 60_000), async (req: Request, res: Response) => {
+// In-memory LRU cache for resized WebP variants (avoids repeated external fetches & sharp CPU work)
+const IMAGE_VARIANT_CACHE = new Map<string, { buffer: Buffer; contentType: string; ts: number }>();
+const IMAGE_CACHE_MAX_ENTRIES = 100;
+const IMAGE_CACHE_TTL_MS = 30 * 60 * 1000;
+
+function getCachedImageVariant(key: string): { buffer: Buffer; contentType: string } | null {
+  const entry = IMAGE_VARIANT_CACHE.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > IMAGE_CACHE_TTL_MS) {
+    IMAGE_VARIANT_CACHE.delete(key);
+    return null;
+  }
+  // Refresh LRU order
+  IMAGE_VARIANT_CACHE.delete(key);
+  IMAGE_VARIANT_CACHE.set(key, entry);
+  return { buffer: entry.buffer, contentType: entry.contentType };
+}
+
+function setCachedImageVariant(key: string, buffer: Buffer, contentType: string) {
+  if (IMAGE_VARIANT_CACHE.size >= IMAGE_CACHE_MAX_ENTRIES) {
+    const oldestKey = IMAGE_VARIANT_CACHE.keys().next().value;
+    if (oldestKey) IMAGE_VARIANT_CACHE.delete(oldestKey);
+  }
+  IMAGE_VARIANT_CACHE.set(key, { buffer, contentType, ts: Date.now() });
+}
+
+// 0. GET /api/proxy-image - Direct image proxy & adaptive WebP optimizer (w, q)
+app.get('/api/proxy-image', rateLimit('proxy-image', 600, 60_000), async (req: Request, res: Response) => {
   const imageUrl = req.query.url as string;
   if (!imageUrl) {
     return res.status(400).send('URL parameter is required');
   }
 
+  const rawW = Number(req.query.w);
+  const rawQ = Number(req.query.q);
+  const targetW = Number.isFinite(rawW) ? Math.min(1600, Math.max(200, Math.round(rawW))) : 800;
+  const targetQ = Number.isFinite(rawQ) ? Math.min(95, Math.max(50, Math.round(rawQ))) : 80;
+  const targetMaxH = targetW <= 640 ? 640 : 1280;
+  const cacheKey = `${imageUrl}|w=${targetW}|q=${targetQ}`;
+
+  const cached = getCachedImageVariant(cacheKey);
+  if (cached) {
+    res.setHeader('Content-Type', cached.contentType);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.status(200).send(cached.buffer);
+  }
+
+  const optimizeBufferWithSharp = async (inputBuffer: Buffer, fallbackMime: string) => {
+    try {
+      const sharpInstance = await getSharp();
+      if (sharpInstance) {
+        const optimizedBuffer = await sharpInstance(inputBuffer)
+          .resize(targetW, targetMaxH, { fit: 'inside', withoutEnlargement: true })
+          .webp({ quality: targetQ, effort: 4 })
+          .toBuffer();
+        return { buffer: optimizedBuffer, contentType: 'image/webp' };
+      }
+    } catch {
+      // fall back to original buffer
+    }
+    return { buffer: inputBuffer, contentType: fallbackMime };
+  };
+
   // Fast Path: If URL contains /uploads/, it's a locally stored file on this server!
-  // Serve it directly from disk with 200 OK without making external HTTP requests.
   if (imageUrl.includes('/uploads/')) {
     try {
-      const relPath = imageUrl.substring(imageUrl.indexOf('/uploads/') + '/uploads/'.length);
-      const diskPath = path.join(UPLOADS_DIR, relPath);
-      if (fs.existsSync(diskPath)) {
+      const relPath = imageUrl.substring(imageUrl.indexOf('/uploads/') + '/uploads/'.length).split('?')[0];
+      const baseUploadsDir = path.resolve(UPLOADS_DIR);
+      const diskPath = path.resolve(baseUploadsDir, relPath);
+      if (diskPath.startsWith(baseUploadsDir + path.sep) && fs.existsSync(diskPath)) {
         const fileData = fs.readFileSync(diskPath);
         const ext = path.extname(diskPath).toLowerCase();
         const mime = ext === '.webp' ? 'image/webp' : ext === '.png' ? 'image/png' : 'image/jpeg';
-        res.setHeader('Content-Type', mime);
+        const optimized = await optimizeBufferWithSharp(fileData, mime);
+        setCachedImageVariant(cacheKey, optimized.buffer, optimized.contentType);
+        res.setHeader('Content-Type', optimized.contentType);
         res.setHeader('X-Content-Type-Options', 'nosniff');
         res.setHeader('Cache-Control', 'public, max-age=86400');
-        return res.status(200).send(fileData);
+        return res.status(200).send(optimized.buffer);
       }
     } catch (diskErr: any) {
       console.warn('[Proxy Local Uploads Read Warning]:', diskErr.message);
@@ -715,26 +774,12 @@ app.get('/api/proxy-image', rateLimit('proxy-image', 120, 60_000), async (req: R
       return res.status(200).send(buffer);
     }
 
-    // Process non-SVG images with sharp for lightning fast card rendering (max width 800, quality 80 WebP)
-    try {
-      const sharpInstance = await getSharp();
-      if (sharpInstance) {
-        const optimizedBuffer = await sharpInstance(buffer)
-          .resize(800, 600, { fit: 'inside', withoutEnlargement: true })
-          .webp({ quality: 80, effort: 4 })
-          .toBuffer();
-
-        res.setHeader('Content-Type', 'image/webp');
-        res.setHeader('X-Content-Type-Options', 'nosniff');
-        res.setHeader('Cache-Control', 'public, max-age=86400');
-        return res.status(200).send(optimizedBuffer);
-      }
-    } catch {
-      res.setHeader('Content-Type', contentType);
-      res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.setHeader('Cache-Control', 'public, max-age=86400');
-      return res.status(200).send(buffer);
-    }
+    const optimized = await optimizeBufferWithSharp(buffer, contentType);
+    setCachedImageVariant(cacheKey, optimized.buffer, optimized.contentType);
+    res.setHeader('Content-Type', optimized.contentType);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.status(200).send(optimized.buffer);
   } catch (err: any) {
     console.warn('Image proxy failed for:', imageUrl, err.message);
     res.setHeader('Content-Type', 'image/svg+xml');
@@ -802,7 +847,7 @@ async function downloadAndCacheImage(
       return imageUrl;
     }
 
-    // Automatically resize and optimize image for card layout standard (max width 800px, max height 600px, WebP format 80% quality)
+    // Store high-quality master image on CDN (max 1280x1280, WebP 86% quality) so popup modal stays crisp while list cards serve smaller compressed variants
     let finalBuffer: Buffer = originalBuffer;
     let ext = 'webp';
     let mimeType = 'image/webp';
@@ -811,11 +856,11 @@ async function downloadAndCacheImage(
       const sharpInstance = await getSharp();
       if (sharpInstance) {
         finalBuffer = await sharpInstance(originalBuffer)
-          .resize(800, 600, {
+          .resize(1280, 1280, {
             fit: 'inside',
             withoutEnlargement: true
           })
-          .webp({ quality: 80, effort: 4 })
+          .webp({ quality: 86, effort: 4 })
           .toBuffer();
         console.log(`[Image Optimization SUCCESS] Resized cover ${filenamePrefix} from ${Math.round(originalBuffer.length / 1024)}KB to ${Math.round(finalBuffer.length / 1024)}KB (WebP)`);
       }
@@ -1015,6 +1060,8 @@ export interface ExtractedMetaResult {
   mediaType?: 'video' | 'image' | 'carousel';
   images?: string[];
   slides?: MediaSlide[];
+  sourceName?: string;
+  sourceHandle?: string;
   data?: any;
   error?: string;
 }
@@ -1045,8 +1092,19 @@ export async function extractMetadataForUrl(targetUrl: string): Promise<Extracte
     const videoId = ytMatch[1];
     let title = cleanUrl.includes('shorts') ? 'ویدیو کوتاه یوتیوب (Shorts)' : 'ویدیو آموزشی در یوتیوب';
     let authorName = 'کانال یوتیوب';
+    let sourceHandle = '';
     let description = '';
     let rawThumb = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+
+    const extractYtHandle = (urlOrPath?: string): string => {
+      if (!urlOrPath) return '';
+      const m = urlOrPath.match(/youtube\.com\/@([a-zA-Z0-9_.-]+)/i) ||
+                urlOrPath.match(/\/@([a-zA-Z0-9_.-]+)/) ||
+                urlOrPath.match(/youtube\.com\/(?:user|c)\/([a-zA-Z0-9_.-]+)/i);
+      return m?.[1] ? `@${m[1]}` : '';
+    };
+
+    sourceHandle = extractYtHandle(cleanUrl);
 
     try {
       const oeRes = await axios.get(`https://www.youtube.com/oembed?url=${encodeURIComponent(cleanUrl)}&format=json`, { timeout: 6000 });
@@ -1054,6 +1112,7 @@ export async function extractMetadataForUrl(targetUrl: string): Promise<Extracte
         if (oeRes.data.title) title = oeRes.data.title;
         if (oeRes.data.author_name) authorName = oeRes.data.author_name;
         if (oeRes.data.thumbnail_url) rawThumb = oeRes.data.thumbnail_url;
+        if (!sourceHandle && oeRes.data.author_url) sourceHandle = extractYtHandle(oeRes.data.author_url);
       }
     } catch {
       try {
@@ -1062,6 +1121,7 @@ export async function extractMetadataForUrl(targetUrl: string): Promise<Extracte
           if (noembed.data.title) title = noembed.data.title;
           if (noembed.data.author_name) authorName = noembed.data.author_name;
           if (noembed.data.thumbnail_url) rawThumb = noembed.data.thumbnail_url;
+          if (!sourceHandle && noembed.data.author_url) sourceHandle = extractYtHandle(noembed.data.author_url);
         }
       } catch {}
     }
@@ -1080,6 +1140,13 @@ export async function extractMetadataForUrl(targetUrl: string): Promise<Extracte
       if (descMatch && descMatch[1] && descMatch[1].trim()) {
         description = descMatch[1].trim();
       }
+      if (!sourceHandle) {
+        const canonicalMatch = html.match(/"canonicalBaseUrl"\s*:\s*"(\/@[^"]+)"/i) ||
+                               html.match(/youtube\.com\/@([a-zA-Z0-9_.-]+)/i);
+        if (canonicalMatch?.[1]) {
+          sourceHandle = extractYtHandle(canonicalMatch[1]);
+        }
+      }
     } catch {}
 
     if (!description) {
@@ -1095,6 +1162,8 @@ export async function extractMetadataForUrl(targetUrl: string): Promise<Extracte
       title,
       description,
       authorName,
+      sourceName: authorName,
+      sourceHandle: sourceHandle || (/^[a-zA-Z0-9_.-]{2,}$/.test(authorName) ? `@${authorName}` : ''),
       thumbnail: finalThumbnail,
       image: finalThumbnail,
       author: authorName,
@@ -1104,6 +1173,7 @@ export async function extractMetadataForUrl(targetUrl: string): Promise<Extracte
       data: {
         title,
         author_name: authorName,
+        sourceHandle,
         thumbnail_url: finalThumbnail
       }
     };
@@ -1115,6 +1185,7 @@ export async function extractMetadataForUrl(targetUrl: string): Promise<Extracte
     const hash = apMatch[1];
     let title = 'ویدیوی آپارات';
     let authorName = 'کانال آپارات';
+    let aparatUsername = '';
     let description = '';
     let readingOrWatchTime = 'ویدیو آپارات';
     let rawThumb = '';
@@ -1133,6 +1204,7 @@ export async function extractMetadataForUrl(targetUrl: string): Promise<Extracte
         if (v.title) title = v.title;
         if (v.description) description = v.description;
         if (v.sender_name) authorName = v.sender_name;
+        if (v.username) aparatUsername = String(v.username).replace(/^@+/, '').trim();
         if (v.duration) readingOrWatchTime = `${Math.ceil(v.duration / 60)} دقیقه ویدیو`;
         rawThumb = v.big_poster || v.small_poster || '';
       }
@@ -1149,7 +1221,11 @@ export async function extractMetadataForUrl(targetUrl: string): Promise<Extracte
         if (attr) {
           if (attr.title) title = attr.title;
           if (attr.description) description = attr.description;
-          if (attr.owner_username) authorName = attr.owner_username;
+          if (attr.sender_name) authorName = attr.sender_name;
+          if (attr.owner_username || attr.username) {
+            aparatUsername = String(attr.owner_username || attr.username).replace(/^@+/, '').trim();
+            if (!attr.sender_name) authorName = aparatUsername;
+          }
           if (attr.duration) readingOrWatchTime = `${Math.ceil(attr.duration / 60)} دقیقه ویدیو`;
           rawThumb = attr.big_poster || attr.poster || attr.medium_poster || attr.small_poster || '';
         }
@@ -1171,6 +1247,8 @@ export async function extractMetadataForUrl(targetUrl: string): Promise<Extracte
       title,
       description,
       authorName,
+      sourceName: authorName,
+      sourceHandle: aparatUsername ? `@${aparatUsername}` : '',
       thumbnail: finalThumbnail,
       image: finalThumbnail,
       author: authorName,
@@ -1180,6 +1258,7 @@ export async function extractMetadataForUrl(targetUrl: string): Promise<Extracte
       data: {
         title,
         author_name: authorName,
+        username: aparatUsername,
         thumbnail_url: finalThumbnail
       }
     };
@@ -1349,6 +1428,8 @@ async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMe
         title,
         description: caption || `محتوای اشتراک‌گذاری شده از صفحه @${ownerUsername} در اینستاگرام.`,
         authorName: ownerFullName,
+        sourceName: ownerFullName,
+        sourceHandle: ownerUsername ? `@${ownerUsername.replace(/^@+/, '')}` : '@instagram',
         author: ownerFullName,
         thumbnail: cdnPrimaryThumb,
         image: cdnPrimaryThumb,
@@ -1479,6 +1560,8 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
       title,
       description: caption || `محتوای به اشتراک گذاشته شده از اینستاگرام.`,
       authorName: authorName ? `@${authorName}` : 'اینستاگرام',
+      sourceName: authorName ? `@${authorName}` : 'اینستاگرام',
+      sourceHandle: authorName ? `@${authorName.replace(/^@+/, '')}` : '',
       author: authorName ? `@${authorName}` : 'اینستاگرام',
       thumbnail: cdnThumb,
       image: cdnThumb,
@@ -1658,6 +1741,25 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
       }
     }
 
+    let siteName = '';
+    const siteNameMatches = [
+      html.match(/<meta\s+[^>]*property=["']og:site_name["'][^>]*content=["']([^"']+)["']/i),
+      html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:site_name["']/i),
+      html.match(/<meta\s+[^>]*name=["']application-name["'][^>]*content=["']([^"']+)["']/i)
+    ];
+    for (const sm of siteNameMatches) {
+      if (sm && sm[1] && sm[1].trim()) {
+        siteName = sm[1].trim();
+        break;
+      }
+    }
+    if (!siteName && title) {
+      const titleSuffix = title.match(/\s[|\-–—«»]\s*([^\|\-–—]{2,25})$/);
+      if (titleSuffix?.[1] && /[\u0600-\u06FF]/.test(titleSuffix[1])) {
+        siteName = titleSuffix[1].trim();
+      }
+    }
+
     let finalThumbnail = image;
     if (image && image.startsWith('http')) {
       let domain = 'general';
@@ -1678,6 +1780,7 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
       title: title || 'مقاله وب',
       description: description || '',
       authorName: author || '',
+      sourceName: siteName || '',
       thumbnail: finalThumbnail || '',
       image: finalThumbnail || '',
       author,
@@ -1687,6 +1790,7 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
       data: {
         title,
         author_name: author,
+        site_name: siteName,
         thumbnail_url: finalThumbnail
       }
     };
@@ -1747,10 +1851,12 @@ async function enrichDatabaseContent(id: string, url: string) {
         images: meta.images || [],
         slides: meta.slides || [],
         apifyFetched: !!meta.data?.apify,
+        sourceName: meta.sourceName || '',
+        sourceHandle: meta.sourceHandle || '',
         author: {
           name: meta.authorName || 'کاربر گیک کلاب',
           avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-          handle: `@${(meta.authorName || 'geek').replace(/\s+/g, '_').toLowerCase()}`,
+          handle: meta.sourceHandle || `@${(meta.authorName || 'geek').replace(/\s+/g, '_').toLowerCase()}`,
           isVerified: false
         },
         category: 'tech',
@@ -1806,9 +1912,23 @@ async function enrichDatabaseContent(id: string, url: string) {
       item.apifyFetched = true;
       changed = true;
     }
-    if (meta.authorName && (!item.author?.name || item.author.name === 'کاربر گیک کلاب')) {
-      if (!item.author) item.author = { name: meta.authorName, handle: `@${meta.authorName.replace(/\s+/g, '_')}` };
-      else item.author.name = meta.authorName;
+    if (meta.sourceName && meta.sourceName !== item.sourceName) {
+      item.sourceName = meta.sourceName;
+      changed = true;
+    }
+    if (meta.sourceHandle && meta.sourceHandle !== item.sourceHandle) {
+      item.sourceHandle = meta.sourceHandle;
+      changed = true;
+    }
+    if (meta.authorName && (!item.author?.name || item.author.name === 'کاربر گیک کلاب' || item.author.name === 'پیج اینستاگرام')) {
+      if (!item.author) item.author = { name: meta.authorName, handle: meta.sourceHandle || `@${meta.authorName.replace(/\s+/g, '_')}` };
+      else {
+        item.author.name = meta.authorName;
+        if (meta.sourceHandle) item.author.handle = meta.sourceHandle;
+      }
+      changed = true;
+    } else if (meta.sourceHandle && item.author && (!item.author.handle || item.author.handle === '@geek' || item.author.handle === '@admin')) {
+      item.author.handle = meta.sourceHandle;
       changed = true;
     }
     if (meta.readingOrWatchTime) {
@@ -2006,6 +2126,9 @@ app.post('/api/contents', rateLimit('add-content', 30, 60_000), async (req: Requ
     commentsCount: 0,
     approvalStatus: req.body.approvalStatus || 'approved',
     authorUid: req.body.authorUid || '',
+    sharedBy: req.body.sharedBy || undefined,
+    sourceName: req.body.sourceName || '',
+    sourceHandle: req.body.sourceHandle || '',
     articleContent: articleContent || description || '',
     sourceDomain: sourceDomain || 'web',
     needsEnrichment: Boolean(needsEnrichment),
@@ -2099,7 +2222,8 @@ function isTombstoned(db: DatabaseSchema, id: string): boolean {
 // Fields a NON-admin client may change (used by the background metadata enrichment after adding a link)
 const NON_ADMIN_UPDATABLE_FIELDS = new Set([
   'title', 'description', 'thumbnail', 'videoUrl', 'mediaType', 'images', 'slides',
-  'needsEnrichment', 'apifyFetched', 'articleContent', 'embedUrl', 'readingOrWatchTime', 'tags', 'sourceDomain'
+  'needsEnrichment', 'apifyFetched', 'articleContent', 'embedUrl', 'readingOrWatchTime', 'tags', 'sourceDomain',
+  'sourceName', 'sourceHandle', 'author'
 ]);
 
 function matchesContentId(item: any, id: string): boolean {
@@ -4101,7 +4225,8 @@ function injectInitialDataIntoHtml(html: string): string {
 }
 
   const distPath = path.resolve(__dirname, 'dist');
-  const isProd = process.env.NODE_ENV === 'production';
+  const distIndexPath = path.resolve(distPath, 'index.html');
+  const isProd = process.env.NODE_ENV === 'production' && fs.existsSync(distIndexPath);
 
   if (isProd) {
     app.use(
@@ -4121,17 +4246,17 @@ function injectInitialDataIntoHtml(html: string): string {
       res.setHeader('Expires', '0');
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       try {
-        const rawHtml = fs.readFileSync(path.resolve(distPath, 'index.html'), 'utf-8');
+        const rawHtml = fs.readFileSync(distIndexPath, 'utf-8');
         res.send(injectInitialDataIntoHtml(rawHtml));
       } catch {
-        res.sendFile(path.resolve(distPath, 'index.html'));
+        res.sendFile(distIndexPath);
       }
     });
   } else {
     // Mount Vite in middleware mode for seamless development
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, hmr: false, ws: false },
       appType: 'custom',
     });
     app.use(vite.middlewares);
