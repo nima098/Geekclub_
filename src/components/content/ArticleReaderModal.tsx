@@ -290,6 +290,21 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
     return 'بازکردن در منبع خبر';
   };
 
+  const getYouTubeEmbedSrc = (): string => {
+    const rawEmbed = (item?.embedUrl || '').trim();
+    const rawUrl = (item?.url || '').trim();
+    const match =
+      rawEmbed.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts|live)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i) ||
+      rawUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts|live)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+    if (match && match[1]) {
+      return `https://www.youtube.com/embed/${match[1]}?autoplay=1&controls=1&rel=0&fs=1&playsinline=1&iv_load_policy=3`;
+    }
+    const base = rawEmbed || rawUrl;
+    if (!base) return '';
+    const sep = base.includes('?') ? '&' : '?';
+    return `${base}${sep}autoplay=1&controls=1&rel=0&fs=1&playsinline=1&iv_load_policy=3`;
+  };
+
   const handleShareClick = () => {
     onShare(item);
     setIsCopied(true);
@@ -320,15 +335,20 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
         </div>
 
         {/* Modal Body / Main Viewport */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">
-          {/* 1. YouTube Video Embed Player */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 lg:p-6 space-y-5">
+          {/* 1. YouTube Video Embed Player (Default YouTube Native Player with Full Controls) */}
           {item.platform === 'youtube' && (
-            <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black shadow-2xl border border-slate-800">
+            <div
+              dir="ltr"
+              className="relative w-full mx-auto aspect-video rounded-2xl overflow-hidden bg-black shadow-2xl border border-slate-800"
+              style={{ maxWidth: 'min(100%, calc(52vh * 16 / 9))' }}
+            >
               <iframe
-                src={`${item.embedUrl}?autoplay=1&rel=0`}
+                src={getYouTubeEmbedSrc()}
                 title={item.title}
-                className="w-full h-full border-0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                className="absolute inset-0 w-full h-full border-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+                referrerPolicy="strict-origin-when-cross-origin"
                 allowFullScreen
               />
             </div>
@@ -375,8 +395,8 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
                 {/* Counter Badge (Top-Right inside media frame) */}
                 {(hasMultipleSlides || isFetchingSlides) && (
                   <div dir="rtl" className="absolute top-3 right-3 z-30">
-                    <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-900/85 text-pink-300 border border-pink-500/30 flex items-center gap-1.5 shadow-lg backdrop-blur-md">
-                      <Layers className="w-3.5 h-3.5 text-pink-400" />
+                    <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 border border-slate-700/60 flex items-center gap-1.5 shadow-lg">
+                      <Layers className="w-3.5 h-3.5 text-slate-300" />
                       {isFetchingSlides
                         ? 'در حال بررسی اسلایدها...'
                         : `اسلاید ${activeSlideIndex + 1} از ${slideList.length}`}
@@ -765,11 +785,7 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
               href={item.url}
               target="_blank"
               rel="noopener noreferrer"
-              className={
-                item.platform === 'instagram' || (item.url || '').toLowerCase().includes('instagram.com')
-                  ? 'px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer no-underline active:scale-95'
-                  : 'px-3.5 py-2 rounded-xl bg-[#0077d9] hover:bg-[#0062b3] text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-[#0077d9]/20 transition cursor-pointer no-underline active:scale-95'
-              }
+              className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer no-underline active:scale-95"
               title={getSourceButtonLabel()}
             >
               <ExternalLink className="w-4 h-4" />

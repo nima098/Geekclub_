@@ -89,7 +89,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   return (
     <div 
       id="feed-right-sidebar"
-      className="feed-right-sidebar w-full lg:w-80 xl:w-84 shrink-0 lg:sticky lg:top-24 bg-slate-900/90 light:bg-white/95 backdrop-blur-xl border border-slate-800/80 light:border-slate-200/90 rounded-[1.75rem] p-4 sm:p-5 shadow-2xl shadow-slate-950/20 space-y-5 text-right select-none transition-all duration-300"
+      className="feed-right-sidebar w-full lg:w-80 xl:w-84 shrink-0 lg:sticky lg:top-24 bg-slate-900/95 backdrop-blur-xl border border-slate-800/80 light:border-slate-200/90 rounded-[1.75rem] p-4 sm:p-5 shadow-2xl shadow-slate-950/20 space-y-5 text-right select-none transition-all duration-300"
       dir="rtl"
     >
       {/* 1. Sidebar Header */}
@@ -500,16 +500,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           </div>
         )}
 
-        {/* 8. Stats Footer */}
-        <div className="feed-sidebar-footer border-t border-slate-800/80 light:border-slate-200/80 pt-4 flex flex-col gap-2">
-          <div className="flex items-center justify-between text-xs text-slate-400 light:text-slate-600 font-medium">
-            <span>تعداد نتایج:</span>
-            <span className="font-bold text-slate-100 light:text-slate-900 font-mono">
-              {totalFilteredCount} از {totalCount} محتوا
-            </span>
-          </div>
-
-          {activeFilterCount > 0 && (
+        {/* 8. Reset Filters Footer (shown only when filters are active) */}
+        {activeFilterCount > 0 && (
+          <div className="feed-sidebar-footer border-t border-slate-800/80 light:border-slate-200/80 pt-4 flex flex-col gap-2">
             <button
               onClick={onResetFilters}
               id="btn-filter-reset-bottom"
@@ -518,8 +511,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               <RotateCcw className="w-3.5 h-3.5 text-indigo-400" />
               <span>پاک کردن فیلترها ({activeFilterCount})</span>
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
       </div>
     </div>

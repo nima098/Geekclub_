@@ -390,7 +390,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
       </div>
 
       {/* Content Body */}
-      <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between bg-slate-900/95 backdrop-blur-xl">
+      <div className="@container p-3.5 @[260px]:p-4 @[320px]:p-5 flex-1 flex flex-col justify-between bg-slate-900/95 backdrop-blur-xl min-w-0">
         <div className="space-y-3">
           {/* Author & Published Info - Unboxed Text Metadata */}
           <div className="flex items-center justify-between gap-2 mb-2.5">
@@ -469,120 +469,128 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           </div>
 
           {/* M3 Joined Reaction Bar & Action Controls */}
-          <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-1.5">
+          <div className="pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-1.5 @[280px]:gap-2 min-w-0">
             {/* M3 Segmented Reaction Controls (Like / Dislike) */}
-            <div className="flex items-center gap-0.5 bg-slate-800/80 border border-slate-700/60 rounded-xl p-0.5">
+            <div className="flex items-center gap-0.5 bg-slate-800/80 border border-slate-700/60 rounded-xl p-0.5 shrink-0">
               {/* Like */}
               <button
+                type="button"
                 onClick={() => onLike(item.id)}
-                className={`px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                className={`px-1.5 @[260px]:px-2 py-1 rounded-lg text-[11px] @[260px]:text-xs font-bold inline-flex items-center justify-center gap-1 transition-all cursor-pointer shrink-0 ${
                   item.userReaction === 'like'
                     ? 'gc-reaction-like-active'
                     : 'text-slate-300 hover:text-white hover:bg-slate-750'
                 }`}
                 title="پسندیدم (لایک)"
               >
-                <ThumbsUp className={`w-3.5 h-3.5 ${item.userReaction === 'like' ? 'fill-white text-white' : ''}`} />
+                <ThumbsUp className={`w-3.5 h-3.5 shrink-0 ${item.userReaction === 'like' ? 'fill-white text-white' : ''}`} />
                 <span className="font-mono">{item.likesCount}</span>
               </button>
 
               {/* Separator */}
-              <span className="w-px h-3 bg-slate-700/80 mx-0.25"></span>
+              <span className="w-px h-3 bg-slate-700/80 mx-0.25 shrink-0"></span>
 
               {/* Dislike */}
               <button
+                type="button"
                 onClick={() => onDislike(item.id)}
-                className={`px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                className={`px-1.5 @[260px]:px-2 py-1 rounded-lg text-[11px] @[260px]:text-xs font-bold inline-flex items-center justify-center gap-1 transition-all cursor-pointer shrink-0 ${
                   item.userReaction === 'dislike'
                     ? 'gc-reaction-dislike-active'
                     : 'text-slate-300 hover:text-white hover:bg-slate-750'
                 }`}
                 title="نپسندیدم (دیس‌لایک)"
               >
-                <ThumbsDown className={`w-3.5 h-3.5 ${item.userReaction === 'dislike' ? 'fill-white text-white' : ''}`} />
+                <ThumbsDown className={`w-3.5 h-3.5 shrink-0 ${item.userReaction === 'dislike' ? 'fill-white text-white' : ''}`} />
                 <span className="font-mono">{item.dislikesCount}</span>
               </button>
             </div>
 
             {/* Action Buttons: Comments, Bookmark, Share */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center flex-wrap justify-end gap-1 min-w-0">
               {/* Comments button */}
               <button
+                type="button"
                 onClick={() => onOpenComments(item)}
-                className="px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-indigo-300 border border-slate-700/60 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                className="px-2 @[260px]:px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-indigo-300 border border-slate-700/60 text-[11px] @[260px]:text-xs font-bold inline-flex items-center justify-center gap-1 @[260px]:gap-1.5 transition cursor-pointer shrink-0"
                 title="مشاهده و ثبت نظر"
               >
-                <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
+                <MessageSquare className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                 <span className="font-mono">{item.commentsCount}</span>
               </button>
 
               {/* Bookmark button */}
               <button
+                type="button"
                 onClick={() => onToggleSave(item.id)}
-                className={`p-1.5 rounded-xl border transition cursor-pointer ${
+                className={`w-7 h-7 @[260px]:w-8 @[260px]:h-8 p-0 rounded-xl border transition cursor-pointer inline-flex items-center justify-center shrink-0 ${
                   item.saved
                     ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                     : 'bg-slate-800/80 hover:bg-slate-750 text-slate-400 hover:text-white border-slate-700/60'
                 }`}
                 title={item.saved ? 'حذف از ذخیره‌ها' : 'ذخیره محتوا'}
               >
-                <Bookmark className={`w-4 h-4 ${item.saved ? 'fill-amber-400 text-amber-400' : ''}`} />
+                <Bookmark className={`w-3.5 h-3.5 @[260px]:w-4 @[260px]:h-4 shrink-0 ${item.saved ? 'fill-amber-400 text-amber-400' : ''}`} />
               </button>
 
               {/* Share button */}
               <button
+                type="button"
                 onClick={handleShare}
-                className="p-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-400 hover:text-white border border-slate-700/60 transition cursor-pointer"
+                className="w-7 h-7 @[260px]:w-8 @[260px]:h-8 p-0 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-400 hover:text-white border border-slate-700/60 transition cursor-pointer inline-flex items-center justify-center shrink-0"
                 title="کپی لینک اشتراک"
               >
                 {isCopied ? (
-                  <Check className="w-4 h-4 text-emerald-400" />
+                  <Check className="w-3.5 h-3.5 @[260px]:w-4 @[260px]:h-4 text-emerald-400 shrink-0" />
                 ) : (
-                  <Share2 className="w-4 h-4" />
+                  <Share2 className="w-3.5 h-3.5 @[260px]:w-4 @[260px]:h-4 shrink-0" />
                 )}
               </button>
 
               {/* Admin-Only Delete button (Moves content to Trash Bin) */}
               {isAdmin && onDeleteContent && !(item.isDeleted || item.isArchived) && (
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDeleteContent(item.id);
                   }}
-                  className="px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 active:scale-95 text-rose-400 hover:text-rose-300 border border-slate-700/60 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm group"
+                  className="px-2 @[320px]:px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 active:scale-95 text-rose-400 hover:text-rose-300 border border-slate-700/60 text-[11px] @[260px]:text-xs font-bold inline-flex items-center justify-center gap-1.5 transition cursor-pointer shadow-sm group shrink-0"
                   title="حذف و انتقال به سطل زباله (مخصوص مدیریت)"
                 >
-                  <Trash2 className="w-3.5 h-3.5 text-rose-400 group-hover:scale-110 transition-transform" />
-                  <span>حذف</span>
+                  <Trash2 className="w-3.5 h-3.5 text-rose-400 group-hover:scale-110 transition-transform shrink-0" />
+                  <span className="hidden @[320px]:inline">حذف</span>
                 </button>
               )}
 
               {/* Restore button (When viewing Trash as Admin) */}
               {isAdmin && (item.isDeleted || item.isArchived) && onRestoreContent && (
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     onRestoreContent(item.id);
                   }}
-                  className="px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 hover:text-emerald-100 border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+                  className="px-2 @[320px]:px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 hover:text-emerald-100 border border-emerald-500/30 text-[11px] @[260px]:text-xs font-bold inline-flex items-center justify-center gap-1.5 transition cursor-pointer shadow-sm shrink-0"
                   title="بازگردانی محتوا از سطل زباله به صفحه اصلی"
                 >
-                  <RotateCcw className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>بازگردانی</span>
+                  <RotateCcw className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span className="hidden @[320px]:inline">بازگردانی</span>
                 </button>
               )}
 
               {/* Permanent Delete button (When viewing Trash as Admin) */}
               {isAdmin && (item.isDeleted || item.isArchived) && onPermanentDelete && (
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     onPermanentDelete(item.id);
                   }}
-                  className="p-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 hover:text-rose-100 border border-rose-500/40 transition cursor-pointer"
+                  className="w-7 h-7 @[260px]:w-8 @[260px]:h-8 p-0 rounded-xl bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 hover:text-rose-100 border border-rose-500/40 transition cursor-pointer inline-flex items-center justify-center shrink-0"
                   title="حذف دائمی از دیتابیس"
                 >
-                  <Trash2 className="w-4 h-4 text-rose-400" />
+                  <Trash2 className="w-3.5 h-3.5 @[260px]:w-4 @[260px]:h-4 text-rose-400 shrink-0" />
                 </button>
               )}
             </div>
