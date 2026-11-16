@@ -10,7 +10,6 @@ import {
   MessageSquare,
   Bookmark,
   Youtube,
-  Instagram,
   Video,
   Play,
   ChevronLeft,
@@ -29,6 +28,7 @@ interface ArticleReaderModalProps {
   onOpenComments: (item: ContentItem) => void;
   onToggleSave: (id: string) => void;
   onShare: (item: ContentItem) => void;
+  onEnrichedContent?: (contentId: string, updates: Partial<ContentItem>) => void;
 }
 
 export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
@@ -38,18 +38,185 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
   onDislike,
   onOpenComments,
   onToggleSave,
-  onShare
+  onShare,
+  onEnrichedContent
 }) => {
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
   const [isPlayingIgVideo, setIsPlayingIgVideo] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [isFetchingSlides, setIsFetchingSlides] = useState(false);
+  const [fetchedSlidesOverride, setFetchedSlidesOverride] = useState<MediaSlide[] | null>(null);
 
-  // Reset slide index when active item changes
+  const autoFetchedIdsRef = React.useRef<Set<string>>(new Set());
+
+  // Normalize slides for Instagram (merges slides[] + extra images[] + videoUrl/thumbnail fallback without dropping any slide)
+  const slideList: MediaSlide[] = React.useMemo(() => {
+    if (!item) return [];
+    const baseSlides = (fetchedSlidesOverride && fetchedSlidesOverride.length > 0 ? fetchedSlidesOverride : item.slides) || [];
+    const merged: MediaSlide[] = [];
+    const seenUrls = new Set<string>();
+
+    const normalizeKey = (u?: string) => {
+      if (!u) return '';
+      const trimmed = u.trim();
+      if (!trimmed) return '';
+      return trimmed.split('?')[0];
+    };
+
+    for (const s of baseSlides) {
+      if (!s || (!s.url && !s.thumbnail)) continue;
+      const key = normalizeKey(s.url || s.thumbnail);
+      if (key && !seenUrls.has(key)) {
+        seenUrls.add(key);
+        if (s.thumbnail) seenUrls.add(normalizeKey(s.thumbnail));
+        merged.push(s);
+      }
+    }
+
+    const extraImages = (item.images || []).filter(Boolean);
+    for (const img of extraImages) {
+      const key = normalizeKey(img);
+      if (key && !seenUrls.has(key)) {
+        seenUrls.add(key);
+        merged.push({ type: 'image', url: img, thumbnail: img });
+      }
+    }
+
+    if (merged.length > 0) return merged;
+    if (item.videoUrl) {
+      return [{ type: 'video' as const, url: item.videoUrl, thumbnail: item.thumbnail }];
+    }
+    if (item.thumbnail) {
+      return [{ type: 'image' as const, url: item.thumbnail, thumbnail: item.thumbnail }];
+    }
+    return [];
+  }, [item, fetchedSlidesOverride]);
+
+  const hasMultipleSlides = slideList.length > 1;
+  const activeSlide = slideList[activeSlideIndex] || slideList[0];
+
+  const goToPrevSlide = () => {
+    if (!hasMultipleSlides) return;
+    setIsPlayingIgVideo(false);
+    setActiveSlideIndex((prev) => (prev - 1 + slideList.length) % slideList.length);
+  };
+
+  const goToNextSlide = () => {
+    if (!hasMultipleSlides) return;
+    setIsPlayingIgVideo(false);
+    setActiveSlideIndex((prev) => (prev + 1) % slideList.length);
+  };
+
+  const handleFetchAllSlides = React.useCallback(async () => {
+    if (!item || item.platform !== 'instagram' || !item.url || isFetchingSlides) return;
+    setIsFetchingSlides(true);
+    try {
+      let data: any = null;
+      if (!item.id.startsWith('ig-')) {
+        try {
+          const enrichRes = await fetch(`/api/contents/${encodeURIComponent(item.id)}/enrich`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: item.url })
+          });
+          if (enrichRes.ok) {
+            const json = await enrichRes.json();
+            if (json?.success && json?.data && !json.data?.data?.instantFallback) {
+              data = json.data;
+            }
+          }
+        } catch {}
+      }
+
+      if (!data) {
+        const res = await fetch(`/api/extract-metadata?url=${encodeURIComponent(item.url)}`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json && !json.data?.instantFallback) {
+            data = json;
+          }
+        }
+      }
+
+      if (data) {
+        const extractedSlides: MediaSlide[] = Array.isArray(data.slides) && data.slides.length > 0
+          ? data.slides
+          : Array.isArray(data.images) && data.images.length > 0
+            ? data.images.map((img: string) => ({ type: 'image' as const, url: img, thumbnail: img }))
+            : [];
+        if (extractedSlides.length > 0 && extractedSlides.length >= slideList.length) {
+          setFetchedSlidesOverride(extractedSlides);
+          setActiveSlideIndex(0);
+          onEnrichedContent?.(item.id, {
+            slides: extractedSlides,
+            apifyFetched: Boolean(data.apifyFetched || data.data?.apify),
+            ...(Array.isArray(data.images) && data.images.length > 0 ? { images: data.images } : {}),
+            ...(data.videoUrl ? { videoUrl: data.videoUrl } : {}),
+            ...(data.thumbnail ? { thumbnail: data.thumbnail } : {}),
+            mediaType: extractedSlides.length > 1 ? 'carousel' : (data.mediaType || item.mediaType)
+          });
+        }
+      }
+    } catch {
+      // Ignore silent background check error
+    } finally {
+      setIsFetchingSlides(false);
+    }
+  }, [item, isFetchingSlides, slideList.length, onEnrichedContent]);
+
+  // Reset slide index when active item changes and auto-fetch incomplete Instagram posts once
   useEffect(() => {
     setActiveSlideIndex(0);
     setIsPlayingIgVideo(false);
     setIsCopied(false);
+    setIsZoomed(false);
+    setFetchedSlidesOverride(null);
+
+    if (
+      item &&
+      item.platform === 'instagram' &&
+      item.url &&
+      !item.id.startsWith('ig-') &&
+      !item.videoUrl &&
+      !item.apifyFetched &&
+      (!item.slides || item.slides.length <= 1) &&
+      (!item.images || item.images.length <= 1) &&
+      !autoFetchedIdsRef.current.has(item.id)
+    ) {
+      autoFetchedIdsRef.current.add(item.id);
+      void handleFetchAllSlides();
+    }
   }, [item?.id]);
+
+  // Keyboard navigation (ArrowLeft/ArrowRight for slides in RTL, Escape to close zoom or modal)
+  useEffect(() => {
+    if (!item) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (isZoomed) {
+          setIsZoomed(false);
+          return;
+        }
+        onClose();
+        return;
+      }
+      if (item.platform === 'instagram' && slideList.length > 1) {
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          setIsPlayingIgVideo(false);
+          setActiveSlideIndex((prev) => (prev + 1) % slideList.length);
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          setIsPlayingIgVideo(false);
+          setActiveSlideIndex((prev) => (prev - 1 + slideList.length) % slideList.length);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [item, slideList.length, isZoomed, onClose]);
 
   if (!item) return null;
 
@@ -97,20 +264,6 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
   };
-
-
-
-  // Normalize slides for Instagram
-  const slideList: MediaSlide[] = (item.slides && item.slides.length > 0)
-    ? item.slides
-    : (item.images && item.images.length > 1)
-      ? item.images.map((img) => ({ type: 'image' as const, url: img }))
-      : item.videoUrl
-        ? [{ type: 'video' as const, url: item.videoUrl, thumbnail: item.thumbnail }]
-        : [{ type: 'image' as const, url: item.thumbnail }];
-
-  const activeSlide = slideList[activeSlideIndex] || slideList[0];
-  const hasMultipleSlides = slideList.length > 1;
 
   return (
     <div 
@@ -167,33 +320,96 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
           )}
 
           {/* 3. Instagram Multi-Slide Carousel or Video Player */}
-          {item.platform === 'instagram' && (
-            <div className="relative w-full min-h-[320px] sm:min-h-[460px] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 flex items-center justify-center group/ig shadow-2xl">
-              {activeSlide.type === 'video' ? (
-                isPlayingIgVideo ? (
-                  <div className="relative w-full h-full min-h-[320px] sm:min-h-[460px] bg-black flex items-center justify-center">
-                    <video
-                      src={activeSlide.url}
-                      controls
-                      autoPlay
-                      playsInline
-                      className="w-full max-h-[550px] object-contain"
-                    />
-                    <button
-                      onClick={() => setIsPlayingIgVideo(false)}
-                      className="absolute top-3 left-3 z-20 p-2 rounded-xl bg-black/80 hover:bg-black text-white text-xs transition cursor-pointer backdrop-blur-md border border-white/20"
-                      title="بستن پخش ویدیو"
+          {item.platform === 'instagram' && activeSlide && (
+            <div className="space-y-3">
+              <div
+                className="relative w-full min-h-[340px] sm:min-h-[480px] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 flex items-center justify-center group/ig shadow-2xl select-none"
+                onTouchStart={(e) => {
+                  if (e.touches && e.touches.length === 1) {
+                    setTouchStartX(e.touches[0].clientX);
+                  }
+                }}
+                onTouchEnd={(e) => {
+                  if (touchStartX === null || !hasMultipleSlides) return;
+                  const endX = e.changedTouches?.[0]?.clientX;
+                  if (typeof endX === 'number') {
+                    const diff = endX - touchStartX;
+                    if (diff > 45) {
+                      goToPrevSlide();
+                    } else if (diff < -45) {
+                      goToNextSlide();
+                    }
+                  }
+                  setTouchStartX(null);
+                }}
+              >
+                {/* Counter Badge (Top-Right inside media frame) */}
+                  {(hasMultipleSlides || isFetchingSlides) && (
+                    <div className="absolute top-3 right-3 z-30">
+                      <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-900/85 text-pink-300 border border-pink-500/30 flex items-center gap-1.5 shadow-lg backdrop-blur-md">
+                        <Layers className="w-3.5 h-3.5 text-pink-400" />
+                        {isFetchingSlides
+                          ? 'در حال بررسی اسلایدها...'
+                          : `اسلاید ${activeSlideIndex + 1} از ${slideList.length}`}
+                      </span>
+                    </div>
+                  )}
+
+                  {activeSlide.type === 'video' ? (
+                  isPlayingIgVideo ? (
+                    <div key={`${item.id}-vid-${activeSlideIndex}`} className="relative w-full h-full min-h-[340px] sm:min-h-[480px] bg-black flex items-center justify-center">
+                      <video
+                        key={activeSlide.url}
+                        src={activeSlide.url}
+                        controls
+                        autoPlay
+                        playsInline
+                        className="w-full max-h-[64vh] object-contain"
+                      />
+                      <button
+                        onClick={() => setIsPlayingIgVideo(false)}
+                        className="absolute bottom-4 left-4 z-20 p-2 rounded-xl bg-black/80 hover:bg-black text-white text-xs transition cursor-pointer backdrop-blur-md border border-white/20"
+                        title="بستن پخش ویدیو"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      key={`${item.id}-vid-cover-${activeSlideIndex}`}
+                      className="relative w-full h-full min-h-[340px] sm:min-h-[480px] cursor-pointer overflow-hidden flex items-center justify-center bg-slate-950"
+                      onClick={() => setIsPlayingIgVideo(true)}
                     >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
+                      <img
+                        src={resolveCoverImageUrl(activeSlide.thumbnail || activeSlide.url || item.thumbnail, 'instagram', 'modal')}
+                        alt=""
+                        aria-hidden="true"
+                        decoding="async"
+                        className="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-60 select-none pointer-events-none"
+                        onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
+                      />
+                      <div className="absolute inset-0 bg-black/30 pointer-events-none z-10" />
+                      <img
+                        src={resolveCoverImageUrl(activeSlide.thumbnail || activeSlide.url || item.thumbnail, 'instagram', 'modal')}
+                        alt={item.title || 'پست اینستاگرام'}
+                        decoding="async"
+                        className="w-full max-h-[64vh] object-contain relative z-10 opacity-95 hover:opacity-100 transition drop-shadow-md"
+                        onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center z-20">
+                        <div style={{ backgroundColor: "oklch(0.592 0.249 0.584)" }} className="w-16 h-16 rounded-2xl text-white flex items-center justify-center shadow-2xl shadow-[oklch(0.592_0.249_0.584)]/50 hover:scale-110 transition-all duration-300 backdrop-blur-md">
+                          <Play className="w-8 h-8 fill-white ml-1" />
+                        </div>
+                      </div>
+                    </div>
+                  )
                 ) : (
                   <div
-                    className="relative w-full h-full min-h-[320px] sm:min-h-[460px] cursor-pointer overflow-hidden flex items-center justify-center bg-slate-950"
-                    onClick={() => setIsPlayingIgVideo(true)}
+                    key={`${item.id}-img-${activeSlideIndex}`}
+                    className="relative w-full h-full min-h-[340px] sm:min-h-[480px] flex items-center justify-center bg-slate-950 overflow-hidden"
                   >
                     <img
-                      src={resolveCoverImageUrl(activeSlide.thumbnail || activeSlide.url || item.thumbnail, 'instagram', 'modal')}
+                      src={resolveCoverImageUrl(activeSlide.url || activeSlide.thumbnail || item.thumbnail, 'instagram', 'modal')}
                       alt=""
                       aria-hidden="true"
                       decoding="async"
@@ -202,71 +418,66 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
                     />
                     <div className="absolute inset-0 bg-black/30 pointer-events-none z-10" />
                     <img
-                      src={resolveCoverImageUrl(activeSlide.thumbnail || activeSlide.url || item.thumbnail, 'instagram', 'modal')}
-                      alt={item.title}
+                      src={resolveCoverImageUrl(activeSlide.url || activeSlide.thumbnail || item.thumbnail, 'instagram', 'modal')}
+                      alt={`${item.title || 'پست اینستاگرام'} - اسلاید ${activeSlideIndex + 1}`}
                       decoding="async"
-                      className="w-full max-h-[550px] object-contain relative z-10 opacity-95 hover:opacity-100 transition drop-shadow-md"
+                      onClick={() => setIsZoomed(true)}
+                      className="w-full max-h-[64vh] object-contain relative z-10 drop-shadow-md cursor-zoom-in"
                       onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
                     />
-                    <div className="absolute inset-0 flex items-center justify-center z-20">
-                      <div style={{ backgroundColor: "oklch(0.592 0.249 0.584)" }} className="w-16 h-16 rounded-2xl text-white flex items-center justify-center shadow-2xl shadow-[oklch(0.592_0.249_0.584)]/50 hover:scale-110 transition-all duration-300 backdrop-blur-md">
-                        <Play className="w-8 h-8 fill-white ml-1" />
-                      </div>
-                    </div>
                   </div>
-                )
-              ) : (
-                <div className="relative w-full h-full min-h-[320px] sm:min-h-[460px] flex items-center justify-center bg-slate-950 overflow-hidden">
-                  <img
-                    src={resolveCoverImageUrl(activeSlide.url || activeSlide.thumbnail || item.thumbnail, 'instagram', 'modal')}
-                    alt=""
-                    aria-hidden="true"
-                    decoding="async"
-                    className="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-60 select-none pointer-events-none"
-                    onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
-                  />
-                  <div className="absolute inset-0 bg-black/30 pointer-events-none z-10" />
-                  <img
-                    src={resolveCoverImageUrl(activeSlide.url || activeSlide.thumbnail || item.thumbnail, 'instagram', 'modal')}
-                    alt={`${item.title} - اسلاید ${activeSlideIndex + 1}`}
-                    decoding="async"
-                    className="w-full max-h-[550px] object-contain relative z-10 drop-shadow-md"
-                    onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
-                  />
-                </div>
-              )}
+                )}
 
-              {/* Multi-slide controls for Instagram */}
-              {hasMultipleSlides && (
-                <>
-                  <button
-                    onClick={() => {
-                      setIsPlayingIgVideo(false);
-                      setActiveSlideIndex((prev) => (prev - 1 + slideList.length) % slideList.length);
-                    }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full bg-slate-900/90 hover:bg-slate-900 text-white border border-slate-700 shadow-xl backdrop-blur-md transition cursor-pointer"
-                    title="اسلاید قبلی"
-                  >
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
+                {/* Side Slider Arrows next to Instagram media (always accessible for carousel or checking slides) */}
+                {(hasMultipleSlides || !item.videoUrl) && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (hasMultipleSlides) {
+                          goToPrevSlide();
+                        } else {
+                          handleFetchAllSlides();
+                        }
+                      }}
+                      className={`absolute right-3 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-full bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700 shadow-xl backdrop-blur-md transition active:scale-95 cursor-pointer ${
+                        hasMultipleSlides ? 'opacity-95 hover:opacity-100' : 'opacity-65 hover:opacity-100'
+                      }`}
+                      title={hasMultipleSlides ? 'اسلاید قبلی' : 'بررسی اسلایدهای بیشتر'}
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
 
-                  <button
-                    onClick={() => {
-                      setIsPlayingIgVideo(false);
-                      setActiveSlideIndex((prev) => (prev + 1) % slideList.length);
-                    }}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full bg-slate-900/90 hover:bg-slate-900 text-white border border-slate-700 shadow-xl backdrop-blur-md transition cursor-pointer"
-                    title="اسلاید بعدی"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (hasMultipleSlides) {
+                          goToNextSlide();
+                        } else {
+                          handleFetchAllSlides();
+                        }
+                      }}
+                      className={`absolute left-3 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-full bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700 shadow-xl backdrop-blur-md transition active:scale-95 cursor-pointer ${
+                        hasMultipleSlides ? 'opacity-95 hover:opacity-100' : 'opacity-65 hover:opacity-100'
+                      }`}
+                      title={hasMultipleSlides ? 'اسلاید بعدی' : 'بررسی اسلایدهای بیشتر'}
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                  </>
+                )}
 
-                  {/* Dots Indicator */}
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-950/80 border border-slate-800 backdrop-blur-md shadow-xl">
+                {/* Dots Indicator */}
+                {hasMultipleSlides && (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-950/80 border border-slate-800 backdrop-blur-md shadow-xl">
                     {slideList.map((_, idx) => (
                       <button
                         key={idx}
-                        onClick={() => {
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setIsPlayingIgVideo(false);
                           setActiveSlideIndex(idx);
                         }}
@@ -279,16 +490,98 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
                       />
                     ))}
                   </div>
+                )}
+              </div>
 
-                  {/* Counter Badge */}
-                  <div className="absolute top-4 right-4 z-20">
-                    <span className="text-xs font-bold px-3 py-1 rounded-xl bg-slate-900/90 text-pink-300 border border-pink-500/30 flex items-center gap-1.5 shadow-lg backdrop-blur-md">
-                      <Layers className="w-3.5 h-3.5 text-pink-400" />
-                      اسلاید {activeSlideIndex + 1} از {slideList.length}
-                    </span>
-                  </div>
+              {/* Thumbnail Filmstrip for Multi-Page Instagram Carousels */}
+              {hasMultipleSlides && (
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 px-1 scrollbar-thin">
+                  {slideList.map((slide, idx) => {
+                    const thumbSrc = resolveCoverImageUrl(
+                      slide.thumbnail || slide.url || item.thumbnail,
+                      'instagram',
+                      'card'
+                    );
+                    const isActive = idx === activeSlideIndex;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setIsPlayingIgVideo(false);
+                          setActiveSlideIndex(idx);
+                        }}
+                        className={`relative shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 transition-all cursor-pointer bg-slate-950 ${
+                          isActive
+                            ? 'border-pink-500 ring-2 ring-pink-500/35 scale-[1.03]'
+                            : 'border-slate-800 opacity-65 hover:opacity-100 hover:border-slate-600'
+                        }`}
+                        title={`نمایش اسلاید ${idx + 1}`}
+                      >
+                        <img
+                          src={thumbSrc}
+                          alt={`اسلاید ${idx + 1}`}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover"
+                          onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
+                        />
+                        {slide.type === 'video' && (
+                          <span className="absolute inset-0 flex items-center justify-center bg-black/35">
+                            <Play className="w-4 h-4 text-white fill-white" />
+                          </span>
+                        )}
+                        <span className="absolute bottom-1 right-1 px-1.5 py-0.2 rounded-md bg-slate-950/85 text-[10px] font-bold text-slate-200 border border-slate-700/70">
+                          {idx + 1}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Fullscreen Zoom Overlay for Active Instagram Slide */}
+          {isZoomed && item.platform === 'instagram' && activeSlide && activeSlide.type !== 'video' && (
+            <div
+              className="fixed inset-0 z-[70] bg-black/95 flex items-center justify-center p-4"
+              onClick={() => setIsZoomed(false)}
+            >
+              <button
+                type="button"
+                onClick={() => setIsZoomed(false)}
+                className="absolute top-4 left-4 z-10 p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700 cursor-pointer"
+                title="بستن بزرگ‌نمایی"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              {hasMultipleSlides && (
+                <>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); goToPrevSlide(); }}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700 cursor-pointer"
+                    title="اسلاید قبلی"
+                  >
+                    <ChevronRight className="w-6 h-6" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); goToNextSlide(); }}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700 cursor-pointer"
+                    title="اسلاید بعدی"
+                  >
+                    <ChevronLeft className="w-6 h-6" />
+                  </button>
                 </>
               )}
+              <img
+                src={resolveCoverImageUrl(activeSlide.url || activeSlide.thumbnail || item.thumbnail, 'instagram', 'modal')}
+                alt={`${item.title || 'پست اینستاگرام'} - اسلاید ${activeSlideIndex + 1}`}
+                className="max-w-full max-h-[92vh] object-contain rounded-xl shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              />
             </div>
           )}
 

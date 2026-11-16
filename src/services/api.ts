@@ -215,7 +215,7 @@ export const api = {
 
     const newItem: ContentItem = {
       id: newId,
-      title: contentData.title || 'محتوای اشتراک‌گذاری شده',
+      title: contentData.platform === 'instagram' ? (contentData.title || '') : (contentData.title || 'محتوای اشتراک‌گذاری شده'),
       description: contentData.description || '',
       url: contentData.url || '',
       platform: contentData.platform || 'article',
@@ -243,7 +243,8 @@ export const api = {
       mediaType: contentData.mediaType || (contentData.slides && contentData.slides.length > 1 ? 'carousel' : 'image'),
       images: contentData.images || [],
       slides: contentData.slides || [],
-      apifyFetched: Boolean(contentData.apifyFetched)
+      apifyFetched: Boolean(contentData.apifyFetched),
+      hasCustomTitle: Boolean(contentData.hasCustomTitle)
     };
 
     // Primary: Express REST API endpoint

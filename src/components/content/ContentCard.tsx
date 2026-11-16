@@ -197,14 +197,30 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         )}
 
         {item.platform === 'instagram' && (() => {
-          // Normalize slides list
-          const slideList: MediaSlide[] = (item.slides && item.slides.length > 0)
-            ? item.slides
-            : (item.images && item.images.length > 1)
-              ? item.images.map((img) => ({ type: 'image' as const, url: img }))
-              : item.videoUrl
-                ? [{ type: 'video' as const, url: item.videoUrl, thumbnail: item.thumbnail }]
-                : [{ type: 'image' as const, url: item.thumbnail }];
+          // Normalize slides list (merge slides[] + extra images[] without losing any slide)
+          const slideList: MediaSlide[] = (() => {
+            const merged: MediaSlide[] = [];
+            const seen = new Set<string>();
+            const keyOf = (u?: string) => (u ? u.trim().split('?')[0] : '');
+            for (const s of (item.slides || [])) {
+              if (!s || (!s.url && !s.thumbnail)) continue;
+              const k = keyOf(s.url || s.thumbnail);
+              if (k && !seen.has(k)) {
+                seen.add(k);
+                merged.push(s);
+              }
+            }
+            for (const img of (item.images || [])) {
+              const k = keyOf(img);
+              if (k && !seen.has(k)) {
+                seen.add(k);
+                merged.push({ type: 'image', url: img, thumbnail: img });
+              }
+            }
+            if (merged.length > 0) return merged;
+            if (item.videoUrl) return [{ type: 'video', url: item.videoUrl, thumbnail: item.thumbnail }];
+            return [{ type: 'image', url: item.thumbnail }];
+          })();
 
           const activeSlide = slideList[activeSlideIndex] || slideList[0];
           const hasMultipleSlides = slideList.length > 1;
@@ -238,27 +254,15 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                     className="relative w-full h-full cursor-pointer overflow-hidden flex items-center justify-center bg-slate-950"
                     onClick={() => onOpenArticleReader(item)}
                   >
-                    {/* لایه پس‌زمینه محو */}
                     <img
                       src={resolveCoverImageUrl(activeSlide.thumbnail || activeSlide.url || item.thumbnail, 'instagram', 'card')}
-                      alt=""
-                      aria-hidden="true"
-                      loading="lazy"
-                      decoding="async"
-                      className="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-60 pointer-events-none"
-                      onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
-                    />
-                    {/* روکش تیره ملایم */}
-                    <div className="absolute inset-0 bg-black/30 pointer-events-none" />
-                    {/* تصویر اصلی بدون برش */}
-                    <img
-                      src={resolveCoverImageUrl(activeSlide.thumbnail || activeSlide.url || item.thumbnail, 'instagram', 'card')}
-                      alt={item.title}
-                      className="relative z-10 max-h-full max-w-full object-contain transition-transform duration-500 group-hover/ig:scale-105 opacity-95 group-hover/ig:opacity-100 drop-shadow-md"
+                      alt={item.title || 'پست اینستاگرام'}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover/ig:scale-105 opacity-95 group-hover/ig:opacity-100"
                       loading="lazy"
                       decoding="async"
                       onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-transparent to-black/25 pointer-events-none" />
                     <div className="absolute inset-0 flex items-center justify-center z-20">
                       <div style={{ backgroundColor: "oklch(0.592 0.249 0.584)" }} className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl text-white flex items-center justify-center shadow-xl shadow-[oklch(0.592_0.249_0.584)]/40 group-hover/ig:scale-110 transition-all duration-300 backdrop-blur-sm">
                         <Play className="w-6 h-6 fill-white ml-0.5" />
@@ -271,27 +275,15 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   className="relative w-full h-full cursor-pointer overflow-hidden flex items-center justify-center bg-slate-950"
                   onClick={() => onOpenArticleReader(item)}
                 >
-                  {/* لایه پس‌زمینه محو */}
                   <img
                     src={resolveCoverImageUrl(activeSlide.url || activeSlide.thumbnail || item.thumbnail, 'instagram', 'card')}
-                    alt=""
-                    aria-hidden="true"
-                    loading="lazy"
-                    decoding="async"
-                    className="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-60 pointer-events-none"
-                    onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
-                  />
-                  {/* روکش تیره ملایم */}
-                  <div className="absolute inset-0 bg-black/30 pointer-events-none" />
-                  {/* تصویر اصلی بدون برش */}
-                  <img
-                    src={resolveCoverImageUrl(activeSlide.url || activeSlide.thumbnail || item.thumbnail, 'instagram', 'card')}
-                    alt={`${item.title} - اسلاید ${activeSlideIndex + 1}`}
-                    className="relative z-10 max-h-full max-w-full object-contain transition-transform duration-500 group-hover/ig:scale-105 opacity-95 group-hover/ig:opacity-100 drop-shadow-md"
+                    alt={`${item.title || 'پست اینستاگرام'} - اسلاید ${activeSlideIndex + 1}`}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover/ig:scale-105 opacity-95 group-hover/ig:opacity-100"
                     loading="lazy"
                     decoding="async"
                     onError={(e) => handleImageError(e, getPlatformFallbackImage('instagram', item.url), 'instagram', item.id)}
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-transparent to-black/25 pointer-events-none" />
                 </div>
               )}
 

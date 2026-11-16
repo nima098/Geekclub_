@@ -47,7 +47,7 @@ const isTombstoned = (db, id) => db.deletedIds.includes(id) || db.deletedIds.inc
 // Fields a NON-admin client may change (background metadata enrichment only)
 const NON_ADMIN_FIELDS = new Set([
   'title', 'description', 'thumbnail', 'videoUrl', 'mediaType', 'images', 'slides', 'needsEnrichment',
-  'apifyFetched', 'articleContent', 'embedUrl', 'readingOrWatchTime', 'tags', 'sourceDomain'
+  'apifyFetched', 'articleContent', 'embedUrl', 'readingOrWatchTime', 'tags', 'sourceDomain', 'hasCustomTitle'
 ]);
 
 export default async function handler(req, res) {
@@ -115,7 +115,10 @@ export default async function handler(req, res) {
       if (db.contents.some((c) => c.id === id)) return res.status(409).json({ success: false, error: 'Content already exists' });
       const newItem = {
         id,
-        title: body.title || 'محتوای اشتراک‌گذاری شده',
+        title: body.platform === 'instagram'
+          ? (typeof body.title === 'string' ? body.title.trim() : '')
+          : (body.title || 'محتوای اشتراک‌گذاری شده'),
+        hasCustomTitle: Boolean(body.hasCustomTitle && typeof body.title === 'string' && body.title.trim()),
         description: body.description || '',
         url: body.url,
         platform: body.platform || 'article',

@@ -64,6 +64,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
   }, [initialUrl, isOpen]);
   const [detectedPlatform, setDetectedPlatform] = useState<Platform | null>(null);
   const [title, setTitle] = useState('');
+  const [userEditedTitle, setUserEditedTitle] = useState(false);
   const [description, setDescription] = useState('');
   
   // Category state with Auto-detect and Suggestion / Autocomplete
@@ -162,8 +163,8 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
     setEmbedUrl(parsed.embedUrl);
     if (parsed.platform === 'instagram') {
       setDescription('');
+      if (!userEditedTitle) setTitle('');
       if (!thumbnail.trim()) setThumbnail(FALLBACK_IMAGES.instagram);
-      if (!title.trim()) setTitle('پست اینستاگرام');
       if (!authorName.trim()) setAuthorName('پیج اینستاگرام');
       if (!readingOrWatchTime.trim()) setReadingOrWatchTime(url.includes('reel') ? 'ریلز اینستاگرام' : 'پست اینستاگرام');
       if (!tagsInput.trim()) setTagsInput('اینستاگرام, رسانه');
@@ -179,11 +180,12 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
           setFetchedMeta(meta);
           setDetectedPlatform(meta.platform);
           setEmbedUrl(meta.embedUrl);
-          if (meta.title) setTitle(meta.title);
           if (meta.platform === 'instagram') {
+            if (!userEditedTitle) setTitle('');
             setDescription('');
-          } else if (meta.description) {
-            setDescription(meta.description);
+          } else {
+            if (meta.title && !userEditedTitle) setTitle(meta.title);
+            if (meta.description) setDescription(meta.description);
           }
           if (meta.thumbnail) {
             setThumbnail(meta.thumbnail);
@@ -209,11 +211,12 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
 
   useEffect(() => {
     if (fetchedMeta) {
-      if (fetchedMeta.title) setTitle(fetchedMeta.title);
       if (fetchedMeta.platform === 'instagram') {
+        if (!userEditedTitle) setTitle('');
         setDescription('');
-      } else if (fetchedMeta.description) {
-        setDescription(fetchedMeta.description);
+      } else {
+        if (fetchedMeta.title && !userEditedTitle) setTitle(fetchedMeta.title);
+        if (fetchedMeta.description) setDescription(fetchedMeta.description);
       }
       if (fetchedMeta.thumbnail) setThumbnail(fetchedMeta.thumbnail);
       if (fetchedMeta.authorName) setAuthorName(fetchedMeta.authorName);
@@ -264,10 +267,11 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
   // Manually apply fetched metadata into input fields
   const handleApplyFetchedMetadata = () => {
     if (!fetchedMeta) return;
-    setTitle(fetchedMeta.title);
     if (fetchedMeta.platform === 'instagram') {
+      if (!userEditedTitle) setTitle('');
       setDescription('');
     } else {
+      setTitle(fetchedMeta.title);
       setDescription(fetchedMeta.description);
     }
     setAuthorName(fetchedMeta.authorName);
@@ -326,16 +330,16 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
         return;
       }
 
-      // Title fallback
-      const finalTitle = title.trim() || fetchedMeta?.title || (
-        finalPlatform === 'youtube'
-          ? 'ویدیوی یوتیوب'
-          : finalPlatform === 'instagram'
-          ? 'پست اینستاگرام'
-          : finalPlatform === 'aparat'
-          ? 'ویدیوی آپارات'
-          : `مقاله در ${parsed.sourceDomain}`
-      );
+      // Title fallback (Instagram content keeps title empty by default unless user enters text)
+      const finalTitle = finalPlatform === 'instagram'
+        ? title.trim()
+        : (title.trim() || fetchedMeta?.title || (
+            finalPlatform === 'youtube'
+              ? 'ویدیوی یوتیوب'
+              : finalPlatform === 'aparat'
+              ? 'ویدیوی آپارات'
+              : `مقاله در ${parsed.sourceDomain}`
+          ));
 
       // Description fallback (Instagram videos leave description empty by default unless user enters text)
       const finalDescription = finalPlatform === 'instagram'
@@ -359,8 +363,21 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
           : FALLBACK_IMAGES.article
       );
 
-      // Check if user submitted very quickly without waiting for metadata extraction or if it's Instagram media
-      const isQuickSubmit = !fetchedMeta || isLoadingMeta || !title.trim() || finalPlatform === 'instagram';
+      // Check if user submitted quickly before metadata finished, unless Instagram already completed full extraction
+      const hasRichIgMeta = Boolean(
+        finalPlatform === 'instagram' &&
+        fetchedMeta &&
+        !isLoadingMeta &&
+        (
+          fetchedMeta.data?.apify ||
+          (Array.isArray(fetchedMeta.slides) && fetchedMeta.slides.length > 0) ||
+          Boolean(fetchedMeta.videoUrl) ||
+          (fetchedMeta.thumbnail && (fetchedMeta.thumbnail.includes('upc.geekclub.ir') || fetchedMeta.thumbnail.startsWith('/uploads/')))
+        )
+      );
+      const isQuickSubmit = finalPlatform === 'instagram'
+        ? !hasRichIgMeta
+        : (!fetchedMeta || isLoadingMeta || !title.trim());
 
       // Auto transfer cover photo (YouTube, Aparat, Instagram, Article) to personal CDN on upc.geekclub.ir/s1/
       let finalThumbnail = rawThumbnail;
@@ -453,6 +470,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
       // Reset form
       setUrl('');
       setTitle('');
+      setUserEditedTitle(false);
       setDescription('');
       setCategoryInput('');
       setSelectedCategory('auto');
@@ -475,6 +493,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
 
   // Helper samples for instant testing
   const handleAutoFillSample = (sampleType: 'yt' | 'ig' | 'aparat' | 'art') => {
+    setUserEditedTitle(false);
     if (sampleType === 'yt') {
       setUrl('https://www.youtube.com/watch?v=fJ9rUzIMcZQ');
       setTitle('');
@@ -651,8 +670,15 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
             <input
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="اگر عنوان پلتفرم اشتباه است، عنوان صحیح را اینجا وارد کنید..."
+              onChange={(e) => {
+                setTitle(e.target.value);
+                setUserEditedTitle(Boolean(e.target.value.trim()));
+              }}
+              placeholder={
+                detectedPlatform === 'instagram'
+                  ? 'برای لینک‌های اینستاگرام عنوان به صورت پیش‌فرض خالی است؛ در صورت نیاز بنویسید...'
+                  : 'اگر عنوان پلتفرم اشتباه است، عنوان صحیح را اینجا وارد کنید...'
+              }
               className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-100 placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
             />
           </div>

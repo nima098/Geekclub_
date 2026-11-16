@@ -331,6 +331,10 @@ export default function App() {
   const [profileModalTab, setProfileModalTab] = useState<'settings' | 'my_contents' | 'inbox' | 'guestbook'>('my_contents');
   const [activeCommentsItem, setActiveCommentsItem] = useState<ContentItem | null>(null);
   const [activeArticleItem, setActiveArticleItem] = useState<ContentItem | null>(null);
+  const resolvedActiveArticleItem = React.useMemo(
+    () => (activeArticleItem ? contents.find((c) => c.id === activeArticleItem.id) || activeArticleItem : null),
+    [activeArticleItem, contents]
+  );
   const [sharedIncomingUrl, setSharedIncomingUrl] = useState('');
 
   // Inbox & Profile Comments state
@@ -887,7 +891,7 @@ export default function App() {
     setContents((prev) => [newItem, ...prev]);
     api.addContent(newItem);
 
-    const isGenericTitle = !newItem.title || 
+    const isGenericTitle = (newItem.platform !== 'instagram' && !newItem.title) || 
       newItem.title === 'ویدیوی یوتیوب' || 
       newItem.title === 'ویدیوی آپارات' || 
       newItem.title === 'پست اینستاگرام' || 
@@ -976,14 +980,29 @@ export default function App() {
               } catch {}
             }
 
+            const existingSlidesCount = Array.isArray(newItem.slides) ? newItem.slides.length : 0;
+            const existingImagesCount = Array.isArray(newItem.images) ? newItem.images.length : 0;
+            const incomingSlidesCount = Array.isArray(enriched.slides) ? enriched.slides.length : 0;
+            const incomingImagesCount = Array.isArray(enriched.images) ? enriched.images.length : 0;
+            const resolvedSlides = incomingSlidesCount >= existingSlidesCount && incomingSlidesCount > 0
+              ? enriched.slides
+              : newItem.slides;
+            const resolvedImages = incomingImagesCount >= existingImagesCount && incomingImagesCount > 0
+              ? enriched.images
+              : newItem.images;
+            const resolvedMediaType = (resolvedSlides && resolvedSlides.length > 1)
+              ? 'carousel'
+              : (enriched.mediaType || newItem.mediaType);
+
             const updates: Partial<ContentItem> = {
-              ...(enriched.title && enriched.title.trim() ? { title: enriched.title.trim() } : {}),
-              ...(enriched.description && enriched.description.trim() ? { description: enriched.description.trim() } : {}),
+              ...(newItem.platform !== 'instagram' && !newItem.hasCustomTitle && enriched.title && enriched.title.trim() ? { title: enriched.title.trim() } : {}),
+              ...(newItem.platform !== 'instagram' && enriched.description && enriched.description.trim() ? { description: enriched.description.trim() } : {}),
               ...(finalCover ? { thumbnail: finalCover } : {}),
               ...(enriched.videoUrl ? { videoUrl: enriched.videoUrl } : {}),
-              ...(enriched.mediaType ? { mediaType: enriched.mediaType } : {}),
-              ...(enriched.images && enriched.images.length > 0 ? { images: enriched.images } : {}),
-              ...(enriched.slides && enriched.slides.length > 0 ? { slides: enriched.slides } : {}),
+              ...(resolvedMediaType ? { mediaType: resolvedMediaType } : {}),
+              ...(resolvedImages && resolvedImages.length > 0 ? { images: resolvedImages } : {}),
+              ...(resolvedSlides && resolvedSlides.length > 0 ? { slides: resolvedSlides } : {}),
+              ...(enriched.apifyFetched || enriched.data?.apify ? { apifyFetched: true } : {}),
               ...(enriched.readingOrWatchTime ? { readingOrWatchTime: enriched.readingOrWatchTime } : {}),
               ...(enriched.embedUrl ? { embedUrl: enriched.embedUrl } : {}),
               ...(enriched.sourceName ? { sourceName: enriched.sourceName } : {}),
@@ -1729,7 +1748,7 @@ export default function App() {
       />
 
       <ArticleReaderModal
-        item={activeArticleItem}
+        item={resolvedActiveArticleItem}
         onClose={() => setActiveArticleItem(null)}
         onLike={handleLike}
         onDislike={handleDislike}
@@ -1739,6 +1758,12 @@ export default function App() {
         }}
         onToggleSave={handleToggleSave}
         onShare={handleShare}
+        onEnrichedContent={(contentId, updates) => {
+          setContents((prev) => prev.map((c) => (c.id === contentId ? { ...c, ...updates } : c)));
+          if (!contentId.startsWith('ig-')) {
+            api.updateContent(contentId, updates).catch(() => {});
+          }
+        }}
       />
 
       <AddContentModal

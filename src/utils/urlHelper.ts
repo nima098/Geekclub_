@@ -113,10 +113,10 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
   const cleanUrl = rawUrl.trim();
   const parsed = parseContentUrl(cleanUrl);
 
-  // 1. PRIMARY STEP: Use Server-side Proxy (/api/extract-metadata) - allow up to 65s for Instagram (Apify + CDN media)
+  // 1. PRIMARY STEP: Use Server-side Proxy (/api/extract-metadata) - allow up to 90s for Instagram (Apify + batch CDN slides)
   try {
     const controller = new AbortController();
-    const requestTimeoutMs = parsed.platform === 'instagram' ? 65000 : 12000;
+    const requestTimeoutMs = parsed.platform === 'instagram' ? 90000 : 12000;
     const timeoutId = setTimeout(() => controller.abort(), requestTimeoutMs);
     const res = await fetch(`/api/extract-metadata?url=${encodeURIComponent(cleanUrl)}`, {
       signal: controller.signal

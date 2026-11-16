@@ -766,12 +766,18 @@ app.get('/api/proxy-image', rateLimit('proxy-image', 600, 60_000), async (req: R
 
   try {
     const cleanUrl = validation.parsedUrl.toString();
+    const isIgCdn = /(instagram|fbcdn|cdninstagram)/i.test(cleanUrl);
+    const defaultReferer = isIgCdn
+      ? 'https://www.instagram.com/'
+      : `${validation.parsedUrl.protocol}//${validation.parsedUrl.hostname}/`;
     const response = await safeAxiosGet(cleanUrl, {
       responseType: 'arraybuffer',
-      timeout: 10000,
+      timeout: 12000,
       maxContentLength: 10 * 1024 * 1024, // 10MB limit
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': defaultReferer,
+        'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
       }
     });
 
@@ -1501,112 +1507,235 @@ async function fetchInstagramViaApify(instagramUrl: string): Promise<ExtractedMe
   try {
     console.log(`[Apify Pipeline] Executing Apify actor ${actorId} for ${cleanDirectUrl}...`);
     const items = await runApifyActorWithAutoInput(actorId, token, cleanDirectUrl, {
-      timeoutSec: 45,
+      timeoutSec: 42,
       resultsLimit: 1
     });
     if (Array.isArray(items) && items.length > 0 && !items[0]?.error) {
       const item = items[0];
       console.log(`[Apify Pipeline SUCCESS] Dataset item received for ${instagramUrl}:`, {
         id: item.id || item.shortCode,
+        type: item.type,
+        itemsCount: items.length,
+        childCount: Array.isArray(item.childPosts) ? item.childPosts.length : (Array.isArray(item.carouselMedia) ? item.carouselMedia.length : 0),
+        imagesCount: Array.isArray(item.images) ? item.images.length : 0,
         hasVideo: !!(item.videoUrl || item.video_url || item.videoVersions),
         caption: (item.caption || item.text || '').substring(0, 40)
       });
 
-      const rawVideoUrl = item.videoUrl || item.video_url || item.video_play_url || (item.videoVersions && item.videoVersions[0]?.url) || '';
-      const rawDisplayUrl = item.displayUrl || item.display_url || (item.images && item.images[0]) || item.thumbnailUrl || '';
-      const rawImages: string[] = Array.isArray(item.images) ? item.images : [];
+      const pickImgFromNode = (node: any): string => {
+        if (!node) return '';
+        if (typeof node === 'string') return node.trim();
+        const displayResLast = Array.isArray(node.display_resources) && node.display_resources.length > 0
+          ? node.display_resources[node.display_resources.length - 1]?.src
+          : '';
+        const candidateFirst = Array.isArray(node.image_versions2?.candidates) && node.image_versions2.candidates.length > 0
+          ? node.image_versions2.candidates[0]?.url
+          : '';
+        const raw = (
+          node.displayUrl ||
+          node.display_url ||
+          node.src ||
+          node.image ||
+          (Array.isArray(node.images) && node.images[0]) ||
+          displayResLast ||
+          candidateFirst ||
+          node.thumbnailUrl ||
+          node.thumbnail_url ||
+          ''
+        );
+        return typeof raw === 'string' ? raw.trim() : '';
+      };
+
+      const pickVidFromNode = (node: any): string => {
+        if (!node || typeof node === 'string') return '';
+        const raw = (
+          node.videoUrl ||
+          node.video_url ||
+          node.video_play_url ||
+          (Array.isArray(node.videoVersions) && node.videoVersions[0]?.url) ||
+          (Array.isArray(node.video_versions) && node.video_versions[0]?.url) ||
+          ''
+        );
+        return typeof raw === 'string' ? raw.trim() : '';
+      };
+
+      const rawVideoUrl = pickVidFromNode(item);
+      const rawDisplayUrl = pickImgFromNode(item) || '';
+      const rawImages: string[] = Array.isArray(item.images)
+        ? item.images.map((x: any) => (typeof x === 'string' ? x.trim() : pickImgFromNode(x))).filter(Boolean)
+        : [];
+      const rawVideos: string[] = Array.isArray(item.videos)
+        ? item.videos.map((x: any) => (typeof x === 'string' ? x.trim() : pickVidFromNode(x))).filter(Boolean)
+        : [];
       const caption = item.caption || item.text || '';
       const ownerUsername = item.ownerUsername || item.owner_username || item.owner?.username || 'instagram';
       const cleanUsername = ownerUsername.replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase() || 'general';
       const ownerFullName = item.ownerFullName || item.owner_fullname || item.owner?.full_name || `@${ownerUsername}`;
 
-      // Extract raw slides (videos, photos, mixed carousel) from Apify dataset
+      // Extract & merge ALL raw carousel slides (childPosts + sidecar + images + videos + multi-item dataset)
       const rawSlidesInput: Array<{ type: 'video' | 'image'; videoUrl?: string; imageUrl?: string }> = [];
+      const seenSlideKeys = new Set<string>();
 
-      const childList = item.childPosts || item.sidecarChildPosts || item.carouselMedia || item.child_posts || [];
-      if (Array.isArray(childList) && childList.length > 0) {
+      const mediaDedupeKey = (urlStr?: string): string => {
+        if (!urlStr) return '';
+        try {
+          const u = new URL(urlStr);
+          return `${u.hostname}${u.pathname}`;
+        } catch {
+          return urlStr.split('?')[0].trim();
+        }
+      };
+
+      const pushRawSlide = (type: 'video' | 'image', vidUrl?: string, imgUrl?: string) => {
+        const cleanVid = vidUrl ? vidUrl.trim() : '';
+        const cleanImg = imgUrl ? imgUrl.trim() : '';
+        if (!cleanVid && !cleanImg) return;
+        const primary = type === 'video' ? (cleanVid || cleanImg) : (cleanImg || cleanVid);
+        const key = mediaDedupeKey(primary);
+        if (!key || seenSlideKeys.has(key)) return;
+        seenSlideKeys.add(key);
+        if (cleanImg && key !== mediaDedupeKey(cleanImg)) {
+          seenSlideKeys.add(mediaDedupeKey(cleanImg));
+        }
+        if (type === 'video' && cleanVid) {
+          rawSlidesInput.push({ type: 'video', videoUrl: cleanVid, imageUrl: cleanImg || undefined });
+        } else if (cleanImg) {
+          rawSlidesInput.push({ type: 'image', imageUrl: cleanImg });
+        }
+      };
+
+      const edgeChildren = Array.isArray(item.edge_sidecar_to_children?.edges)
+        ? item.edge_sidecar_to_children.edges.map((e: any) => e?.node).filter(Boolean)
+        : [];
+      const childSources = [
+        item.childPosts,
+        item.sidecarChildPosts,
+        item.carouselMedia,
+        item.carousel_media,
+        item.child_posts,
+        item.children,
+        item.attachments,
+        edgeChildren
+      ];
+
+      for (const childList of childSources) {
+        if (!Array.isArray(childList) || childList.length === 0) continue;
         for (const child of childList) {
+          if (typeof child === 'string') {
+            pushRawSlide('image', undefined, child);
+            continue;
+          }
+          if (!child || typeof child !== 'object') continue;
+          const vidUrl = pickVidFromNode(child);
+          const imgUrl = pickImgFromNode(child);
           const isVid = Boolean(
-            child.type === 'Video' ||
-            child.type === 'video' ||
-            child.media_type === 2 ||
-            child.videoUrl ||
-            child.video_url ||
-            child.video_play_url ||
-            (child.videoVersions && child.videoVersions[0]?.url)
+            vidUrl && (
+              child.type === 'Video' ||
+              child.type === 'video' ||
+              child.media_type === 2 ||
+              child.is_video ||
+              vidUrl
+            )
           );
-          const vidUrl = child.videoUrl || child.video_url || child.video_play_url || (child.videoVersions && child.videoVersions[0]?.url);
-          const imgUrl = child.displayUrl || child.display_url || child.image || (child.images && child.images[0]) || child.thumbnailUrl;
-
           if (isVid && vidUrl) {
-            rawSlidesInput.push({ type: 'video', videoUrl: vidUrl, imageUrl: imgUrl });
+            pushRawSlide('video', vidUrl, imgUrl);
           } else if (imgUrl) {
-            rawSlidesInput.push({ type: 'image', imageUrl: imgUrl });
+            pushRawSlide('image', undefined, imgUrl);
           }
         }
       }
 
-      // Fallback if childList is empty, but item has images or single video
-      if (rawSlidesInput.length === 0) {
-        if (rawVideoUrl) {
-          rawSlidesInput.push({ type: 'video', videoUrl: rawVideoUrl, imageUrl: rawDisplayUrl });
-        } else if (rawImages.length > 0) {
-          for (const imgUrl of rawImages) {
-            rawSlidesInput.push({ type: 'image', imageUrl: imgUrl });
+      // Also inspect additional dataset items if actor emitted multiple rows for the same post/shortcode
+      const baseShortCode = String(item.shortCode || shortcode || '').toLowerCase();
+      if (items.length > 1) {
+        for (const extraItem of items.slice(1)) {
+          if (!extraItem || extraItem.error) continue;
+          const extraSc = String(extraItem.shortCode || '').toLowerCase();
+          if (baseShortCode && extraSc && extraSc !== baseShortCode) continue;
+          const extraVid = pickVidFromNode(extraItem);
+          const extraImg = pickImgFromNode(extraItem);
+          if (extraVid) pushRawSlide('video', extraVid, extraImg);
+          else if (extraImg) pushRawSlide('image', undefined, extraImg);
+          if (Array.isArray(extraItem.images)) {
+            for (const u of extraItem.images) {
+              const s = typeof u === 'string' ? u.trim() : pickImgFromNode(u);
+              if (s) pushRawSlide('image', undefined, s);
+            }
           }
-        } else if (rawDisplayUrl) {
-          rawSlidesInput.push({ type: 'image', imageUrl: rawDisplayUrl });
         }
       }
 
-      console.log(`[Apify Pipeline] Extracted ${rawSlidesInput.length} media slide(s) for ${instagramUrl}`);
+      // Always merge rawVideoUrl + rawVideos + rawImages so partial childPosts never hide remaining carousel images!
+      if (rawVideoUrl) {
+        pushRawSlide('video', rawVideoUrl, rawDisplayUrl);
+      }
+      for (const vid of rawVideos) {
+        pushRawSlide('video', vid, rawDisplayUrl);
+      }
+      for (const imgUrl of rawImages) {
+        pushRawSlide('image', undefined, imgUrl);
+      }
+      if (rawSlidesInput.length === 0 && rawDisplayUrl) {
+        pushRawSlide('image', undefined, rawDisplayUrl);
+      }
 
-      // Cache slides in parallel with bounded timeout so slow external CDNs never discard Apify metadata
+      console.log(`[Apify Pipeline] Extracted ${rawSlidesInput.length} unique media slide(s) for ${instagramUrl}`);
+
+      // Cache slides in bounded batches (4 concurrent) so CDN uploads finish reliably without thundering-herd timeouts
       const cdnSlides: MediaSlide[] = [];
       const cdnImages: string[] = [];
       let cdnPrimaryVideo = rawVideoUrl;
       let cdnPrimaryThumb = '';
 
       const nowPfx = Date.now();
-      const targetSlides = rawSlidesInput.slice(0, 8);
-      const slideResults = await Promise.allSettled(
-        targetSlides.map(async (slide, i) => {
-          if (slide.type === 'video' && slide.videoUrl) {
-            const [cachedVideo, cachedThumb] = await Promise.all([
-              Promise.race([
-                downloadAndCacheVideo(slide.videoUrl, `ig_vid_slide_${nowPfx}_${i}`, 'instagram', cleanUsername),
-                new Promise<string>((resolve) => setTimeout(() => resolve(slide.videoUrl || ''), 20000))
-              ]),
-              slide.imageUrl
-                ? Promise.race([
-                    downloadAndCacheImage(slide.imageUrl, `ig_thumb_slide_${nowPfx}_${i}`, 'instagram', cleanUsername),
-                    new Promise<string>((resolve) => setTimeout(() => resolve(`/api/proxy-image?url=${encodeURIComponent(slide.imageUrl!)}`), 12000))
-                  ])
-                : Promise.resolve('')
-            ]);
-            const resolvedThumb = cachedThumb || (slide.imageUrl ? `/api/proxy-image?url=${encodeURIComponent(slide.imageUrl)}` : '');
-            return {
-              type: 'video' as const,
-              url: cachedVideo || slide.videoUrl,
-              thumbnail: resolvedThumb || cachedVideo || slide.videoUrl,
-              thumbOnly: resolvedThumb
-            };
-          } else if (slide.imageUrl) {
-            const cachedImg = await Promise.race([
-              downloadAndCacheImage(slide.imageUrl, `ig_img_slide_${nowPfx}_${i}`, 'instagram', cleanUsername),
-              new Promise<string>((resolve) => setTimeout(() => resolve(`/api/proxy-image?url=${encodeURIComponent(slide.imageUrl!)}`), 12000))
-            ]);
-            const finalImg = cachedImg || `/api/proxy-image?url=${encodeURIComponent(slide.imageUrl)}`;
-            return {
-              type: 'image' as const,
-              url: finalImg,
-              thumbnail: finalImg,
-              thumbOnly: finalImg
-            };
-          }
-          return null;
-        })
-      );
+      const targetSlides = rawSlidesInput.slice(0, 16);
+      const slideResults: Array<PromiseSettledResult<{ type: 'video' | 'image'; url: string; thumbnail: string; thumbOnly: string } | null>> = [];
+
+      const cacheSingleSlide = async (slide: { type: 'video' | 'image'; videoUrl?: string; imageUrl?: string }, i: number) => {
+        if (slide.type === 'video' && slide.videoUrl) {
+          const [cachedVideo, cachedThumb] = await Promise.all([
+            Promise.race([
+              downloadAndCacheVideo(slide.videoUrl, `ig_vid_slide_${nowPfx}_${i}`, 'instagram', cleanUsername),
+              new Promise<string>((resolve) => setTimeout(() => resolve(slide.videoUrl || ''), 24000))
+            ]),
+            slide.imageUrl
+              ? Promise.race([
+                  downloadAndCacheImage(slide.imageUrl, `ig_thumb_slide_${nowPfx}_${i}`, 'instagram', cleanUsername),
+                  new Promise<string>((resolve) => setTimeout(() => resolve(`/api/proxy-image?url=${encodeURIComponent(slide.imageUrl!)}`), 20000))
+                ])
+              : Promise.resolve('')
+          ]);
+          const resolvedThumb = cachedThumb || (slide.imageUrl ? `/api/proxy-image?url=${encodeURIComponent(slide.imageUrl)}` : '');
+          return {
+            type: 'video' as const,
+            url: cachedVideo || slide.videoUrl,
+            thumbnail: resolvedThumb || cachedVideo || slide.videoUrl,
+            thumbOnly: resolvedThumb
+          };
+        } else if (slide.imageUrl) {
+          const cachedImg = await Promise.race([
+            downloadAndCacheImage(slide.imageUrl, `ig_img_slide_${nowPfx}_${i}`, 'instagram', cleanUsername),
+            new Promise<string>((resolve) => setTimeout(() => resolve(`/api/proxy-image?url=${encodeURIComponent(slide.imageUrl!)}`), 22000))
+          ]);
+          const finalImg = cachedImg || `/api/proxy-image?url=${encodeURIComponent(slide.imageUrl)}`;
+          return {
+            type: 'image' as const,
+            url: finalImg,
+            thumbnail: finalImg,
+            thumbOnly: finalImg
+          };
+        }
+        return null;
+      };
+
+      const BATCH_SIZE = 4;
+      for (let start = 0; start < targetSlides.length; start += BATCH_SIZE) {
+        const chunk = targetSlides.slice(start, start + BATCH_SIZE);
+        const chunkSettled = await Promise.allSettled(
+          chunk.map((slide, offset) => cacheSingleSlide(slide, start + offset))
+        );
+        slideResults.push(...chunkSettled);
+      }
 
       for (const res of slideResults) {
         if (res.status === 'fulfilled' && res.value) {
@@ -1696,10 +1825,42 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
   let authorName = '';
   let rawThumb = '';
   let rawVideo = '';
+  const collectedRawSlides: Array<{ type: 'video' | 'image'; url: string; thumbnail?: string }> = [];
+  const seenSlideKeys = new Set<string>();
   const isReel = /\/(?:reel|reels)\//i.test(instagramUrl);
+
+  const pushUniqueSlide = (type: 'video' | 'image', url: string, thumbnail?: string) => {
+    const clean = decodeInstagramEscapedUrl(url);
+    if (!clean || clean.includes('rsrc.php') || clean.includes('s150x150') || clean.includes('s320x320')) return;
+    const key = (() => {
+      try {
+        return new URL(clean).pathname;
+      } catch {
+        return clean.split('?')[0];
+      }
+    })();
+    if (seenSlideKeys.has(key)) return;
+    seenSlideKeys.add(key);
+    collectedRawSlides.push({ type, url: clean, thumbnail: thumbnail ? decodeInstagramEscapedUrl(thumbnail) : undefined });
+  };
 
   const parseEmbedHtml = (html: string) => {
     if (!html) return;
+
+    // Collect all carousel slides from inline JSON / media tags
+    for (const m of html.matchAll(/"video_url"\s*:\s*"([^"]+)"/gi)) {
+      if (m[1]) pushUniqueSlide('video', m[1]);
+    }
+    for (const m of html.matchAll(/<video[^>]+src=["']([^"']+)["']/gi)) {
+      if (m[1]) pushUniqueSlide('video', m[1]);
+    }
+    for (const m of html.matchAll(/"display_url"\s*:\s*"([^"]+)"/gi)) {
+      if (m[1]) pushUniqueSlide('image', m[1]);
+    }
+    for (const m of html.matchAll(/class=["']EmbeddedMediaImage["'][^>]*src=["']([^"']+)["']/gi)) {
+      if (m[1]) pushUniqueSlide('image', m[1]);
+    }
+
     if (!rawThumb) {
       const imgMatch =
         html.match(/class=["']EmbeddedMediaImage["'][^>]*src=["']([^"']+)["']/i) ||
@@ -1751,8 +1912,8 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
     console.warn(`[Instagram Bridge] Embed captioned frame notice:`, err.message);
   }
 
-  // Tier 2: Plain /embed/ endpoint (sometimes succeeds when captioned fails or omits media)
-  if (!rawThumb || !rawVideo) {
+  // Tier 2: Plain /embed/ endpoint (runs if media missing or carousel still has <= 1 slide)
+  if (!rawThumb || !rawVideo || collectedRawSlides.length <= 1) {
     try {
       const plainEmbedRes = await axios.get(`https://www.instagram.com/p/${shortcode}/embed/`, {
         timeout: 7000,
@@ -1768,7 +1929,7 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
   }
 
   // Tier 3: Direct post page OpenGraph tags via social crawler User-Agent
-  if (!rawThumb || !caption) {
+  if (!rawThumb || !caption || collectedRawSlides.length <= 1) {
     try {
       const directRes = await axios.get(`https://www.instagram.com/${isReel ? 'reel' : 'p'}/${shortcode}/`, {
         timeout: 7000,
@@ -1833,8 +1994,39 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
     cdnVideo = await downloadAndCacheVideo(rawVideo, `ig_bridge_vid_${shortcode}`, 'instagram', cleanUser);
   }
 
-  if (cdnThumb || cdnVideo || caption) {
-    console.log(`[Instagram Bridge SUCCESS] Successfully extracted post ${shortcode} (Thumb: ${!!cdnThumb}, Video: ${!!cdnVideo})`);
+  const cdnSlides: MediaSlide[] = [];
+  const cdnImages: string[] = [];
+  if (collectedRawSlides.length > 1) {
+    const bridgeTarget = collectedRawSlides.slice(0, 16);
+    const bridgeResults: Array<PromiseSettledResult<{ type: 'video' | 'image'; url: string; thumbnail?: string }>> = [];
+    for (let start = 0; start < bridgeTarget.length; start += 4) {
+      const chunk = bridgeTarget.slice(start, start + 4);
+      const settled = await Promise.allSettled(
+        chunk.map(async (s, offset) => {
+          const idx = start + offset;
+          if (s.type === 'video') {
+            const vid = await downloadAndCacheVideo(s.url, `ig_bridge_slide_vid_${shortcode}_${idx}`, 'instagram', cleanUser);
+            return { type: 'video' as const, url: vid || s.url, thumbnail: cdnThumb || s.thumbnail };
+          }
+          const img = await downloadAndCacheImage(s.url, `ig_bridge_slide_img_${shortcode}_${idx}`, 'instagram', cleanUser);
+          const finalImg = img || `/api/proxy-image?url=${encodeURIComponent(s.url)}`;
+          return { type: 'image' as const, url: finalImg, thumbnail: finalImg };
+        })
+      );
+      bridgeResults.push(...settled);
+    }
+    for (const r of bridgeResults) {
+      if (r.status === 'fulfilled' && r.value) {
+        cdnSlides.push(r.value);
+        if (r.value.type === 'image') cdnImages.push(r.value.url);
+      }
+    }
+  }
+
+  if (cdnThumb || cdnVideo || cdnSlides.length > 0 || caption) {
+    const primaryThumb = cdnThumb || cdnImages[0] || '';
+    const finalMediaType = cdnSlides.length > 1 ? 'carousel' : (cdnVideo ? 'video' : 'image');
+    console.log(`[Instagram Bridge SUCCESS] Successfully extracted post ${shortcode} (Thumb: ${!!primaryThumb}, Video: ${!!cdnVideo}, Slides: ${cdnSlides.length})`);
     return {
       success: true,
       platform: 'instagram',
@@ -1844,17 +2036,20 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
       sourceName: authorName ? `@${authorName}` : 'اینستاگرام',
       sourceHandle: authorName ? `@${authorName.replace(/^@+/, '')}` : '',
       author: authorName ? `@${authorName}` : 'اینستاگرام',
-      thumbnail: cdnThumb,
-      image: cdnThumb,
+      thumbnail: primaryThumb,
+      image: primaryThumb,
       videoUrl: cdnVideo || undefined,
-      mediaType: cdnVideo ? 'video' : 'image',
+      mediaType: finalMediaType,
+      images: cdnImages.length > 0 ? cdnImages : (primaryThumb ? [primaryThumb] : []),
+      slides: cdnSlides.length > 0 ? cdnSlides : undefined,
       embedUrl: `https://www.instagram.com/p/${shortcode}/embed`,
-      readingOrWatchTime: instagramUrl.includes('reel') ? 'ریلز اینستاگرام' : 'پست اینستاگرام',
+      readingOrWatchTime: cdnSlides.length > 1 ? `${cdnSlides.length} اسلاید اینستاگرام` : (instagramUrl.includes('reel') ? 'ریلز اینستاگرام' : 'پست اینستاگرام'),
       tags: ['اینستاگرام', 'ویدیو', 'رسانه', cleanUser].filter(Boolean),
       data: {
         bridge: true,
         shortcode,
-        videoUrl: cdnVideo
+        videoUrl: cdnVideo,
+        slidesCount: cdnSlides.length
       }
     };
   }
@@ -1869,12 +2064,12 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
       (process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN || db.settings?.apifyApiToken || db.settings?.apifyToken || '').trim()
     );
 
-    // If Apify is configured, prioritize Apify extraction with full 75s timeout (actor run + parallel media download)
+    // If Apify is configured, prioritize Apify extraction with full 85s timeout (actor run + batch media download)
     if (hasApifyToken) {
       try {
         console.log(`[Instagram Pipeline] Priority Tier 1: Executing Apify extraction for ${cleanUrl}...`);
         const apifyPromise = fetchInstagramViaApify(cleanUrl);
-        const apifyTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Apify timeout after 75s')), 75000));
+        const apifyTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Apify timeout after 85s')), 85000));
         const apifyResult: any = await Promise.race([apifyPromise, apifyTimeout]);
         if (apifyResult && apifyResult.success) {
           console.log(`[Instagram Pipeline SUCCESS] Apify extracted details for ${cleanUrl}`);
@@ -2112,8 +2307,8 @@ async function enrichDatabaseContent(id: string, url: string) {
     if (!item) {
       item = {
         id: id || `content-${Date.now()}`,
-        title: meta.title || 'محتوای اشتراک‌گذاری شده',
-        description: meta.description || '',
+        title: meta.platform === 'instagram' ? '' : (meta.title || 'محتوای اشتراک‌گذاری شده'),
+        description: meta.platform === 'instagram' ? '' : (meta.description || ''),
         url,
         platform: meta.platform || 'article',
         embedUrl: meta.embedUrl || url,
@@ -2153,11 +2348,11 @@ async function enrichDatabaseContent(id: string, url: string) {
       return item;
     }
 
-    if (meta.title && meta.title.trim() && meta.title !== item.title) {
+    if (item.platform !== 'instagram' && !item.hasCustomTitle && meta.title && meta.title.trim() && meta.title !== item.title) {
       item.title = meta.title.trim();
       changed = true;
     }
-    if (meta.description && meta.description.trim() && (!item.description || item.description.includes('به اشتراک گذاشته شده') || item.description.length < 20)) {
+    if (item.platform !== 'instagram' && meta.description && meta.description.trim() && (!item.description || item.description.includes('به اشتراک گذاشته شده') || item.description.length < 20)) {
       item.description = meta.description.trim();
       changed = true;
     }
@@ -2173,17 +2368,20 @@ async function enrichDatabaseContent(id: string, url: string) {
       item.videoUrl = meta.videoUrl.trim();
       changed = true;
     }
-    if (meta.mediaType && item.mediaType !== meta.mediaType) {
-      item.mediaType = meta.mediaType;
-      changed = true;
-    }
-    if (meta.images && meta.images.length > 0) {
+    if (meta.images && meta.images.length > 0 && meta.images.length >= (Array.isArray(item.images) ? item.images.length : 0)) {
       item.images = meta.images;
       changed = true;
     }
-    if (meta.slides && meta.slides.length > 0) {
+    if (meta.slides && meta.slides.length > 0 && meta.slides.length >= (Array.isArray(item.slides) ? item.slides.length : 0)) {
       item.slides = meta.slides;
       changed = true;
+    }
+    if (meta.mediaType) {
+      const nextMediaType = Array.isArray(item.slides) && item.slides.length > 1 ? 'carousel' : meta.mediaType;
+      if (item.mediaType !== nextMediaType) {
+        item.mediaType = nextMediaType;
+        changed = true;
+      }
     }
     if (meta.data?.apify) {
       item.apifyFetched = true;
@@ -2382,7 +2580,9 @@ app.post('/api/contents', rateLimit('add-content', 30, 60_000), async (req: Requ
   const existingIdx = db.contents.findIndex((c: any) => c.id === contentId);
   const newItem = {
     id: contentId,
-    title: title || 'محتوای اشتراک‌گذاری شده',
+    title: platform === 'instagram'
+      ? (typeof title === 'string' ? title.trim() : '')
+      : (title || 'محتوای اشتراک‌گذاری شده'),
     description: description || '',
     url,
     platform: platform || 'article',
@@ -2413,7 +2613,8 @@ app.post('/api/contents', rateLimit('add-content', 30, 60_000), async (req: Requ
     mediaType: req.body.mediaType || (req.body.slides && req.body.slides.length > 1 ? 'carousel' : 'image'),
     images: req.body.images || [],
     slides: req.body.slides || [],
-    apifyFetched: Boolean(req.body.apifyFetched)
+    apifyFetched: Boolean(req.body.apifyFetched),
+    hasCustomTitle: Boolean(req.body.hasCustomTitle && typeof title === 'string' && title.trim())
   };
 
   if (existingIdx >= 0) {
@@ -2424,7 +2625,7 @@ app.post('/api/contents', rateLimit('add-content', 30, 60_000), async (req: Requ
   saveDatabase(db);
 
   // Background enrichment: If the user didn't wait and submitted quickly with generic title/thumbnail
-  const isGenericTitle = !newItem.title || 
+  const isGenericTitle = (newItem.platform !== 'instagram' && !newItem.title) || 
     newItem.title === 'ویدیوی یوتیوب' || 
     newItem.title === 'ویدیوی آپارات' || 
     newItem.title === 'پست اینستاگرام' || 
@@ -2437,7 +2638,12 @@ app.post('/api/contents', rateLimit('add-content', 30, 60_000), async (req: Requ
     newItem.thumbnail.startsWith('data:') ||
     newItem.thumbnail.includes('unsplash');
 
-  if (isGenericTitle || needsThumbnail || needsEnrichment) {
+  const igAlreadyEnriched = newItem.platform === 'instagram' && (
+    newItem.apifyFetched ||
+    (Array.isArray(newItem.slides) && newItem.slides.length > 1)
+  );
+
+  if (!igAlreadyEnriched && (isGenericTitle || needsThumbnail || needsEnrichment)) {
     setImmediate(async () => {
       try {
         await enrichDatabaseContent(newItem.id, newItem.url);
