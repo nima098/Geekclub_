@@ -17,8 +17,6 @@ import {
   RotateCcw,
   Loader2,
   X,
-  ChevronLeft,
-  ChevronRight,
   Layers,
   Film
 } from 'lucide-react';
@@ -61,7 +59,6 @@ export const ContentCard: React.FC<ContentCardProps> = ({
 }) => {
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const [activeSlideIndex, setActiveSlideIndex] = useState(0);
 
   // Check if current user is admin or author of post
   const isAdmin = Boolean(
@@ -222,17 +219,17 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             return [{ type: 'image', url: item.thumbnail }];
           })();
 
-          const activeSlide = slideList[activeSlideIndex] || slideList[0];
+          const firstSlide = slideList[0];
           const hasMultipleSlides = slideList.length > 1;
 
           return (
             <div className="relative w-full h-full bg-slate-950 flex items-center justify-center group/ig">
-              {/* Media Display */}
-              {activeSlide.type === 'video' ? (
+              {/* Media Display (loads only cover slide in main feed) */}
+              {firstSlide.type === 'video' ? (
                 isPlayingVideo ? (
                   <div className="relative w-full h-full bg-black flex items-center justify-center">
                     <video
-                      src={activeSlide.url}
+                      src={firstSlide.url}
                       controls
                       autoPlay
                       playsInline
@@ -255,7 +252,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                     onClick={() => onOpenArticleReader(item)}
                   >
                     <img
-                      src={resolveCoverImageUrl(activeSlide.thumbnail || activeSlide.url || item.thumbnail, 'instagram', 'card')}
+                      src={resolveCoverImageUrl(firstSlide.thumbnail || firstSlide.url || item.thumbnail, 'instagram', 'card')}
                       alt={item.title || 'پست اینستاگرام'}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover/ig:scale-105 opacity-95 group-hover/ig:opacity-100"
                       loading="lazy"
@@ -276,8 +273,8 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   onClick={() => onOpenArticleReader(item)}
                 >
                   <img
-                    src={resolveCoverImageUrl(activeSlide.url || activeSlide.thumbnail || item.thumbnail, 'instagram', 'card')}
-                    alt={`${item.title || 'پست اینستاگرام'} - اسلاید ${activeSlideIndex + 1}`}
+                    src={resolveCoverImageUrl(firstSlide.url || firstSlide.thumbnail || item.thumbnail, 'instagram', 'card')}
+                    alt={item.title || 'پست اینستاگرام'}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover/ig:scale-105 opacity-95 group-hover/ig:opacity-100"
                     loading="lazy"
                     decoding="async"
@@ -287,63 +284,14 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 </div>
               )}
 
-              {/* Multi-Slide Navigation Controls */}
+              {/* Slide Count Badge Top-Right (no extra slides loaded on feed) */}
               {hasMultipleSlides && (
-                <>
-                  {/* Previous Slide Button (Right side in RTL) */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsPlayingVideo(false);
-                      setActiveSlideIndex((prev) => (prev - 1 + slideList.length) % slideList.length);
-                    }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 z-20 p-1.5 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white border border-slate-700/80 shadow-lg backdrop-blur-md transition-all active:scale-95 cursor-pointer opacity-80 hover:opacity-100"
-                    title="اسلاید قبلی"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-
-                  {/* Next Slide Button (Left side in RTL) */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsPlayingVideo(false);
-                      setActiveSlideIndex((prev) => (prev + 1) % slideList.length);
-                    }}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 z-20 p-1.5 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white border border-slate-700/80 shadow-lg backdrop-blur-md transition-all active:scale-95 cursor-pointer opacity-80 hover:opacity-100"
-                    title="اسلاید بعدی"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-
-                  {/* Dots Indicator */}
-                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-950/75 border border-slate-800/80 backdrop-blur-md shadow-lg">
-                    {slideList.map((s, idx) => (
-                      <button
-                        key={idx}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsPlayingVideo(false);
-                          setActiveSlideIndex(idx);
-                        }}
-                        className={`transition-all rounded-full cursor-pointer ${
-                          idx === activeSlideIndex
-                            ? 'w-4 h-1.5 bg-pink-400'
-                            : 'w-1.5 h-1.5 bg-slate-500 hover:bg-slate-300'
-                        }`}
-                        title={`اسلاید ${idx + 1}`}
-                      />
-                    ))}
-                  </div>
-
-                  {/* Slide Counter Badge Top-Right */}
-                  <div className="absolute top-3 right-3 z-20 flex items-center gap-1">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-900/85 text-pink-300 border border-pink-500/30 flex items-center gap-1 shadow-md backdrop-blur-md">
-                      <Layers className="w-3 h-3 text-pink-400" />
-                      اسلاید {activeSlideIndex + 1} از {slideList.length}
-                    </span>
-                  </div>
-                </>
+                <div className="absolute top-3 right-3 z-20 flex items-center gap-1 pointer-events-none">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-900/85 text-pink-300 border border-pink-500/30 flex items-center gap-1 shadow-md backdrop-blur-md">
+                    <Layers className="w-3 h-3 text-pink-400" />
+                    {slideList.length} اسلاید
+                  </span>
+                </div>
               )}
 
               {/* CDN Media Badge Top-Left */}
