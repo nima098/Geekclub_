@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { ContentItem, MediaSlide, shouldDisplayTitle } from '../../types/content';
 import { handleImageError, getPlatformFallbackImage, resolveCoverImageUrl } from '../../utils/imageHelper';
+import { YouTubePlayer } from './YouTubePlayer';
 
 interface ArticleReaderModalProps {
   item: ContentItem | null;
@@ -290,16 +291,21 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
     return 'بازکردن در منبع خبر';
   };
 
-  const getYouTubeEmbedSrc = (): string => {
+  const getYouTubeVideoId = (): string => {
     const rawEmbed = (item?.embedUrl || '').trim();
     const rawUrl = (item?.url || '').trim();
     const match =
       rawEmbed.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts|live)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i) ||
       rawUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts|live)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
-    if (match && match[1]) {
-      return `https://www.youtube.com/embed/${match[1]}?autoplay=1&controls=1&rel=0&fs=1&playsinline=1&iv_load_policy=3`;
+    return match && match[1] ? match[1] : '';
+  };
+
+  const getYouTubeEmbedSrc = (): string => {
+    const id = getYouTubeVideoId();
+    if (id) {
+      return `https://www.youtube.com/embed/${id}?autoplay=1&controls=1&rel=0&fs=1&playsinline=1&iv_load_policy=3`;
     }
-    const base = rawEmbed || rawUrl;
+    const base = (item?.embedUrl || item?.url || '').trim();
     if (!base) return '';
     const sep = base.includes('?') ? '&' : '?';
     return `${base}${sep}autoplay=1&controls=1&rel=0&fs=1&playsinline=1&iv_load_policy=3`;
@@ -321,7 +327,7 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Top Header Bar */}
-        <div className="p-3 sm:p-3.5 border-b border-slate-800 flex items-center justify-start bg-slate-900/90 backdrop-blur-xl shrink-0">
+        <div className="p-3 sm:p-3.5 border-b border-slate-800 flex items-center justify-start bg-slate-900/95 backdrop-blur-xl shrink-0">
           <div className="flex items-center shrink-0">
             <button
               type="button"
@@ -335,24 +341,36 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
         </div>
 
         {/* Modal Body / Main Viewport */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 lg:p-6 space-y-5">
-          {/* 1. YouTube Video Embed Player (Default YouTube Native Player with Full Controls) */}
-          {item.platform === 'youtube' && (
-            <div
-              dir="ltr"
-              className="relative w-full mx-auto aspect-video rounded-2xl overflow-hidden bg-black shadow-2xl border border-slate-800"
-              style={{ maxWidth: 'min(100%, calc(52vh * 16 / 9))' }}
-            >
-              <iframe
-                src={getYouTubeEmbedSrc()}
-                title={item.title}
-                className="absolute inset-0 w-full h-full border-0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-                referrerPolicy="strict-origin-when-cross-origin"
-                allowFullScreen
-              />
-            </div>
-          )}
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 lg:p-6 space-y-5">
+          {/* 1. YouTube Video Embed Player (Unified Bottom Control Bar, No More Videos Overlay) */}
+          {item.platform === 'youtube' && (() => {
+            const ytId = getYouTubeVideoId();
+            if (ytId) {
+              return (
+                <YouTubePlayer
+                  videoId={ytId}
+                  title={item.title}
+                  posterUrl={resolveCoverImageUrl(item.thumbnail, 'youtube', 'modal')}
+                />
+              );
+            }
+            return (
+              <div
+                dir="ltr"
+                className="relative w-full mx-auto aspect-video min-h-[210px] sm:min-h-[300px] shrink-0 rounded-2xl overflow-hidden bg-black shadow-2xl border border-slate-800"
+                style={{ maxWidth: 'min(100%, max(480px, calc(56vh * 16 / 9)))' }}
+              >
+                <iframe
+                  src={getYouTubeEmbedSrc()}
+                  title={item.title}
+                  className="absolute inset-0 w-full h-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                />
+              </div>
+            );
+          })()}
 
           {/* 2. Aparat Video Embed Player */}
           {item.platform === 'aparat' && (
@@ -392,9 +410,9 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
                   setTouchStartX(null);
                 }}
               >
-                {/* Counter Badge (Top-Right inside media frame) */}
+                {/* Counter Badge (Top-Right inside media frame, shifts beside close button when video is playing) */}
                 {(hasMultipleSlides || isFetchingSlides) && (
-                  <div dir="rtl" className="absolute top-3 right-3 z-30">
+                  <div dir="rtl" className={`absolute top-3 z-30 transition-all ${isPlayingIgVideo ? 'right-14' : 'right-3'}`}>
                     <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 border border-slate-700/60 flex items-center gap-1.5 shadow-lg">
                       <Layers className="w-3.5 h-3.5 text-slate-300" />
                       {isFetchingSlides
@@ -438,10 +456,10 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
                               type="button"
                               onClick={() => setIsPlayingIgVideo(false)}
                               aria-label="بستن پخش ویدیو"
-                              className="absolute bottom-4 left-4 z-20 w-8 h-8 p-0 m-0 leading-none text-center rounded-xl bg-black/80 hover:bg-black text-white text-xs transition cursor-pointer backdrop-blur-md border border-white/20 inline-flex items-center justify-center shrink-0"
+                              className="absolute top-3 right-3 z-30 w-9 h-9 p-0 m-0 leading-none text-center rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/60 shadow-lg transition cursor-pointer inline-flex items-center justify-center shrink-0"
                               title="بستن پخش ویدیو"
                             >
-                              <X className="w-4 h-4 block m-0 shrink-0" />
+                              <X className="w-5 h-5 block m-0 shrink-0" />
                             </button>
                           </div>
                         ) : (
@@ -735,7 +753,7 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
         </div>
 
         {/* Modal Footer Action Bar */}
-        <div className="p-4 sm:p-5 border-t border-slate-800 bg-slate-900/90 backdrop-blur-xl flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div className="p-4 sm:p-5 border-t border-slate-800 bg-slate-900/95 backdrop-blur-xl flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-2">
             {/* Like */}
             <button
