@@ -2,27 +2,8 @@ import React, { useState } from 'react';
 import { 
   Search, 
   X, 
-  SlidersHorizontal, 
-  Youtube, 
-  Instagram, 
-  Newspaper, 
-  Grid3X3, 
-  Grid2X2, 
-  LayoutList, 
-  Flame, 
-  MessageSquare, 
-  ThumbsUp, 
-  Clock, 
-  Video, 
-  Check, 
-  Bookmark, 
-  Trash2,
   ChevronDown,
-  ChevronUp,
-  RotateCcw,
-  Sparkles,
-  Layers,
-  Filter
+  ChevronUp
 } from 'lucide-react';
 import { Platform, Category, SortOption, ViewMode } from '../../types/content';
 
@@ -94,29 +75,24 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     >
       {/* 1. Sidebar Header */}
       <div className="feed-sidebar-header flex items-center justify-between border-b border-slate-800/80 light:border-slate-200/80 pb-3.5">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-[#0077d9] text-white flex items-center justify-center shadow-md shadow-[#0077d9]/30 shrink-0">
-            <SlidersHorizontal className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="text-sm font-black text-slate-100 light:text-slate-900">
-              فیلترها و دسته‌بندی
-            </h3>
-            <span className="text-[11px] text-slate-400 light:text-slate-500 font-medium">
-              ناوبری محتوای گیک کلاب
-            </span>
-          </div>
+        <div>
+          <h3 className="text-sm font-black text-slate-100 light:text-slate-900">
+            فیلترها و دسته‌بندی
+          </h3>
+          <span className="text-[11px] text-slate-400 light:text-slate-500 font-medium">
+            ناوبری محتوای گیک کلاب
+          </span>
         </div>
 
         <div className="flex items-center gap-1.5">
           {activeFilterCount > 0 && (
             <button
+              type="button"
               onClick={onResetFilters}
               id="btn-filter-reset-top"
-              className="btn-filter-reset text-[11px] font-bold text-indigo-400 hover:text-indigo-300 px-2 py-1 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 transition flex items-center gap-1 cursor-pointer"
+              className="btn-filter-reset text-[11px] font-bold text-indigo-400 hover:text-indigo-300 px-2.5 py-1 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 transition flex items-center justify-center cursor-pointer"
               title="پاک کردن تمام فیلترها"
             >
-              <RotateCcw className="w-3 h-3" />
               <span>ریست ({activeFilterCount})</span>
             </button>
           )}
@@ -150,8 +126,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         />
         {searchQuery && (
           <button
+            type="button"
             onClick={() => onSearchChange('')}
-            className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 hover:text-white transition cursor-pointer"
+            className="btn-sidebar-search-clear absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 hover:text-white transition cursor-pointer"
             title="پاک کردن جستجو"
           >
             <X className="w-4 h-4" />
@@ -164,103 +141,100 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         
         {/* 3. Platform Filter Section */}
         <div className="feed-sidebar-section feed-sidebar-platforms space-y-2">
-          <span className="feed-sidebar-section-title text-xs font-bold text-slate-300 light:text-slate-700 flex items-center gap-1.5">
-            <Layers className="w-3.5 h-3.5 text-[#0077d9]" />
+          <span className="feed-sidebar-section-title block text-xs font-bold text-slate-300 light:text-slate-700">
             انتخاب پلتفرم
           </span>
 
           <div className="flex flex-col gap-1.5">
             {/* All Platforms */}
             <button
+              type="button"
               id="btn-filter-platform-all"
               onClick={() => onPlatformChange('all')}
-              className={`btn-filter-platform-all w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`btn-filter-platform-all w-full flex items-center justify-start px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 selectedPlatform === 'all'
                   ? 'bg-[#0077d9] text-white shadow-md shadow-[#0077d9]/25 font-black'
                   : 'bg-slate-800/60 light:bg-slate-100 hover:bg-slate-800 light:hover:bg-slate-200 text-slate-300 light:text-slate-700 border border-slate-750 light:border-slate-200'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                <span>همه پلتفرم‌ها</span>
-              </div>
-              {selectedPlatform === 'all' && <Check className="w-3.5 h-3.5 text-white" />}
+              <span>همه پلتفرم‌ها</span>
             </button>
 
             {/* YouTube */}
             <button
+              type="button"
               id="btn-filter-platform-youtube"
               onClick={() => onPlatformChange('youtube')}
-              className={`btn-filter-platform-youtube w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`btn-filter-platform-youtube w-full flex items-center justify-start px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 selectedPlatform === 'youtube'
                   ? 'bg-red-600 text-white shadow-md shadow-red-600/30 font-black'
                   : 'bg-slate-800/60 light:bg-slate-100 hover:bg-slate-800 light:hover:bg-slate-200 text-slate-300 light:text-slate-700 border border-slate-750 light:border-slate-200'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <Youtube className="w-3.5 h-3.5 text-red-500" />
-                <span>ویدیوهای یوتیوب</span>
-              </div>
-              {selectedPlatform === 'youtube' && <Check className="w-3.5 h-3.5 text-white" />}
+              <span>ویدیوهای یوتیوب</span>
             </button>
 
             {/* Instagram */}
             <button
+              type="button"
               id="btn-filter-platform-instagram"
               onClick={() => onPlatformChange('instagram')}
-              className={`btn-filter-platform-instagram w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`btn-filter-platform-instagram w-full flex items-center justify-start px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 selectedPlatform === 'instagram'
                   ? 'bg-gradient-to-r from-amber-500 via-rose-500 to-purple-600 text-white shadow-md shadow-rose-500/30 font-black'
                   : 'bg-slate-800/60 light:bg-slate-100 hover:bg-slate-800 light:hover:bg-slate-200 text-slate-300 light:text-slate-700 border border-slate-750 light:border-slate-200'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <Instagram className="w-3.5 h-3.5 text-pink-500" />
-                <span>پست و ریلز اینستاگرام</span>
-              </div>
-              {selectedPlatform === 'instagram' && <Check className="w-3.5 h-3.5 text-white" />}
+              <span>پست و ریلز اینستاگرام</span>
             </button>
 
             {/* Aparat */}
             <button
+              type="button"
               id="btn-filter-platform-aparat"
               onClick={() => onPlatformChange('aparat')}
-              className={`btn-filter-platform-aparat w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`btn-filter-platform-aparat w-full flex items-center justify-start px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 selectedPlatform === 'aparat'
                   ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30 font-black'
                   : 'bg-slate-800/60 light:bg-slate-100 hover:bg-slate-800 light:hover:bg-slate-200 text-slate-300 light:text-slate-700 border border-slate-750 light:border-slate-200'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <Video className="w-3.5 h-3.5 text-rose-500" />
-                <span>ویدیوهای آپارات</span>
-              </div>
-              {selectedPlatform === 'aparat' && <Check className="w-3.5 h-3.5 text-white" />}
+              <span>ویدیوهای آپارات</span>
+            </button>
+
+            {/* Telegram */}
+            <button
+              type="button"
+              id="btn-filter-platform-telegram"
+              onClick={() => onPlatformChange('telegram')}
+              className={`btn-filter-platform-telegram w-full flex items-center justify-start px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                selectedPlatform === 'telegram'
+                  ? 'bg-sky-600 text-white shadow-md shadow-sky-600/30 font-black'
+                  : 'bg-slate-800/60 light:bg-slate-100 hover:bg-slate-800 light:hover:bg-slate-200 text-slate-300 light:text-slate-700 border border-slate-750 light:border-slate-200'
+              }`}
+            >
+              <span>پست‌های تلگرام</span>
             </button>
 
             {/* Web Articles */}
             <button
+              type="button"
               id="btn-filter-platform-article"
               onClick={() => onPlatformChange('article')}
-              className={`btn-filter-platform-article w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`btn-filter-platform-article w-full flex items-center justify-start px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 selectedPlatform === 'article'
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-black'
                   : 'bg-slate-800/60 light:bg-slate-100 hover:bg-slate-800 light:hover:bg-slate-200 text-slate-300 light:text-slate-700 border border-slate-750 light:border-slate-200'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <Newspaper className="w-3.5 h-3.5 text-emerald-500" />
-                <span>مقالات تخصصی وب</span>
-              </div>
-              {selectedPlatform === 'article' && <Check className="w-3.5 h-3.5 text-white" />}
+              <span>مقالات تخصصی وب</span>
             </button>
           </div>
         </div>
 
         {/* 4. Category Filter Section */}
         <div className="feed-sidebar-section feed-sidebar-categories space-y-2 border-t border-slate-800/80 light:border-slate-200/80 pt-4">
-          <span className="feed-sidebar-section-title text-xs font-bold text-slate-300 light:text-slate-700 flex items-center gap-1.5">
-            <Filter className="w-3.5 h-3.5 text-[#0077d9]" />
+          <span className="feed-sidebar-section-title block text-xs font-bold text-slate-300 light:text-slate-700">
             موضوعات و دسته‌بندی‌ها
           </span>
 
@@ -269,17 +243,17 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               const isSelected = selectedCategory === cat.id;
               return (
                 <button
+                  type="button"
                   key={cat.id}
                   id={`btn-filter-category-${cat.id}`}
                   onClick={() => onCategoryChange(cat.id)}
-                  className={`btn-filter-category btn-filter-category-${cat.id} w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all cursor-pointer ${
+                  className={`btn-filter-category btn-filter-category-${cat.id} w-full flex items-center justify-start px-3 py-2 rounded-xl text-xs transition-all cursor-pointer ${
                     isSelected
                       ? 'bg-[#0077d9] text-white font-black shadow-md shadow-[#0077d9]/25'
                       : 'text-slate-300 light:text-slate-700 hover:text-white hover:bg-slate-800/70 light:hover:bg-slate-200/80 font-medium'
                   }`}
                 >
                   <span className="truncate">{cat.label}</span>
-                  {isSelected && <Check className="w-3.5 h-3.5 text-white shrink-0" />}
                 </button>
               );
             })}
@@ -288,61 +262,73 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
         {/* 5. Sort Options Section */}
         <div className="feed-sidebar-section feed-sidebar-sorting space-y-2 border-t border-slate-800/80 light:border-slate-200/80 pt-4">
-          <span className="feed-sidebar-section-title text-xs font-bold text-slate-300 light:text-slate-700 flex items-center gap-1.5">
-            <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-400" />
+          <span className="feed-sidebar-section-title block text-xs font-bold text-slate-300 light:text-slate-700">
             مرتب‌سازی مطالب
           </span>
 
           <div className="grid grid-cols-2 gap-1.5">
             <button
+              type="button"
+              id="btn-filter-sort-highest_score"
+              onClick={() => onSortChange('highest_score')}
+              className={`btn-filter-sort btn-filter-sort-highest_score col-span-2 flex items-center justify-center py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                sortOption === 'highest_score'
+                  ? 'bg-[#0077d9] text-white shadow-md shadow-[#0077d9]/25'
+                  : 'bg-slate-800/60 light:bg-slate-100 hover:bg-slate-800 light:hover:bg-slate-200 text-slate-300 light:text-slate-700 border border-slate-750 light:border-slate-200'
+              }`}
+            >
+              <span>بیشترین امتیاز</span>
+            </button>
+
+            <button
+              type="button"
               id="btn-filter-sort-newest"
               onClick={() => onSortChange('newest')}
-              className={`btn-filter-sort btn-filter-sort-newest flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`btn-filter-sort btn-filter-sort-newest flex items-center justify-center py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 sortOption === 'newest'
                   ? 'bg-[#0077d9] text-white shadow-md shadow-[#0077d9]/25'
                   : 'bg-slate-800/60 light:bg-slate-100 hover:bg-slate-800 light:hover:bg-slate-200 text-slate-300 light:text-slate-700 border border-slate-750 light:border-slate-200'
               }`}
             >
-              <Clock className="w-3.5 h-3.5" />
               <span>جدیدترین</span>
             </button>
 
             <button
+              type="button"
               id="btn-filter-sort-most_liked"
               onClick={() => onSortChange('most_liked')}
-              className={`btn-filter-sort btn-filter-sort-most_liked flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`btn-filter-sort btn-filter-sort-most_liked flex items-center justify-center py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 sortOption === 'most_liked'
                   ? 'bg-[#0077d9] text-white shadow-md shadow-[#0077d9]/25'
                   : 'bg-slate-800/60 light:bg-slate-100 hover:bg-slate-800 light:hover:bg-slate-200 text-slate-300 light:text-slate-700 border border-slate-750 light:border-slate-200'
               }`}
             >
-              <ThumbsUp className="w-3.5 h-3.5" />
               <span>محبوب‌ترین</span>
             </button>
 
             <button
+              type="button"
               id="btn-filter-sort-most_comments"
               onClick={() => onSortChange('most_comments')}
-              className={`btn-filter-sort btn-filter-sort-most_comments flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`btn-filter-sort btn-filter-sort-most_comments flex items-center justify-center py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 sortOption === 'most_comments'
                   ? 'bg-[#0077d9] text-white shadow-md shadow-[#0077d9]/25'
                   : 'bg-slate-800/60 light:bg-slate-100 hover:bg-slate-800 light:hover:bg-slate-200 text-slate-300 light:text-slate-700 border border-slate-750 light:border-slate-200'
               }`}
             >
-              <MessageSquare className="w-3.5 h-3.5" />
               <span>پربحث‌ترین</span>
             </button>
 
             <button
+              type="button"
               id="btn-filter-sort-trending"
               onClick={() => onSortChange('trending')}
-              className={`btn-filter-sort btn-filter-sort-trending flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`btn-filter-sort btn-filter-sort-trending flex items-center justify-center py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 sortOption === 'trending'
                   ? 'bg-[#0077d9] text-white shadow-md shadow-[#0077d9]/25'
                   : 'bg-slate-800/60 light:bg-slate-100 hover:bg-slate-800 light:hover:bg-slate-200 text-slate-300 light:text-slate-700 border border-slate-750 light:border-slate-200'
               }`}
             >
-              <Flame className="w-3.5 h-3.5 text-amber-400" />
               <span>داغ‌ترین</span>
             </button>
           </div>
@@ -350,8 +336,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
         {/* 6. View Mode Section */}
         <div className="feed-sidebar-section feed-sidebar-viewmode space-y-2 border-t border-slate-800/80 light:border-slate-200/80 pt-4">
-          <span className="feed-sidebar-section-title text-xs font-bold text-slate-300 light:text-slate-700 flex items-center gap-1.5">
-            <Grid3X3 className="w-3.5 h-3.5 text-[#0077d9]" />
+          <span className="feed-sidebar-section-title block text-xs font-bold text-slate-300 light:text-slate-700">
             حالت چینش کارت‌ها
           </span>
 
@@ -359,6 +344,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             {/* Row 1: Grid 6, Grid 5, Grid 4 */}
             <div className="flex items-center gap-1 bg-slate-800/80 light:bg-slate-100 border border-slate-750 light:border-slate-200 rounded-2xl p-1">
               <button
+                type="button"
                 id="btn-filter-viewmode-grid6"
                 onClick={() => onViewModeChange('grid6')}
                 className={`btn-filter-viewmode btn-filter-viewmode-grid6 flex-1 py-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
@@ -372,6 +358,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               </button>
 
               <button
+                type="button"
                 id="btn-filter-viewmode-grid5"
                 onClick={() => onViewModeChange('grid5')}
                 className={`btn-filter-viewmode btn-filter-viewmode-grid5 flex-1 py-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
@@ -385,6 +372,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               </button>
 
               <button
+                type="button"
                 id="btn-filter-viewmode-grid4"
                 onClick={() => onViewModeChange('grid4')}
                 className={`btn-filter-viewmode btn-filter-viewmode-grid4 flex-1 py-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
@@ -401,6 +389,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             {/* Row 2: Grid 3, Grid 2, Compact */}
             <div className="flex items-center gap-1 bg-slate-800/80 light:bg-slate-100 border border-slate-750 light:border-slate-200 rounded-2xl p-1">
               <button
+                type="button"
                 id="btn-filter-viewmode-grid3"
                 onClick={() => onViewModeChange('grid3')}
                 className={`btn-filter-viewmode btn-filter-viewmode-grid3 flex-1 py-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
@@ -414,6 +403,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               </button>
 
               <button
+                type="button"
                 id="btn-filter-viewmode-grid2"
                 onClick={() => onViewModeChange('grid2')}
                 className={`btn-filter-viewmode btn-filter-viewmode-grid2 flex-1 py-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
@@ -427,6 +417,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               </button>
 
               <button
+                type="button"
                 id="btn-filter-viewmode-compact"
                 onClick={() => onViewModeChange('compact')}
                 className={`btn-filter-viewmode btn-filter-viewmode-compact flex-1 py-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
@@ -445,14 +436,14 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         {/* 7. Special Lists (Saved / Trash) */}
         {(onToggleSavedOnly || (isAdmin && onToggleTrashOnly)) && (
           <div className="feed-sidebar-section feed-sidebar-shortcuts space-y-2 border-t border-slate-800/80 light:border-slate-200/80 pt-4">
-            <span className="feed-sidebar-section-title text-xs font-bold text-slate-300 light:text-slate-700 flex items-center gap-1.5">
-              <Bookmark className="w-3.5 h-3.5 text-amber-400" />
+            <span className="feed-sidebar-section-title block text-xs font-bold text-slate-300 light:text-slate-700">
               بخش‌های ویژه
             </span>
 
             <div className="space-y-1.5">
               {onToggleSavedOnly && (
                 <button
+                  type="button"
                   id="btn-filter-saved"
                   onClick={onToggleSavedOnly}
                   className={`btn-filter-saved w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
@@ -461,10 +452,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                       : 'bg-slate-800/60 light:bg-slate-100 hover:bg-slate-800 light:hover:bg-slate-200 text-slate-300 light:text-slate-700 border border-slate-750 light:border-slate-200'
                   }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <Bookmark className={`w-3.5 h-3.5 ${showSavedOnly ? 'fill-slate-950 text-slate-950' : 'text-amber-400'}`} />
-                    <span>مطالب نشان‌شده (ذخیره‌ها)</span>
-                  </div>
+                  <span>مطالب نشان‌شده (ذخیره‌ها)</span>
                   {savedCount > 0 && (
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
                       showSavedOnly ? 'bg-slate-950 text-amber-300' : 'bg-[#0077d9] text-white'
@@ -477,6 +465,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
               {isAdmin && onToggleTrashOnly && (
                 <button
+                  type="button"
                   id="btn-filter-trash"
                   onClick={onToggleTrashOnly}
                   className={`btn-filter-trash w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
@@ -485,10 +474,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                       : 'bg-slate-800/60 light:bg-slate-100 hover:bg-slate-800 light:hover:bg-slate-200 text-slate-300 light:text-slate-700 border border-slate-750 light:border-slate-200'
                   }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <Trash2 className="w-3.5 h-3.5 text-rose-400" />
-                    <span>سطل زباله محتواها</span>
-                  </div>
+                  <span>سطل زباله محتواها</span>
                   {trashCount !== undefined && trashCount > 0 && (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white">
                       {trashCount}
@@ -504,11 +490,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         {activeFilterCount > 0 && (
           <div className="feed-sidebar-footer border-t border-slate-800/80 light:border-slate-200/80 pt-4 flex flex-col gap-2">
             <button
+              type="button"
               onClick={onResetFilters}
               id="btn-filter-reset-bottom"
-              className="btn-filter-reset w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-750 light:bg-slate-200 light:hover:bg-slate-300 text-slate-200 light:text-slate-800 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer border border-slate-700/80 light:border-slate-300"
+              className="btn-filter-reset w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-750 light:bg-slate-200 light:hover:bg-slate-300 text-slate-200 light:text-slate-800 text-xs font-bold flex items-center justify-center transition cursor-pointer border border-slate-700/80 light:border-slate-300"
             >
-              <RotateCcw className="w-3.5 h-3.5 text-indigo-400" />
               <span>پاک کردن فیلترها ({activeFilterCount})</span>
             </button>
           </div>

@@ -34,11 +34,30 @@ import {
   Clock3,
   XCircle,
   Award,
-  Layers
+  Layers,
+  Edit3,
+  Link2,
+  Tag
 } from 'lucide-react';
-import { UserProfile, InboxMessage, ProfileComment, ContentItem, Platform } from '../../types/content';
+import {
+  UserProfile,
+  InboxMessage,
+  ProfileComment,
+  ContentItem,
+  Platform,
+  Category,
+  SITE_CATEGORIES,
+  getContentScore,
+  getUserOwnedContents,
+  getUserReputationStats
+} from '../../types/content';
 import { ImageCDNUpload } from '../common/ImageCDNUpload';
-import { handleImageError, FALLBACK_IMAGES } from '../../utils/imageHelper';
+import {
+  handleImageError,
+  FALLBACK_IMAGES,
+  resolveCoverImageUrl,
+  getPlatformFallbackImage
+} from '../../utils/imageHelper';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -52,6 +71,7 @@ interface ProfileModalProps {
   onAddProfileComment: (text: string) => void;
   onOpenArticle?: (item: ContentItem) => void;
   onOpenComments?: (item: ContentItem) => void;
+  onEditContent?: (contentId: string, updates: Partial<ContentItem>, customSuccessMsg?: string) => Promise<boolean> | boolean | void;
   initialTab?: 'settings' | 'my_contents' | 'inbox' | 'guestbook';
 }
 
@@ -79,6 +99,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   onAddProfileComment,
   onOpenArticle,
   onOpenComments,
+  onEditContent,
   initialTab
 }) => {
   const [activeTab, setActiveTab] = useState<'settings' | 'my_contents' | 'inbox' | 'guestbook'>(initialTab || 'my_contents');
@@ -113,20 +134,33 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const [filterStatus, setFilterStatus] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all');
   const [filterPlatform, setFilterPlatform] = useState<Platform | 'all'>('all');
 
+  // Edit My Content Modal State
+  const [editingItem, setEditingItem] = useState<ContentItem | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editUrl, setEditUrl] = useState('');
+  const [editCategory, setEditCategory] = useState<Category>('tech');
+  const [editThumbnail, setEditThumbnail] = useState('');
+  const [editTagsText, setEditTagsText] = useState('');
+  const [editDuration, setEditDuration] = useState('');
+  const [editSourceName, setEditSourceName] = useState('');
+  const [editSourceHandle, setEditSourceHandle] = useState('');
+  const [editArticleContent, setEditArticleContent] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
   if (!isOpen) return null;
 
-  // Derive user's shared contents
-  const userContents = contents.filter((c) => {
-    const matchUid = c.authorUid && user.uid && c.authorUid === user.uid;
-    const matchName = c.author?.name && user.displayName && c.author.name.trim().toLowerCase() === user.displayName.trim().toLowerCase();
-    const matchHandle = user.username && c.author?.handle && c.author.handle.toLowerCase().includes(user.username.toLowerCase());
-    return matchUid || matchName || matchHandle;
-  });
+  // Derive user's shared contents (supports UID, sharedBy, displayName, username)
+  const userContents = getUserOwnedContents(contents, user, { activeOnly: false }).filter(
+    (c) => !c.isDeleted && !c.isArchived
+  );
 
-  // Net Reputation Score = Likes - Dislikes
-  const totalLikes = userContents.reduce((sum, c) => sum + (c.likesCount || 0), 0);
-  const totalDislikes = userContents.reduce((sum, c) => sum + (c.dislikesCount || 0), 0);
-  const netScore = totalLikes - totalDislikes;
+  // Net Reputation Score = Sum(Likes - Dislikes) across user's active contents
+  const reputationStats = getUserReputationStats(contents, user);
+  const totalLikes = reputationStats.totalLikes;
+  const totalDislikes = reputationStats.totalDislikes;
+  const netScore = reputationStats.netScore;
 
   const approvedCount = userContents.filter((c) => c.approvalStatus === 'approved').length;
   const pendingCount = userContents.filter((c) => c.approvalStatus === 'pending').length;
@@ -142,6 +176,64 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
     return true;
   });
+
+  const openEditContentDialog = (item: ContentItem) => {
+    setEditingItem(item);
+    setEditTitle(item.title || '');
+    setEditDescription(item.description || '');
+    setEditUrl(item.url || '');
+    setEditCategory((item.category as Category) || 'tech');
+    setEditThumbnail(item.thumbnail || '');
+    setEditTagsText(Array.isArray(item.tags) ? item.tags.join('، ') : '');
+    setEditDuration(item.readingOrWatchTime || '');
+    setEditSourceName(item.sourceName || '');
+    setEditSourceHandle(item.sourceHandle || '');
+    setEditArticleContent(item.articleContent || '');
+    setEditError(null);
+  };
+
+  const handleSaveEditedContent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem || !onEditContent) return;
+    if (!editTitle.trim()) {
+      setEditError('عنوان محتوا نمی‌تواند خالی باشد.');
+      return;
+    }
+
+    setIsSavingEdit(true);
+    setEditError(null);
+    try {
+      const parsedTags = editTagsText
+        .split(/[,،]+/)
+        .map((t) => t.trim().replace(/^#/, ''))
+        .filter(Boolean);
+
+      const updates: Partial<ContentItem> = {
+        title: editTitle.trim(),
+        hasCustomTitle: true,
+        description: editDescription.trim(),
+        url: editUrl.trim() || editingItem.url,
+        category: editCategory,
+        thumbnail: editThumbnail.trim() || editingItem.thumbnail,
+        tags: parsedTags.length > 0 ? parsedTags : editingItem.tags,
+        readingOrWatchTime: editDuration.trim() || editingItem.readingOrWatchTime,
+        sourceName: editSourceName.trim() || undefined,
+        sourceHandle: editSourceHandle.trim() || undefined,
+        ...(editingItem.platform === 'article' ? { articleContent: editArticleContent } : {})
+      };
+
+      const res = await onEditContent(editingItem.id, updates, 'جزییات محتوای شما با موفقیت به‌روزرسانی شد.');
+      if (res === false) {
+        setEditError('ذخیره تغییرات روی سرور با خطا مواجه شد. لطفاً دوباره تلاش کنید.');
+      } else {
+        setEditingItem(null);
+      }
+    } catch (err: any) {
+      setEditError(err?.message || 'خطا در ذخیره جزییات محتوا');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -187,6 +279,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         return <Instagram className="w-4 h-4 text-pink-400" />;
       case 'aparat':
         return <VideoIcon className="w-4 h-4 text-rose-500" />;
+      case 'telegram':
+        return <Send className="w-4 h-4 text-sky-400" />;
       case 'article':
       default:
         return <Newspaper className="w-4 h-4 text-emerald-400" />;
@@ -404,10 +498,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 {/* Platform Filter */}
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800">
                   <span className="text-xs font-bold text-slate-300">پلتفرم:</span>
-                  <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-750">
+                  <div className="flex flex-wrap items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-750">
                     <button
+                      id="btn-profile-filter-all"
                       onClick={() => setFilterPlatform('all')}
-                      className={`px-2.5 py-1 text-xs rounded-lg transition ${
+                      className={`btn-profile-filter-platform px-2.5 py-1 text-xs rounded-lg transition cursor-pointer ${
                         filterPlatform === 'all'
                           ? 'bg-indigo-600 text-white font-bold'
                           : 'text-slate-400 hover:text-slate-200'
@@ -416,8 +511,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                       همه
                     </button>
                     <button
+                      id="btn-profile-filter-youtube"
                       onClick={() => setFilterPlatform('youtube')}
-                      className={`px-2.5 py-1 text-xs rounded-lg transition flex items-center gap-1 ${
+                      className={`btn-profile-filter-platform px-2.5 py-1 text-xs rounded-lg transition flex items-center gap-1 cursor-pointer ${
                         filterPlatform === 'youtube'
                           ? 'bg-indigo-600 text-white font-bold'
                           : 'text-slate-400 hover:text-slate-200'
@@ -427,8 +523,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                       یوتیوب
                     </button>
                     <button
+                      id="btn-profile-filter-instagram"
                       onClick={() => setFilterPlatform('instagram')}
-                      className={`px-2.5 py-1 text-xs rounded-lg transition flex items-center gap-1 ${
+                      className={`btn-profile-filter-platform px-2.5 py-1 text-xs rounded-lg transition flex items-center gap-1 cursor-pointer ${
                         filterPlatform === 'instagram'
                           ? 'bg-indigo-600 text-white font-bold'
                           : 'text-slate-400 hover:text-slate-200'
@@ -438,8 +535,21 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                       اینستاگرام
                     </button>
                     <button
+                      id="btn-profile-filter-telegram"
+                      onClick={() => setFilterPlatform('telegram')}
+                      className={`btn-profile-filter-platform px-2.5 py-1 text-xs rounded-lg transition flex items-center gap-1 cursor-pointer ${
+                        filterPlatform === 'telegram'
+                          ? 'bg-indigo-600 text-white font-bold'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <Send className="w-3 h-3 text-sky-400" />
+                      تلگرام
+                    </button>
+                    <button
+                      id="btn-profile-filter-article"
                       onClick={() => setFilterPlatform('article')}
-                      className={`px-2.5 py-1 text-xs rounded-lg transition flex items-center gap-1 ${
+                      className={`btn-profile-filter-platform px-2.5 py-1 text-xs rounded-lg transition flex items-center gap-1 cursor-pointer ${
                         filterPlatform === 'article'
                           ? 'bg-indigo-600 text-white font-bold'
                           : 'text-slate-400 hover:text-slate-200'
@@ -449,8 +559,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                       مقاله
                     </button>
                     <button
+                      id="btn-profile-filter-aparat"
                       onClick={() => setFilterPlatform('aparat')}
-                      className={`px-2.5 py-1 text-xs rounded-lg transition flex items-center gap-1 ${
+                      className={`btn-profile-filter-platform px-2.5 py-1 text-xs rounded-lg transition flex items-center gap-1 cursor-pointer ${
                         filterPlatform === 'aparat'
                           ? 'bg-indigo-600 text-white font-bold'
                           : 'text-slate-400 hover:text-slate-200'
@@ -470,7 +581,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     <p>هیچ محتوایی با فیلترهای انتخابی یافت نشد.</p>
                   </div>
                 ) : (
-                  filteredUserContents.map((item) => (
+                  filteredUserContents.map((item) => {
+                    const itemScore = getContentScore(item);
+                    return (
                     <div
                       key={item.id}
                       className="p-3 sm:p-3.5 rounded-2xl bg-slate-800/50 border border-slate-800 hover:bg-slate-800/80 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
@@ -479,9 +592,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                         {/* Thumbnail */}
                         <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-slate-900 shrink-0 border border-slate-700/60">
                           <img
-                            src={item.thumbnail}
+                            src={resolveCoverImageUrl(item.thumbnail, item.platform, 'card')}
                             alt={item.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition"
+                            onError={(e) => handleImageError(e, getPlatformFallbackImage(item.platform, item.url), item.platform, item.id)}
                           />
                         </div>
 
@@ -524,9 +638,22 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                       </div>
 
                       {/* Right Section: Metrics & Actions */}
-                      <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800 shrink-0">
+                      <div className="flex items-center justify-between sm:justify-end gap-2.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800 shrink-0 flex-wrap">
                         {/* Metrics */}
-                        <div className="flex items-center gap-2 text-xs font-mono">
+                        <div className="flex items-center gap-1.5 text-xs font-mono">
+                          <span
+                            className={`flex items-center gap-1 px-2 py-1 rounded-lg border font-bold dir-ltr ${
+                              itemScore > 0
+                                ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                                : itemScore < 0
+                                  ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+                                  : 'bg-slate-800 text-slate-300 border-slate-700'
+                            }`}
+                            title="امتیاز این محتوا (لایک منهای دیس‌لایک)"
+                          >
+                            <Award className="w-3 h-3 text-amber-400" />
+                            {itemScore > 0 ? `+${itemScore}` : itemScore}
+                          </span>
                           <span className="text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/20" title="لایک‌ها">
                             <ThumbsUp className="w-3 h-3" />
                             {item.likesCount || 0}
@@ -535,22 +662,32 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                             <ThumbsDown className="w-3 h-3" />
                             {item.dislikesCount || 0}
                           </span>
-                          <span className="text-slate-300 flex items-center gap-1 bg-slate-800 px-2 py-1 rounded-lg border border-slate-700" title="دیدگاه‌ها">
-                            <MessageSquare className="w-3 h-3 text-indigo-400" />
-                            {item.commentsCount || 0}
-                          </span>
                         </div>
 
                         {/* Action Buttons */}
                         <div className="flex items-center gap-1.5">
-                          {item.platform === 'article' && onOpenArticle && (
+                          {onEditContent && (
                             <button
+                              type="button"
+                              id={`btn-profile-edit-content-${item.id}`}
+                              onClick={() => openEditContentDialog(item)}
+                              className="btn-profile-edit-content px-2.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border border-amber-500/30 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                              title="ویرایش جزییات این محتوا"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                              <span>ویرایش</span>
+                            </button>
+                          )}
+
+                          {onOpenArticle && (
+                            <button
+                              type="button"
                               onClick={() => {
                                 onClose();
                                 onOpenArticle(item);
                               }}
                               className="px-2.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                              title="خواندن کامل مقاله"
+                              title="مشاهده محتوا"
                             >
                               <BookOpen className="w-3.5 h-3.5" />
                               <span className="hidden sm:inline">مشاهده</span>
@@ -559,6 +696,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
                           {onOpenComments && (
                             <button
+                              type="button"
                               onClick={() => {
                                 onClose();
                                 onOpenComments(item);
@@ -567,13 +705,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                               title="مشاهده نظرات"
                             >
                               <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
-                              <span className="hidden sm:inline">نظرات</span>
+                              <span className="hidden sm:inline">نظرات ({item.commentsCount || 0})</span>
                             </button>
                           )}
                         </div>
                       </div>
                     </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -989,6 +1128,199 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           )}
         </div>
       </div>
+
+      {/* Embedded Edit Content Dialog for User */}
+      {editingItem && (
+        <div
+          id="profile-edit-content-dialog"
+          className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-5 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-150"
+          onClick={() => !isSavingEdit && setEditingItem(null)}
+        >
+          <div
+            className="w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/95">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
+                  <Edit3 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-slate-100">ویرایش جزییات محتوا</h4>
+                  <p className="text-[11px] text-slate-400 truncate max-w-xs sm:max-w-md">{editingItem.title}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                id="btn-close-profile-edit-dialog"
+                disabled={isSavingEdit}
+                onClick={() => setEditingItem(null)}
+                className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditedContent} className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
+              {editError && (
+                <div className="p-3 rounded-xl bg-rose-950/50 border border-rose-500/40 text-rose-300 font-bold">
+                  {editError}
+                </div>
+              )}
+
+              <div>
+                <label className="block font-bold text-slate-200 mb-1.5">عنوان محتوا *</label>
+                <input
+                  type="text"
+                  id="profileEditContentTitleInput"
+                  required
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block font-bold text-slate-200 mb-1.5">دسته‌بندی موضوعی</label>
+                  <select
+                    id="profileEditContentCategorySelect"
+                    value={editCategory}
+                    onChange={(e) => setEditCategory(e.target.value as Category)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  >
+                    {SITE_CATEGORIES.filter((c) => c.id !== 'all').map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-200 mb-1.5">زمان مطالعه یا مدت ویدیو</label>
+                  <input
+                    type="text"
+                    id="profileEditContentDurationInput"
+                    value={editDuration}
+                    onChange={(e) => setEditDuration(e.target.value)}
+                    placeholder="مثلاً ۵ دقیقه مطالعه یا ۰۸:۳۰"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                  <Link2 className="w-3.5 h-3.5 text-indigo-400" />
+                  لینک اصلی منبع
+                </label>
+                <input
+                  type="url"
+                  id="profileEditContentUrlInput"
+                  value={editUrl}
+                  onChange={(e) => setEditUrl(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 font-mono dir-ltr text-left focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-200 mb-1.5">کپشن / توضیحات کامل</label>
+                <textarea
+                  id="profileEditContentDescInput"
+                  rows={3}
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-y leading-relaxed"
+                />
+              </div>
+
+              {editingItem.platform === 'article' && (
+                <div>
+                  <label className="block font-bold text-slate-200 mb-1.5">متن کامل مقاله</label>
+                  <textarea
+                    id="profileEditContentArticleInput"
+                    rows={5}
+                    value={editArticleContent}
+                    onChange={(e) => setEditArticleContent(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-y leading-relaxed"
+                  />
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block font-bold text-slate-200 mb-1.5">نام کانال / منبع</label>
+                  <input
+                    type="text"
+                    id="profileEditContentSourceNameInput"
+                    value={editSourceName}
+                    onChange={(e) => setEditSourceName(e.target.value)}
+                    placeholder="نام منبع یا کانال"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-200 mb-1.5">آیدی منبع</label>
+                  <input
+                    type="text"
+                    id="profileEditContentSourceHandleInput"
+                    value={editSourceHandle}
+                    onChange={(e) => setEditSourceHandle(e.target.value)}
+                    placeholder="@channel"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 font-mono dir-ltr text-left focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                  <Tag className="w-3.5 h-3.5 text-indigo-400" />
+                  برچسب‌ها (با ویرگول جدا کنید)
+                </label>
+                <input
+                  type="text"
+                  id="profileEditContentTagsInput"
+                  value={editTagsText}
+                  onChange={(e) => setEditTagsText(e.target.value)}
+                  placeholder="هوش مصنوعی، برنامه‌نویسی، تکنولوژی"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                />
+              </div>
+
+              <ImageCDNUpload
+                currentUrl={editThumbnail}
+                onUrlChange={(newUrl) => setEditThumbnail(newUrl)}
+                label="تصویر کاور محتوا"
+                placeholder="https://..."
+                folder="contents"
+              />
+
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  id="btn-cancel-profile-edit"
+                  disabled={isSavingEdit}
+                  onClick={() => setEditingItem(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition cursor-pointer"
+                >
+                  انصراف
+                </button>
+                <button
+                  type="submit"
+                  id="btn-save-profile-edit"
+                  disabled={isSavingEdit}
+                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold flex items-center gap-1.5 shadow-lg shadow-indigo-600/30 transition cursor-pointer"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isSavingEdit ? 'در حال ذخیره...' : 'ذخیره تغییرات'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -15,9 +15,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Layers,
-  Check
+  Check,
+  PictureInPicture2,
+  Send,
+  TrendingUp
 } from 'lucide-react';
-import { ContentItem, MediaSlide, shouldDisplayTitle } from '../../types/content';
+import { ContentItem, MediaSlide, shouldDisplayTitle, getContentScore } from '../../types/content';
 import { handleImageError, getPlatformFallbackImage, resolveCoverImageUrl } from '../../utils/imageHelper';
 import { YouTubePlayer } from './YouTubePlayer';
 
@@ -50,9 +53,27 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
   const [isFetchingSlides, setIsFetchingSlides] = useState(false);
   const [fetchedSlidesOverride, setFetchedSlidesOverride] = useState<MediaSlide[] | null>(null);
   const [openedSlideIndices, setOpenedSlideIndices] = useState<number[]>([0]);
+  const [showTelegramWidget, setShowTelegramWidget] = useState(false);
 
   const autoFetchedIdsRef = React.useRef<Set<string>>(new Set());
   const modalImageCacheRef = React.useRef<Map<string, HTMLImageElement>>(new Map());
+  const igVideoRef = React.useRef<HTMLVideoElement | null>(null);
+
+  const supportsWebPiP =
+    typeof document !== 'undefined' && Boolean((document as any).pictureInPictureEnabled);
+
+  const handleToggleIgPiP = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const videoEl = igVideoRef.current as any;
+    if (!videoEl) return;
+    try {
+      if ((document as any).pictureInPictureElement) {
+        await (document as any).exitPictureInPicture();
+      } else if (typeof videoEl.requestPictureInPicture === 'function') {
+        await videoEl.requestPictureInPicture();
+      }
+    } catch {}
+  };
 
   // Normalize slides for Instagram (merges slides[] + extra images[] + videoUrl/thumbnail fallback without dropping any slide)
   const slideList: MediaSlide[] = React.useMemo(() => {
@@ -177,6 +198,7 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
     setIsCopied(false);
     setIsZoomed(false);
     setFetchedSlidesOverride(null);
+    setShowTelegramWidget(false);
     modalImageCacheRef.current.clear();
 
     if (
@@ -267,7 +289,7 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
     if (item.platform === 'aparat' || urlLower.includes('aparat.com') || domainLower.includes('aparat')) {
       return 'بازکردن در آپارات';
     }
-    if (urlLower.includes('t.me') || urlLower.includes('telegram.me') || urlLower.includes('telegram.org') || domainLower.includes('telegram')) {
+    if (item.platform === 'telegram' || urlLower.includes('t.me') || urlLower.includes('telegram.me') || urlLower.includes('telegram.org') || domainLower.includes('telegram')) {
       return 'بازکردن در تلگرام';
     }
 
@@ -410,9 +432,9 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
                   setTouchStartX(null);
                 }}
               >
-                {/* Counter Badge (Top-Right inside media frame, shifts beside close button when video is playing) */}
+                {/* Counter Badge (Top-Right inside media frame) */}
                 {(hasMultipleSlides || isFetchingSlides) && (
-                  <div dir="rtl" className={`absolute top-3 z-30 transition-all ${isPlayingIgVideo ? 'right-14' : 'right-3'}`}>
+                  <div dir="rtl" className="absolute top-3 right-3 z-30">
                     <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 border border-slate-700/60 flex items-center gap-1.5 shadow-lg">
                       <Layers className="w-3.5 h-3.5 text-slate-300" />
                       {isFetchingSlides
@@ -446,21 +468,25 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
                         isPlayingIgVideo && isCurrent ? (
                           <div className="relative w-full h-full bg-black flex items-center justify-center">
                             <video
+                              ref={igVideoRef}
                               src={slide.url}
                               controls
                               autoPlay
                               playsInline
+                              disablePictureInPicture={supportsWebPiP}
                               className="w-full h-full object-contain"
                             />
-                            <button
-                              type="button"
-                              onClick={() => setIsPlayingIgVideo(false)}
-                              aria-label="بستن پخش ویدیو"
-                              className="absolute top-3 right-3 z-30 w-9 h-9 p-0 m-0 leading-none text-center rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/60 shadow-lg transition cursor-pointer inline-flex items-center justify-center shrink-0"
-                              title="بستن پخش ویدیو"
-                            >
-                              <X className="w-5 h-5 block m-0 shrink-0" />
-                            </button>
+                            {supportsWebPiP && (
+                              <button
+                                type="button"
+                                onClick={handleToggleIgPiP}
+                                aria-label="تصویر در تصویر"
+                                title="تصویر در تصویر"
+                                className="absolute bottom-14 right-3 z-20 w-9 h-9 p-0 m-0 leading-none text-center rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/60 shadow-lg transition cursor-pointer inline-flex items-center justify-center shrink-0"
+                              >
+                                <PictureInPicture2 className="w-4 h-4 block m-0 shrink-0" />
+                              </button>
+                            )}
                           </div>
                         ) : (
                           <div
@@ -677,6 +703,54 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
             </div>
           )}
 
+          {/* 3.5. Telegram Post Media / Video / Optional Live Widget */}
+          {item.platform === 'telegram' && (
+            <div className="space-y-3">
+              {showTelegramWidget && item.embedUrl?.includes('t.me/') ? (
+                <div className="rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 p-2">
+                  <iframe
+                    src={item.embedUrl}
+                    title={item.title}
+                    className="w-full min-h-[380px] rounded-xl border-0 bg-white"
+                  />
+                </div>
+              ) : item.videoUrl ? (
+                <div className="rounded-2xl overflow-hidden bg-black border border-slate-800 shadow-2xl flex items-center justify-center">
+                  <video
+                    src={item.videoUrl}
+                    poster={resolveCoverImageUrl(item.thumbnail, 'telegram', 'modal')}
+                    controls
+                    playsInline
+                    className="w-full max-h-[520px] object-contain"
+                  />
+                </div>
+              ) : item.thumbnail ? (
+                <div className="rounded-2xl overflow-hidden aspect-video max-h-[420px] w-full border border-slate-800 shadow-xl bg-slate-950">
+                  <img
+                    src={resolveCoverImageUrl(item.thumbnail, 'telegram', 'modal')}
+                    alt={item.title}
+                    decoding="async"
+                    className="w-full h-full object-contain"
+                    onError={(e) => handleImageError(e, getPlatformFallbackImage('telegram', item.url), 'telegram', item.id)}
+                  />
+                </div>
+              ) : null}
+
+              {item.embedUrl?.includes('t.me/') && item.embedUrl.includes('embed=1') && (
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowTelegramWidget(!showTelegramWidget)}
+                    className="px-3 py-1.5 rounded-xl bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/30 text-xs font-bold inline-flex items-center gap-1.5 transition cursor-pointer"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>{showTelegramWidget ? 'نمایش نسخه بهینه گیک‌کلاب' : 'نمایش ویجت رسمی تلگرام'}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* 4. Article Featured Image */}
           {item.platform === 'article' && item.thumbnail && (
             <div className="rounded-2xl overflow-hidden aspect-video max-h-80 w-full border border-slate-800 shadow-xl">
@@ -724,7 +798,25 @@ export const ArticleReaderModal: React.FC<ArticleReaderModalProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 text-xs text-slate-400">
+              <div className="flex items-center gap-2.5 text-xs text-slate-400">
+                {(() => {
+                  const score = getContentScore(item);
+                  return (
+                    <span
+                      className={`px-2.5 py-1 rounded-xl font-bold inline-flex items-center gap-1 ${
+                        score > 0
+                          ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                          : score < 0
+                          ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                          : 'bg-slate-700/60 text-slate-300 border border-slate-600/40'
+                      }`}
+                    >
+                      <TrendingUp className="w-3.5 h-3.5" />
+                      <span>امتیاز:</span>
+                      <span className="font-mono" dir="ltr">{score > 0 ? `+${score}` : score}</span>
+                    </span>
+                  );
+                })()}
                 <span>{item.publishedAt}</span>
               </div>
             </div>

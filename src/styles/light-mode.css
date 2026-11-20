@@ -184,4 +184,12 @@ html.light {
   .prose-invert {
     color: #334155 !important;
   }
+
+  .site-brand-icon-wrap {
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border-color: transparent !important;
+    --tw-ring-color: transparent !important;
+    padding: 0 !important;
+  }
 }

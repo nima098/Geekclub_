@@ -129,21 +129,21 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
       onClick={onClose}
     >
       <div 
-        className="w-full max-w-lg bg-slate-900 border border-amber-500/30 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        className="gc-admin-portal-modal w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header */}
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-gradient-to-r from-amber-950/40 via-slate-900 to-indigo-950/40">
+        <div className="gc-admin-portal-header p-5 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-600 text-white flex items-center justify-center shadow-lg shadow-amber-500/20 ring-2 ring-amber-400/30">
-              <Crown className="w-6 h-6 text-white" />
+            <div className="gc-admin-header-badge w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
+              <Crown className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base sm:text-lg font-black text-slate-100">
                   پورتال ورود اختصاصی مدیریت
                 </h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                <span className="gc-admin-meta-badge text-[10px] font-bold px-2 py-0.5 rounded-md">
                   انحصاری
                 </span>
               </div>
@@ -157,7 +157,7 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="بستن"
-            className="w-9 h-9 p-0 m-0 leading-none text-center rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition cursor-pointer inline-flex items-center justify-center shrink-0"
+            className="gc-admin-secondary-btn w-9 h-9 p-0 m-0 leading-none text-center rounded-xl transition cursor-pointer inline-flex items-center justify-center shrink-0"
           >
             <X className="w-5 h-5 block m-0 shrink-0" />
           </button>
@@ -167,8 +167,8 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
         <div className="p-6 space-y-6">
           {/* Current Status Banner */}
           {isAlreadyAdmin ? (
-            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-3">
-              <div className="flex items-center gap-2.5 text-emerald-400 font-bold text-sm">
+            <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/80 space-y-3">
+              <div className="flex items-center gap-2.5 font-bold text-sm">
                 <ShieldCheck className="w-5 h-5 shrink-0" />
                 <span>حساب شما به عنوان مدیر ارشد سایت شناسایی شده است.</span>
               </div>
@@ -176,11 +176,12 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
                 شما هم‌اکنون با دسترسی کامل مدیر کل وارد شده‌اید و به تمامی ابزارهای نظارت، تایید پست‌ها و مدیریت کاربران دسترسی دارید.
               </p>
               <button
+                type="button"
                 onClick={() => {
                   onClose();
                   onOpenAdminPanel();
                 }}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition cursor-pointer active:scale-98"
+                className="gc-admin-primary-btn w-full py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition cursor-pointer active:scale-98"
               >
                 <Crown className="w-4 h-4" />
                 <span>ورود به پنل ادمین</span>
@@ -353,15 +354,13 @@ export const AdminPortalLoginModal: React.FC<AdminPortalLoginModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-800 bg-slate-900/60 flex items-center justify-between text-xs text-slate-400">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>سامانه امنیتی فعال است</span>
-          </div>
+        <div className="gc-admin-portal-footer p-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+          <span>سامانه امنیتی فعال است</span>
 
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white transition cursor-pointer"
+            className="gc-admin-secondary-btn px-4 py-1.5 rounded-xl transition cursor-pointer"
           >
             بستن
           </button>

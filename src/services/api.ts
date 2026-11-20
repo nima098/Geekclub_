@@ -57,6 +57,9 @@ export async function getAdminHeaders(): Promise<Record<string, string>> {
     const rawUser = localStorage.getItem('mediahub_user_v1');
     if (rawUser) {
       const u = JSON.parse(rawUser);
+      if (u.uid) headers['X-User-Uid'] = String(u.uid);
+      if (u.email) headers['X-User-Email'] = String(u.email);
+      if (u.username) headers['X-User-Username'] = String(u.username);
       if (u.email && u.isAdmin) {
         headers['X-Admin-Email'] = u.email;
         headers['X-Admin-Role'] = 'admin';
@@ -259,26 +262,40 @@ export const api = {
     return newItem;
   },
 
-  // 3. Update content (approval / edit / delete / reaction)
-  async updateContent(id: string, updates: Partial<ContentItem>): Promise<void> {
+  // 3. Update content (approval / edit / ownership transfer / delete / reaction)
+  async updateContent(
+    id: string,
+    updates: Partial<ContentItem>
+  ): Promise<{ success: boolean; data?: ContentItem; error?: string }> {
     const encodedId = encodeURIComponent(id);
     const headers = await getAdminHeaders();
 
-    // Primary: Express REST API endpoint with POST and PATCH fallbacks
     try {
-      await fetch(`/api/contents/${encodedId}/update`, {
+      const res = await fetch(`/api/contents/${encodedId}/update`, {
         method: 'POST',
         headers,
         body: JSON.stringify(updates)
       });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && json.success !== false) {
+        return { success: true, data: json.data };
+      }
+      return { success: false, error: json.error || `HTTP ${res.status}` };
     } catch {
       try {
-        await fetch(`/api/contents/${encodedId}`, {
+        const res = await fetch(`/api/contents/${encodedId}`, {
           method: 'PATCH',
           headers,
           body: JSON.stringify(updates)
         });
-      } catch {}
+        const json = await res.json().catch(() => ({}));
+        if (res.ok && json.success !== false) {
+          return { success: true, data: json.data };
+        }
+        return { success: false, error: json.error || `HTTP ${res.status}` };
+      } catch (err: any) {
+        return { success: false, error: err?.message || 'خطا در بروزرسانی محتوا' };
+      }
     }
   },
 
@@ -860,6 +877,59 @@ export const api = {
       return await res.json();
     } catch (err: any) {
       return { success: false, message: err.message || 'خطا در اجرای تست عیب‌یابی دایرکت‌ها' };
+    }
+  },
+
+  // 36. Admin Batch Source Feed Extractor (10 items per page)
+  async fetchSourceFeed(params: {
+    url: string;
+    sourceType?: 'auto' | 'website' | 'instagram' | 'youtube' | 'aparat' | 'telegram';
+    page?: number;
+  }): Promise<{
+    success: boolean;
+    platform?: Platform;
+    sourceName?: string;
+    sourceHandle?: string;
+    page?: number;
+    pageSize?: number;
+    totalCount?: number | null;
+    hasMore?: boolean;
+    items?: any[];
+    message?: string;
+  }> {
+    try {
+      const res = await fetch('/api/admin/fetch-source-feed', {
+        method: 'POST',
+        headers: await getAdminHeaders(),
+        body: JSON.stringify(params)
+      });
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'خطا در دریافت لیست محتواهای منبع' };
+    }
+  },
+
+  // 37. Admin Batch Import Selected Source Items
+  async batchImportContents(params: {
+    items: any[];
+    ownerUid?: string;
+    categoryOverride?: Category | 'auto';
+  }): Promise<{
+    success: boolean;
+    addedCount?: number;
+    skippedCount?: number;
+    data?: ContentItem[];
+    message?: string;
+  }> {
+    try {
+      const res = await fetch('/api/admin/batch-import', {
+        method: 'POST',
+        headers: await getAdminHeaders(),
+        body: JSON.stringify(params)
+      });
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'خطا در افزودن دسته‌ای محتواها' };
     }
   }
 };

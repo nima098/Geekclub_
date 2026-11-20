@@ -25,6 +25,28 @@
   --color-primary-hover: #0062b3;
   --color-accent-purple: #ce3df3;
 
+  /* Smart Semantic Theme & Responsive Geometry Tokens (Light/Dark & Multi-Device Auto-Harmonized) */
+  --gc-bg: #090d16;
+  --gc-bg-light: #efefef;
+  --gc-surface: #0f172a;
+  --gc-surface-light: #ffffff;
+  --gc-surface-elevated: #1e293b;
+  --gc-surface-elevated-light: #f1f5f9;
+  --gc-border: #1e293b;
+  --gc-border-light: #e2e8f0;
+  --gc-text-primary: #f1f5f9;
+  --gc-text-secondary: #94a3b8;
+  --gc-accent: #0077d9;
+  --gc-accent-hover: #0062b3;
+  --gc-accent-ring: rgba(0, 119, 217, 0.28);
+
+  --gc-radius-card: clamp(1.15rem, 2vw, 1.75rem);
+  --gc-radius-control: clamp(0.65rem, 1vw, 0.85rem);
+  --gc-card-padding: clamp(0.85rem, 1.8vw, 1.25rem);
+  --gc-modal-padding: clamp(1rem, 2.2vw, 1.5rem);
+  --gc-gap-feed: clamp(0.875rem, 1.8vw, 1.5rem);
+  --gc-title-size: clamp(0.975rem, 1.4vw, 1.125rem);
+
   /* Typography */
   --font-family-base: 'Vazirmatn', 'Vazir', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
@@ -255,6 +277,13 @@ html:not(.light) .gc-admin-portal-footer {
   color: #ffffff !important;
   font-weight: 700 !important;
   border: 1px solid #10b981 !important;
+}
+
+.gc-chip-platform-telegram {
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: 1px solid #38bdf8 !important;
 }
 
 .gc-reaction-like-active {
@@ -587,7 +616,8 @@ html.light {
   .gc-chip-platform-youtube,
   .gc-chip-platform-instagram,
   .gc-chip-platform-aparat,
-  .gc-chip-platform-article {
+  .gc-chip-platform-article,
+  .gc-chip-platform-telegram {
     color: #ffffff !important;
   }
 
@@ -627,7 +657,1394 @@ html.light {
   .prose-invert {
     color: #334155 !important;
   }
+
+  .site-brand-icon-wrap {
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border-color: transparent !important;
+    --tw-ring-color: transparent !important;
+    padding: 0 !important;
+  }
 }
 
 /* Dark mode custom variant */
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* --------------------------------------------------------------------------
+   7. Smart Style Presets (Switchable via Footer Selector, Default: classic)
+   -------------------------------------------------------------------------- */
+
+/* Emerald Tech Preset */
+html[data-style="emerald-tech"] {
+  --color-primary-blue: #059669;
+  --color-primary-hover: #047857;
+  --gc-accent: #059669;
+  --gc-accent-hover: #047857;
+  --gc-accent-ring: rgba(16, 185, 129, 0.3);
+}
+
+html[data-style="emerald-tech"]:not(.light),
+html[data-style="emerald-tech"]:not(.light) body {
+  --gc-bg: #061311;
+  --gc-surface: #0b1f1b;
+  --gc-surface-elevated: #122c26;
+  --gc-border: #173830;
+  background-color: #061311 !important;
+}
+
+html[data-style="emerald-tech"]:not(.light) .bg-\[\#090d16\],
+html[data-style="emerald-tech"]:not(.light) .bg-slate-950 {
+  background-color: #061311 !important;
+}
+
+html[data-style="emerald-tech"]:not(.light) .bg-slate-900,
+html[data-style="emerald-tech"]:not(.light) .bg-slate-900\/95,
+html[data-style="emerald-tech"]:not(.light) .bg-slate-900\/90,
+html[data-style="emerald-tech"]:not(.light) .bg-slate-900\/80 {
+  background-color: rgba(11, 31, 27, 0.94) !important;
+}
+
+html[data-style="emerald-tech"]:not(.light) .border-slate-800,
+html[data-style="emerald-tech"]:not(.light) .border-slate-800\/80 {
+  border-color: rgba(23, 56, 48, 0.9) !important;
+}
+
+html[data-style="emerald-tech"].light,
+html[data-style="emerald-tech"].light body {
+  background-color: #ecfdf5 !important;
+}
+
+/* Royal Amethyst Preset */
+html[data-style="royal-amethyst"] {
+  --color-primary-blue: #7c3aed;
+  --color-primary-hover: #6d28d9;
+  --gc-accent: #7c3aed;
+  --gc-accent-hover: #6d28d9;
+  --gc-accent-ring: rgba(124, 58, 237, 0.3);
+}
+
+html[data-style="royal-amethyst"]:not(.light),
+html[data-style="royal-amethyst"]:not(.light) body {
+  --gc-bg: #0c0919;
+  --gc-surface: #151029;
+  --gc-surface-elevated: #20183d;
+  --gc-border: #2a204f;
+  background-color: #0c0919 !important;
+}
+
+html[data-style="royal-amethyst"]:not(.light) .bg-\[\#090d16\],
+html[data-style="royal-amethyst"]:not(.light) .bg-slate-950 {
+  background-color: #0c0919 !important;
+}
+
+html[data-style="royal-amethyst"]:not(.light) .bg-slate-900,
+html[data-style="royal-amethyst"]:not(.light) .bg-slate-900\/95,
+html[data-style="royal-amethyst"]:not(.light) .bg-slate-900\/90,
+html[data-style="royal-amethyst"]:not(.light) .bg-slate-900\/80 {
+  background-color: rgba(21, 16, 41, 0.94) !important;
+}
+
+html[data-style="royal-amethyst"]:not(.light) .border-slate-800,
+html[data-style="royal-amethyst"]:not(.light) .border-slate-800\/80 {
+  border-color: rgba(42, 32, 79, 0.9) !important;
+}
+
+html[data-style="royal-amethyst"].light,
+html[data-style="royal-amethyst"].light body {
+  background-color: #f5f3ff !important;
+}
+
+/* Warm Graphite Preset */
+html[data-style="warm-graphite"] {
+  --color-primary-blue: #d97706;
+  --color-primary-hover: #b45309;
+  --gc-accent: #d97706;
+  --gc-accent-hover: #b45309;
+  --gc-accent-ring: rgba(217, 119, 6, 0.3);
+}
+
+html[data-style="warm-graphite"]:not(.light),
+html[data-style="warm-graphite"]:not(.light) body {
+  --gc-bg: #121110;
+  --gc-surface: #1c1a17;
+  --gc-surface-elevated: #292521;
+  --gc-border: #332e29;
+  background-color: #121110 !important;
+}
+
+html[data-style="warm-graphite"]:not(.light) .bg-\[\#090d16\],
+html[data-style="warm-graphite"]:not(.light) .bg-slate-950 {
+  background-color: #121110 !important;
+}
+
+html[data-style="warm-graphite"]:not(.light) .bg-slate-900,
+html[data-style="warm-graphite"]:not(.light) .bg-slate-900\/95,
+html[data-style="warm-graphite"]:not(.light) .bg-slate-900\/90,
+html[data-style="warm-graphite"]:not(.light) .bg-slate-900\/80 {
+  background-color: rgba(28, 26, 23, 0.95) !important;
+}
+
+html[data-style="warm-graphite"]:not(.light) .border-slate-800,
+html[data-style="warm-graphite"]:not(.light) .border-slate-800\/80 {
+  border-color: rgba(51, 46, 41, 0.95) !important;
+}
+
+html[data-style="warm-graphite"].light,
+html[data-style="warm-graphite"].light body {
+  background-color: #f5f2eb !important;
+}
+
+/* Shared Accent Sync for Active Non-Classic Styles (excluding daily-dev which manages its own dual-mode contrast) */
+html[data-style]:not([data-style="classic"]):not([data-style="daily-dev"]) .bg-\[\#0077d9\],
+html[data-style]:not([data-style="classic"]):not([data-style="daily-dev"]) .btn-daily-primary,
+html[data-style]:not([data-style="classic"]):not([data-style="daily-dev"]) .btn-modal-submit,
+html[data-style]:not([data-style="classic"]):not([data-style="daily-dev"]) .btn-save-profile {
+  background-color: var(--gc-accent) !important;
+}
+
+html[data-style]:not([data-style="classic"]):not([data-style="daily-dev"]) .bg-\[\#0077d9\]:hover,
+html[data-style]:not([data-style="classic"]):not([data-style="daily-dev"]) .btn-daily-primary:hover:not(:disabled),
+html[data-style]:not([data-style="classic"]):not([data-style="daily-dev"]) .btn-modal-submit:hover:not(:disabled),
+html[data-style]:not([data-style="classic"]):not([data-style="daily-dev"]) .btn-save-profile:hover:not(:disabled) {
+  background-color: var(--gc-accent-hover) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Daily Modern Preset (data-style="daily-dev")
+   Modeled after daily.dev: crisp hairline surfaces, compact editorial buttons,
+   carbon-ink high-contrast CTAs, inset rounded thumbnails, & tight typography.
+   Auto-harmonized across Light/Dark modes and responsive viewports.
+   -------------------------------------------------------------------------- */
+html[data-style="daily-dev"] {
+  --gc-radius-card: 1rem;
+  --gc-radius-control: 0.625rem;
+  --gc-card-padding: clamp(0.75rem, 1.4vw, 0.95rem);
+  --gc-gap-feed: clamp(0.85rem, 1.5vw, 1.15rem);
+  --gc-title-size: clamp(0.95rem, 1.15vw, 1.075rem);
+}
+
+/* Shared Structural Sizing & Proportions (Header, Sidebar, Cards, Buttons, Footer) */
+html[data-style="daily-dev"] .gc-site-header {
+  box-shadow: none !important;
+}
+
+html[data-style="daily-dev"] .gc-site-header-inner {
+  height: 3.5rem !important;
+  min-height: 3.5rem !important;
+}
+
+html[data-style="daily-dev"] .gc-brand-wordmark {
+  font-size: clamp(0.95rem, 1.4vw, 1.1rem) !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+}
+
+html[data-style="daily-dev"] .gc-navbar-primary-btn {
+  padding: 0.4rem 0.85rem !important;
+  border-radius: 0.625rem !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  line-height: 1.25 !important;
+  box-shadow: none !important;
+}
+
+html[data-style="daily-dev"] .gc-navbar-action-btn {
+  padding: 0.4rem 0.65rem !important;
+  border-radius: 0.625rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+
+/* Compact Sidebar Proportions */
+@media (min-width: 1024px) {
+  html[data-style="daily-dev"] .feed-right-sidebar {
+    width: 16.5rem !important;
+    top: 4.5rem !important;
+  }
+}
+
+html[data-style="daily-dev"] .feed-right-sidebar {
+  border-radius: 1rem !important;
+  padding: 0.9rem !important;
+  box-shadow: none !important;
+}
+
+html[data-style="daily-dev"] .feed-sidebar-header {
+  padding-bottom: 0.7rem !important;
+}
+
+html[data-style="daily-dev"] .feed-sidebar-header h3 {
+  font-size: 0.82rem !important;
+  font-weight: 800 !important;
+}
+
+html[data-style="daily-dev"] .feed-sidebar-section-title {
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+}
+
+html[data-style="daily-dev"] .feed-right-sidebar #searchInput {
+  padding-top: 0.475rem !important;
+  padding-bottom: 0.475rem !important;
+  border-radius: 0.625rem !important;
+  font-size: 0.76rem !important;
+}
+
+html[data-style="daily-dev"] .feed-right-sidebar button[id^="btn-filter-platform-"],
+html[data-style="daily-dev"] .feed-right-sidebar .btn-filter-category,
+html[data-style="daily-dev"] .feed-right-sidebar .btn-filter-sort,
+html[data-style="daily-dev"] .feed-right-sidebar .btn-filter-saved,
+html[data-style="daily-dev"] .feed-right-sidebar .btn-filter-trash {
+  padding: 0.38rem 0.65rem !important;
+  border-radius: 0.575rem !important;
+  font-size: 0.76rem !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+
+html[data-style="daily-dev"] .feed-right-sidebar .btn-filter-viewmode {
+  padding-top: 0.25rem !important;
+  padding-bottom: 0.25rem !important;
+  border-radius: 0.45rem !important;
+  font-size: 0.7rem !important;
+}
+
+/* Crisp Editorial Card Geometry & Framed Inset Media */
+html[data-style="daily-dev"] .gc-content-card {
+  border-radius: 1rem !important;
+  box-shadow: none !important;
+  transition: border-color 180ms ease, box-shadow 180ms ease !important;
+}
+
+html[data-style="daily-dev"] .gc-content-card:not(.gc-content-card-compact) .gc-content-card-media {
+  margin: 0.625rem 0.625rem 0 0.625rem !important;
+  width: calc(100% - 1.25rem) !important;
+  border-radius: 0.75rem !important;
+}
+
+html[data-style="daily-dev"] .gc-content-card-compact .gc-content-card-media {
+  margin: 0.625rem !important;
+  border-radius: 0.75rem !important;
+}
+
+html[data-style="daily-dev"] .gc-content-card-body {
+  padding: 0.75rem 0.875rem 0.85rem !important;
+  background-color: transparent !important;
+  backdrop-filter: none !important;
+}
+
+html[data-style="daily-dev"] .gc-content-card-title {
+  font-size: clamp(0.95rem, 1.15vw, 1.075rem) !important;
+  font-weight: 800 !important;
+  line-height: 1.48 !important;
+  letter-spacing: -0.015em !important;
+}
+
+html[data-style="daily-dev"] .content-card-author-name {
+  font-size: 0.74rem !important;
+  font-weight: 700 !important;
+}
+
+html[data-style="daily-dev"] .content-card-source-platform {
+  font-size: 0.68rem !important;
+}
+
+html[data-style="daily-dev"] .gc-tag-item {
+  padding: 0.22rem 0.48rem !important;
+  border-radius: 0.425rem !important;
+  font-size: 0.68rem !important;
+  font-weight: 500 !important;
+  line-height: 1.15 !important;
+}
+
+html[data-style="daily-dev"] .gc-content-card-actions {
+  padding-top: 0.5rem !important;
+  gap: 0.25rem !important;
+}
+
+html[data-style="daily-dev"] .gc-reaction-group {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  padding: 0 !important;
+  gap: 0.125rem !important;
+}
+
+html[data-style="daily-dev"] .gc-reaction-group button,
+html[data-style="daily-dev"] .gc-card-action-btn {
+  border-radius: 0.45rem !important;
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+html[data-style="daily-dev"] .gc-site-footer {
+  padding-top: 0.9rem !important;
+  padding-bottom: 0.9rem !important;
+  margin-top: 2rem !important;
+  box-shadow: none !important;
+  font-size: 0.74rem !important;
+}
+
+html[data-style="daily-dev"] .footer-style-switcher {
+  border-radius: 0.625rem !important;
+  padding: 0.3rem 0.65rem !important;
+}
+
+/* --- Daily Modern: Light Mode (Faithful to daily.dev Light Screenshot) --- */
+html[data-style="daily-dev"].light {
+  --color-primary-blue: #0e1217;
+  --color-primary-hover: #21262d;
+  --gc-accent: #0e1217;
+  --gc-accent-hover: #21262d;
+  --gc-accent-ring: rgba(14, 18, 23, 0.16);
+}
+
+html[data-style="daily-dev"].light,
+html[data-style="daily-dev"].light body,
+html[data-style="daily-dev"].light .bg-\[\#090d16\] {
+  background-color: #ffffff !important;
+  color: #0e1217 !important;
+}
+
+html[data-style="daily-dev"].light .gc-site-header,
+html[data-style="daily-dev"].light .gc-site-footer {
+  background-color: rgba(255, 255, 255, 0.96) !important;
+  border-color: #e5e7eb !important;
+}
+
+html[data-style="daily-dev"].light .feed-right-sidebar {
+  background-color: #f9fafb !important;
+  border-color: #e5e7eb !important;
+}
+
+html[data-style="daily-dev"].light .feed-right-sidebar #searchInput {
+  background-color: #ffffff !important;
+  border-color: #d8dee9 !important;
+  color: #0e1217 !important;
+}
+
+html[data-style="daily-dev"].light .feed-right-sidebar #searchInput:focus {
+  border-color: #0e1217 !important;
+  box-shadow: 0 0 0 2px rgba(14, 18, 23, 0.12) !important;
+}
+
+html[data-style="daily-dev"].light .feed-right-sidebar button[id^="btn-filter-platform-"]:not(.bg-\[\#0077d9\]):not(.bg-red-600):not(.bg-rose-600):not(.bg-sky-600):not(.bg-emerald-600):not(.bg-gradient-to-r),
+html[data-style="daily-dev"].light .feed-right-sidebar .btn-filter-category:not(.bg-\[\#0077d9\]),
+html[data-style="daily-dev"].light .feed-right-sidebar .btn-filter-sort:not(.bg-\[\#0077d9\]),
+html[data-style="daily-dev"].light .feed-right-sidebar .btn-filter-saved:not(.bg-amber-500),
+html[data-style="daily-dev"].light .feed-right-sidebar .btn-filter-trash:not(.bg-rose-600) {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  color: #525866 !important;
+}
+
+html[data-style="daily-dev"].light .feed-right-sidebar button[id^="btn-filter-platform-"]:not(.bg-\[\#0077d9\]):not(.bg-red-600):not(.bg-rose-600):not(.bg-sky-600):not(.bg-emerald-600):not(.bg-gradient-to-r):hover,
+html[data-style="daily-dev"].light .feed-right-sidebar .btn-filter-category:not(.bg-\[\#0077d9\]):hover,
+html[data-style="daily-dev"].light .feed-right-sidebar .btn-filter-sort:not(.bg-\[\#0077d9\]):hover,
+html[data-style="daily-dev"].light .feed-right-sidebar .btn-filter-saved:not(.bg-amber-500):hover,
+html[data-style="daily-dev"].light .feed-right-sidebar .btn-filter-trash:not(.bg-rose-600):hover {
+  background-color: #eef2f7 !important;
+  color: #0e1217 !important;
+}
+
+html[data-style="daily-dev"].light .gc-content-card {
+  background-color: #f5f8fc !important;
+  border-color: #e2e8f0 !important;
+}
+
+html[data-style="daily-dev"].light .gc-content-card:hover {
+  box-shadow: 0 8px 24px -10px rgba(14, 18, 23, 0.12) !important;
+}
+
+html[data-style="daily-dev"].light .gc-content-card-title {
+  color: #0e1217 !important;
+}
+
+html[data-style="daily-dev"].light .gc-content-card:hover .gc-content-card-title {
+  color: #0e1217 !important;
+}
+
+html[data-style="daily-dev"].light .gc-tag-item {
+  background-color: #ffffff !important;
+  border-color: #cfd6e6 !important;
+  color: #525866 !important;
+}
+
+html[data-style="daily-dev"].light .gc-tag-item:hover {
+  background-color: #e8eef7 !important;
+  border-color: #b8c2d6 !important;
+  color: #0e1217 !important;
+}
+
+html[data-style="daily-dev"].light .gc-content-card-actions {
+  border-top-color: #e2e8f0 !important;
+}
+
+html[data-style="daily-dev"].light .gc-reaction-group button:not(.gc-reaction-like-active):not(.gc-reaction-dislike-active),
+html[data-style="daily-dev"].light .gc-card-action-btn:not(.bg-amber-500\/20) {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  color: #525866 !important;
+}
+
+html[data-style="daily-dev"].light .gc-reaction-group button:not(.gc-reaction-like-active):not(.gc-reaction-dislike-active):hover,
+html[data-style="daily-dev"].light .gc-card-action-btn:not(.bg-amber-500\/20):hover {
+  background-color: #e8eef7 !important;
+  color: #0e1217 !important;
+}
+
+html[data-style="daily-dev"].light .gc-navbar-action-btn {
+  background-color: #ffffff !important;
+  border-color: #cfd6e6 !important;
+  color: #0e1217 !important;
+}
+
+html[data-style="daily-dev"].light .gc-navbar-action-btn:hover {
+  background-color: #f5f8fc !important;
+  border-color: #b8c2d6 !important;
+}
+
+/* Signature Daily.dev Light Mode Primary Carbon-Black CTA */
+html[data-style="daily-dev"].light .bg-\[\#0077d9\],
+html[data-style="daily-dev"].light .gc-navbar-primary-btn,
+html[data-style="daily-dev"].light .btn-daily-primary,
+html[data-style="daily-dev"].light .btn-modal-submit,
+html[data-style="daily-dev"].light .btn-save-profile {
+  background-color: #0e1217 !important;
+  color: #ffffff !important;
+  border-color: #0e1217 !important;
+}
+
+html[data-style="daily-dev"].light .bg-\[\#0077d9\]:hover,
+html[data-style="daily-dev"].light .gc-navbar-primary-btn:hover,
+html[data-style="daily-dev"].light .btn-daily-primary:hover:not(:disabled),
+html[data-style="daily-dev"].light .btn-modal-submit:hover:not(:disabled),
+html[data-style="daily-dev"].light .btn-save-profile:hover:not(:disabled) {
+  background-color: #21262d !important;
+}
+
+html[data-style="daily-dev"].light .bg-\[\#0077d9\] *,
+html[data-style="daily-dev"].light .gc-navbar-primary-btn *,
+html[data-style="daily-dev"].light .btn-daily-primary * {
+  color: #ffffff !important;
+}
+
+/* --- Daily Modern: Dark Mode (Authentic daily.dev Carbon Dark) --- */
+html[data-style="daily-dev"]:not(.light) {
+  --color-primary-blue: #ffffff;
+  --color-primary-hover: #e5e9f2;
+  --gc-bg: #0e1217;
+  --gc-surface: #1c1f26;
+  --gc-surface-elevated: #242832;
+  --gc-border: #2d323c;
+  --gc-accent: #ffffff;
+  --gc-accent-hover: #e5e9f2;
+  --gc-accent-ring: rgba(255, 255, 255, 0.22);
+}
+
+html[data-style="daily-dev"]:not(.light),
+html[data-style="daily-dev"]:not(.light) body,
+html[data-style="daily-dev"]:not(.light) .bg-\[\#090d16\],
+html[data-style="daily-dev"]:not(.light) .bg-slate-950 {
+  background-color: #0e1217 !important;
+  color: #ffffff !important;
+}
+
+html[data-style="daily-dev"]:not(.light) .gc-site-header,
+html[data-style="daily-dev"]:not(.light) .gc-site-footer {
+  background-color: rgba(14, 18, 23, 0.94) !important;
+  border-color: #2d323c !important;
+}
+
+html[data-style="daily-dev"]:not(.light) .feed-right-sidebar {
+  background-color: #15181e !important;
+  border-color: #2d323c !important;
+}
+
+html[data-style="daily-dev"]:not(.light) .feed-right-sidebar #searchInput {
+  background-color: #1c1f26 !important;
+  border-color: #2d323c !important;
+  color: #ffffff !important;
+}
+
+html[data-style="daily-dev"]:not(.light) .feed-right-sidebar #searchInput:focus {
+  border-color: #a8b3cf !important;
+  box-shadow: 0 0 0 2px rgba(168, 179, 207, 0.18) !important;
+}
+
+html[data-style="daily-dev"]:not(.light) .feed-right-sidebar button[id^="btn-filter-platform-"]:not(.bg-\[\#0077d9\]):not(.bg-red-600):not(.bg-rose-600):not(.bg-sky-600):not(.bg-emerald-600):not(.bg-gradient-to-r),
+html[data-style="daily-dev"]:not(.light) .feed-right-sidebar .btn-filter-category:not(.bg-\[\#0077d9\]),
+html[data-style="daily-dev"]:not(.light) .feed-right-sidebar .btn-filter-sort:not(.bg-\[\#0077d9\]),
+html[data-style="daily-dev"]:not(.light) .feed-right-sidebar .btn-filter-saved:not(.bg-amber-500),
+html[data-style="daily-dev"]:not(.light) .feed-right-sidebar .btn-filter-trash:not(.bg-rose-600) {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  color: #a8b3cf !important;
+}
+
+html[data-style="daily-dev"]:not(.light) .feed-right-sidebar button[id^="btn-filter-platform-"]:not(.bg-\[\#0077d9\]):not(.bg-red-600):not(.bg-rose-600):not(.bg-sky-600):not(.bg-emerald-600):not(.bg-gradient-to-r):hover,
+html[data-style="daily-dev"]:not(.light) .feed-right-sidebar .btn-filter-category:not(.bg-\[\#0077d9\]):hover,
+html[data-style="daily-dev"]:not(.light) .feed-right-sidebar .btn-filter-sort:not(.bg-\[\#0077d9\]):hover,
+html[data-style="daily-dev"]:not(.light) .feed-right-sidebar .btn-filter-saved:not(.bg-amber-500):hover,
+html[data-style="daily-dev"]:not(.light) .feed-right-sidebar .btn-filter-trash:not(.bg-rose-600):hover {
+  background-color: #242832 !important;
+  color: #ffffff !important;
+}
+
+html[data-style="daily-dev"]:not(.light) .gc-content-card {
+  background-color: #1c1f26 !important;
+  border-color: #2d323c !important;
+}
+
+html[data-style="daily-dev"]:not(.light) .gc-content-card:hover {
+  box-shadow: 0 12px 28px -12px rgba(0, 0, 0, 0.5) !important;
+}
+
+html[data-style="daily-dev"]:not(.light) .gc-content-card-title {
+  color: #ffffff !important;
+}
+
+html[data-style="daily-dev"]:not(.light) .gc-content-card:hover .gc-content-card-title {
+  color: #f1f5f9 !important;
+}
+
+html[data-style="daily-dev"]:not(.light) .gc-tag-item {
+  background-color: #15181e !important;
+  border-color: #323846 !important;
+  color: #a8b3cf !important;
+}
+
+html[data-style="daily-dev"]:not(.light) .gc-tag-item:hover {
+  background-color: #282d38 !important;
+  border-color: #4a5264 !important;
+  color: #ffffff !important;
+}
+
+html[data-style="daily-dev"]:not(.light) .gc-content-card-actions {
+  border-top-color: #2d323c !important;
+}
+
+html[data-style="daily-dev"]:not(.light) .gc-reaction-group button:not(.gc-reaction-like-active):not(.gc-reaction-dislike-active),
+html[data-style="daily-dev"]:not(.light) .gc-card-action-btn:not(.bg-amber-500\/20) {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  color: #a8b3cf !important;
+}
+
+html[data-style="daily-dev"]:not(.light) .gc-reaction-group button:not(.gc-reaction-like-active):not(.gc-reaction-dislike-active):hover,
+html[data-style="daily-dev"]:not(.light) .gc-card-action-btn:not(.bg-amber-500\/20):hover {
+  background-color: #282d38 !important;
+  color: #ffffff !important;
+}
+
+html[data-style="daily-dev"]:not(.light) .gc-navbar-action-btn {
+  background-color: #1c1f26 !important;
+  border-color: #2d323c !important;
+  color: #d8dee9 !important;
+}
+
+html[data-style="daily-dev"]:not(.light) .gc-navbar-action-btn:hover {
+  background-color: #282d38 !important;
+  border-color: #424959 !important;
+  color: #ffffff !important;
+}
+
+/* Signature Daily.dev Dark Mode Inverted Crisp-White CTA */
+html[data-style="daily-dev"]:not(.light) .bg-\[\#0077d9\],
+html[data-style="daily-dev"]:not(.light) .gc-navbar-primary-btn,
+html[data-style="daily-dev"]:not(.light) .btn-daily-primary,
+html[data-style="daily-dev"]:not(.light) .btn-modal-submit,
+html[data-style="daily-dev"]:not(.light) .btn-save-profile {
+  background-color: #ffffff !important;
+  color: #0e1217 !important;
+  border-color: #ffffff !important;
+}
+
+html[data-style="daily-dev"]:not(.light) .bg-\[\#0077d9\]:hover,
+html[data-style="daily-dev"]:not(.light) .gc-navbar-primary-btn:hover,
+html[data-style="daily-dev"]:not(.light) .btn-daily-primary:hover:not(:disabled),
+html[data-style="daily-dev"]:not(.light) .btn-modal-submit:hover:not(:disabled),
+html[data-style="daily-dev"]:not(.light) .btn-save-profile:hover:not(:disabled) {
+  background-color: #e5e9f2 !important;
+}
+
+html[data-style="daily-dev"]:not(.light) .bg-\[\#0077d9\] *,
+html[data-style="daily-dev"]:not(.light) .gc-navbar-primary-btn *,
+html[data-style="daily-dev"]:not(.light) .btn-daily-primary * {
+  color: #0e1217 !important;
+}
+
+/* --- Daily Modern: Admin Panel & Admin Portal (Shared Sizing & Geometry) --- */
+html[data-style="daily-dev"] .gc-admin-header-bar {
+  padding-top: 0.65rem !important;
+  padding-bottom: 0.65rem !important;
+  box-shadow: none !important;
+}
+
+html[data-style="daily-dev"] .gc-admin-header-badge {
+  width: 2.25rem !important;
+  height: 2.25rem !important;
+  border-radius: 0.625rem !important;
+  box-shadow: none !important;
+}
+
+html[data-style="daily-dev"] .gc-admin-header-bar h3 {
+  font-size: clamp(0.9rem, 1.3vw, 1.05rem) !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.015em !important;
+}
+
+html[data-style="daily-dev"] .gc-admin-header-bar p {
+  font-size: 0.72rem !important;
+}
+
+html[data-style="daily-dev"] .gc-admin-header-secondary-btn,
+html[data-style="daily-dev"] .gc-admin-header-primary-btn {
+  padding: 0.4rem 0.78rem !important;
+  border-radius: 0.6rem !important;
+  font-size: 0.75rem !important;
+  box-shadow: none !important;
+}
+
+@media (min-width: 768px) {
+  html[data-style="daily-dev"] .gc-admin-shell .admin-sidebar-nav {
+    width: 15.5rem !important;
+  }
+}
+
+html[data-style="daily-dev"] .gc-admin-shell .admin-sidebar-nav {
+  padding: 0.7rem !important;
+}
+
+html[data-style="daily-dev"] .gc-admin-shell .btn-admin-sidebar-tab {
+  padding: 0.48rem 0.68rem !important;
+  border-radius: 0.575rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+
+html[data-style="daily-dev"] .gc-admin-main-pane {
+  padding: clamp(0.9rem, 1.8vw, 1.5rem) !important;
+}
+
+html[data-style="daily-dev"] .gc-admin-main-pane .rounded-2xl,
+html[data-style="daily-dev"] .gc-admin-main-pane .rounded-3xl {
+  border-radius: 0.875rem !important;
+  box-shadow: none !important;
+}
+
+html[data-style="daily-dev"] .gc-admin-main-pane button {
+  border-radius: 0.575rem !important;
+  font-size: 0.75rem !important;
+  box-shadow: none !important;
+}
+
+html[data-style="daily-dev"] .gc-admin-main-pane input:not([type="checkbox"]):not([type="radio"]),
+html[data-style="daily-dev"] .gc-admin-main-pane textarea,
+html[data-style="daily-dev"] .gc-admin-main-pane select {
+  border-radius: 0.575rem !important;
+  font-size: 0.78rem !important;
+}
+
+html[data-style="daily-dev"] .gc-admin-main-pane .text-2xl,
+html[data-style="daily-dev"] .gc-admin-main-pane .text-3xl,
+html[data-style="daily-dev"] .gc-admin-main-pane .font-mono {
+  font-variant-numeric: tabular-nums !important;
+}
+
+html[data-style="daily-dev"] .gc-admin-portal-modal,
+html[data-style="daily-dev"] .gc-admin-help-modal,
+html[data-style="daily-dev"] .gc-admin-edit-modal {
+  border-radius: 1rem !important;
+  box-shadow: 0 20px 50px -15px rgba(14, 18, 23, 0.35) !important;
+}
+
+html[data-style="daily-dev"] .gc-admin-portal-header {
+  background-image: none !important;
+  padding: 1rem 1.25rem !important;
+}
+
+/* ==========================================================================
+   Unified Style-Matched Admin Color System (Zero Extra / Rainbow Colors)
+   Applies across Admin Panel, Admin Portal, Domain Help & Content Edit Modal
+   ========================================================================== */
+
+/* 1. Default Dark Palette (Classic & Non-Daily Presets) */
+html:not(.light) :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) {
+  --gc-adm-canvas: var(--gc-bg, #090d16);
+  --gc-adm-sidebar: var(--gc-surface, #0f172a);
+  --gc-adm-surface: var(--gc-surface, #0f172a);
+  --gc-adm-surface-elevated: var(--gc-surface-elevated, #1e293b);
+  --gc-adm-surface-hover: #25334a;
+  --gc-adm-border: var(--gc-border, #1e293b);
+  --gc-adm-border-strong: #334155;
+  --gc-adm-text: #f1f5f9;
+  --gc-adm-text-muted: #94a3b8;
+  --gc-adm-primary-bg: var(--gc-accent, #0077d9);
+  --gc-adm-primary-hover: var(--gc-accent-hover, #0062b3);
+  --gc-adm-primary-text: #ffffff;
+  --gc-adm-chip-bg: var(--gc-surface-elevated, #1e293b);
+  --gc-adm-chip-border: #334155;
+  --gc-adm-chip-text: #e2e8f0;
+}
+
+/* 2. Default Light Palette (Classic & Non-Daily Presets) */
+html.light :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) {
+  --gc-adm-canvas: #efefef;
+  --gc-adm-sidebar: #ffffff;
+  --gc-adm-surface: #ffffff;
+  --gc-adm-surface-elevated: #f8fafc;
+  --gc-adm-surface-hover: #eef2f7;
+  --gc-adm-border: #e2e8f0;
+  --gc-adm-border-strong: #cbd5e1;
+  --gc-adm-text: #0f172a;
+  --gc-adm-text-muted: #475569;
+  --gc-adm-primary-bg: var(--gc-accent, #0077d9);
+  --gc-adm-primary-hover: var(--gc-accent-hover, #0062b3);
+  --gc-adm-primary-text: #ffffff;
+  --gc-adm-chip-bg: #f1f5f9;
+  --gc-adm-chip-border: #cbd5e1;
+  --gc-adm-chip-text: #0f172a;
+}
+
+/* 3. Daily Modern Dark Palette (Strict Monochrome Obsidian + Crisp White CTA) */
+html[data-style="daily-dev"]:not(.light) :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) {
+  --gc-adm-canvas: #0e1217;
+  --gc-adm-sidebar: #15181e;
+  --gc-adm-surface: #1c1f26;
+  --gc-adm-surface-elevated: #242832;
+  --gc-adm-surface-hover: #2d3340;
+  --gc-adm-border: #2d323c;
+  --gc-adm-border-strong: #3b4252;
+  --gc-adm-text: #ffffff;
+  --gc-adm-text-muted: #a8b3cf;
+  --gc-adm-primary-bg: #ffffff;
+  --gc-adm-primary-hover: #e5e9f2;
+  --gc-adm-primary-text: #0e1217;
+  --gc-adm-chip-bg: #242832;
+  --gc-adm-chip-border: #353b4a;
+  --gc-adm-chip-text: #e2e8f0;
+}
+
+/* 4. Daily Modern Light Palette (Strict White + Cool Gray Surfaces + Obsidian CTA) */
+html[data-style="daily-dev"].light :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) {
+  --gc-adm-canvas: #ffffff;
+  --gc-adm-sidebar: #f9fafb;
+  --gc-adm-surface: #f5f8fc;
+  --gc-adm-surface-elevated: #ffffff;
+  --gc-adm-surface-hover: #eef2f7;
+  --gc-adm-border: #e2e8f0;
+  --gc-adm-border-strong: #cfd6e6;
+  --gc-adm-text: #0e1217;
+  --gc-adm-text-muted: #525866;
+  --gc-adm-primary-bg: #0e1217;
+  --gc-adm-primary-hover: #21262d;
+  --gc-adm-primary-text: #ffffff;
+  --gc-adm-chip-bg: #ffffff;
+  --gc-adm-chip-border: #cfd6e6;
+  --gc-adm-chip-text: #0e1217;
+}
+
+/* Core Structural Containers */
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) {
+  background-color: var(--gc-adm-canvas) !important;
+  border-color: var(--gc-adm-border) !important;
+  color: var(--gc-adm-text) !important;
+}
+
+html body .gc-admin-shell .gc-admin-container,
+html body .gc-admin-shell .gc-admin-main-pane {
+  background-color: var(--gc-adm-canvas) !important;
+  color: var(--gc-adm-text) !important;
+}
+
+html body .gc-admin-shell .gc-admin-header-bar,
+html body :is(.gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) .gc-admin-portal-header,
+html body :is(.gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) .gc-admin-portal-footer {
+  background-color: var(--gc-adm-sidebar) !important;
+  border-color: var(--gc-adm-border) !important;
+  color: var(--gc-adm-text) !important;
+}
+
+html body .gc-admin-shell .admin-sidebar-nav {
+  background-color: var(--gc-adm-sidebar) !important;
+  border-color: var(--gc-adm-border) !important;
+}
+
+/* Kill ALL gradients, colored rings, colored shadows & distracting pulse animations inside Admin */
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) [class*="bg-gradient-"] {
+  background-image: none !important;
+}
+
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) [class*="ring-"] {
+  --tw-ring-color: transparent !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+}
+
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) :is(
+  [class*="shadow-amber"],
+  [class*="shadow-indigo"],
+  [class*="shadow-pink"],
+  [class*="shadow-rose"],
+  [class*="shadow-orange"],
+  [class*="shadow-emerald"],
+  [class*="shadow-sky"],
+  [class*="shadow-blue"],
+  [class*="shadow-purple"],
+  [class*="shadow-cyan"],
+  [class*="shadow-red"]
+) {
+  box-shadow: none !important;
+}
+
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) .animate-pulse {
+  animation: none !important;
+}
+
+/* Neutralize ALL Slate & Colored Card/Panel/Alert/Badge Surfaces */
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) :is(
+  .bg-slate-800,
+  .bg-slate-800\/50,
+  .bg-slate-800\/60,
+  .bg-slate-800\/70,
+  .bg-slate-800\/80,
+  .bg-slate-800\/90,
+  .bg-slate-900,
+  .bg-slate-900\/50,
+  .bg-slate-900\/60,
+  .bg-slate-900\/70,
+  .bg-slate-900\/80,
+  .bg-slate-900\/90,
+  .bg-slate-900\/95,
+  .bg-slate-950\/40,
+  .bg-slate-950\/50,
+  .bg-slate-950\/60,
+  .bg-slate-950\/70,
+  .bg-slate-950\/80,
+  .gc-admin-stat-card
+) {
+  background-color: var(--gc-adm-surface) !important;
+  border-color: var(--gc-adm-border) !important;
+  color: var(--gc-adm-text) !important;
+}
+
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) :is(
+  .bg-slate-950,
+  .bg-slate-950\/90,
+  .bg-slate-950\/95
+) {
+  background-color: var(--gc-adm-canvas) !important;
+  border-color: var(--gc-adm-border) !important;
+  color: var(--gc-adm-text) !important;
+}
+
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) :is(
+  .bg-slate-700,
+  .bg-slate-700\/50,
+  .bg-slate-700\/80,
+  .bg-slate-750,
+  .bg-slate-600
+) {
+  background-color: var(--gc-adm-surface-elevated) !important;
+  border-color: var(--gc-adm-border-strong) !important;
+  color: var(--gc-adm-text) !important;
+}
+
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) :is(
+  .hover\:bg-slate-750,
+  .hover\:bg-slate-700,
+  .hover\:bg-slate-800,
+  .hover\:bg-slate-800\/80,
+  .hover\:bg-slate-800\/60,
+  .hover\:bg-slate-600
+):hover {
+  background-color: var(--gc-adm-surface-hover) !important;
+}
+
+/* Flatten ALL Extra-Colored Non-Button Boxes, Alerts, Badges, Chips, Indicators & Divs */
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) :not(button):not(a):is(
+  [class*="bg-amber-"],
+  [class*="bg-emerald-"],
+  [class*="bg-rose-"],
+  [class*="bg-red-"],
+  [class*="bg-pink-"],
+  [class*="bg-purple-"],
+  [class*="bg-violet-"],
+  [class*="bg-cyan-"],
+  [class*="bg-teal-"],
+  [class*="bg-sky-"],
+  [class*="bg-blue-"],
+  [class*="bg-indigo-"],
+  [class*="bg-orange-"],
+  [class*="bg-yellow-"],
+  [class*="bg-fuchsia-"],
+  [class*="bg-lime-"],
+  [class*="bg-green-"],
+  .bg-\[\#0077d9\]
+) {
+  background-color: var(--gc-adm-chip-bg) !important;
+  border-color: var(--gc-adm-chip-border) !important;
+  color: var(--gc-adm-chip-text) !important;
+}
+
+/* Keep tiny status dots monochrome & subtle */
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) span.w-2.h-2.rounded-full,
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) span.w-1\.5.h-1\.5.rounded-full {
+  background-color: var(--gc-adm-text-muted) !important;
+  border-color: transparent !important;
+}
+
+/* Neutralize ALL Extra-Colored Borders */
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) :is(
+  [class*="border-amber-"],
+  [class*="border-emerald-"],
+  [class*="border-rose-"],
+  [class*="border-red-"],
+  [class*="border-pink-"],
+  [class*="border-purple-"],
+  [class*="border-violet-"],
+  [class*="border-cyan-"],
+  [class*="border-teal-"],
+  [class*="border-sky-"],
+  [class*="border-blue-"],
+  [class*="border-indigo-"],
+  [class*="border-orange-"],
+  [class*="border-yellow-"],
+  [class*="border-fuchsia-"],
+  [class*="border-lime-"],
+  [class*="border-green-"],
+  [class*="border-slate-"]
+) {
+  border-color: var(--gc-adm-border) !important;
+}
+
+/* Neutralize ALL Text & Icon Colors to Unified Primary/Muted Hierarchy */
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) :is(
+  .text-white,
+  .text-slate-100,
+  .text-slate-200,
+  .text-slate-300,
+  .text-slate-900,
+  .text-slate-950,
+  [class*="text-amber-"],
+  [class*="text-emerald-"],
+  [class*="text-rose-"],
+  [class*="text-red-"],
+  [class*="text-pink-"],
+  [class*="text-purple-"],
+  [class*="text-violet-"],
+  [class*="text-cyan-"],
+  [class*="text-teal-"],
+  [class*="text-sky-"],
+  [class*="text-blue-"],
+  [class*="text-indigo-"],
+  [class*="text-orange-"],
+  [class*="text-yellow-"],
+  [class*="text-fuchsia-"],
+  [class*="text-lime-"],
+  [class*="text-green-"],
+  .text-\[\#0077d9\]
+) {
+  color: var(--gc-adm-text) !important;
+}
+
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) :is(
+  .text-slate-400,
+  .text-slate-500
+) {
+  color: var(--gc-adm-text-muted) !important;
+}
+
+/* Semantic Admin Badges & Icon Containers */
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) .gc-admin-meta-badge,
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) .gc-admin-tab-counter {
+  background-color: var(--gc-adm-chip-bg) !important;
+  border: 1px solid var(--gc-adm-chip-border) !important;
+  color: var(--gc-adm-chip-text) !important;
+}
+
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) .gc-admin-icon-surface {
+  background-color: var(--gc-adm-surface-elevated) !important;
+  border: 1px solid var(--gc-adm-border-strong) !important;
+  color: var(--gc-adm-text) !important;
+}
+
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) .gc-admin-icon-surface svg {
+  color: var(--gc-adm-text) !important;
+}
+
+/* Unified Sidebar Navigation Tabs */
+html body .gc-admin-shell .btn-admin-sidebar-tab:not(.gc-admin-tab-active) {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  color: var(--gc-adm-text-muted) !important;
+}
+
+html body .gc-admin-shell .btn-admin-sidebar-tab:not(.gc-admin-tab-active) svg {
+  color: var(--gc-adm-text-muted) !important;
+}
+
+html body .gc-admin-shell .btn-admin-sidebar-tab:not(.gc-admin-tab-active):hover {
+  background-color: var(--gc-adm-surface-hover) !important;
+  color: var(--gc-adm-text) !important;
+}
+
+html body .gc-admin-shell .btn-admin-sidebar-tab:not(.gc-admin-tab-active):hover svg {
+  color: var(--gc-adm-text) !important;
+}
+
+/* Unified Legacy Solid Colored Buttons -> Primary Style Action */
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) :is(button, a):is(
+  .bg-\[\#0077d9\],
+  .bg-emerald-600,
+  .bg-emerald-500,
+  .bg-sky-600,
+  .bg-cyan-600,
+  .bg-blue-600,
+  .bg-indigo-600,
+  .bg-amber-500,
+  .bg-amber-600,
+  .bg-orange-600,
+  .bg-pink-600,
+  .bg-purple-600,
+  [class*="bg-gradient-to-"]
+) {
+  background-color: var(--gc-adm-primary-bg) !important;
+  border: 1px solid var(--gc-adm-primary-bg) !important;
+  color: var(--gc-adm-primary-text) !important;
+  box-shadow: none !important;
+}
+
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) :is(button, a):is(
+  .bg-\[\#0077d9\],
+  .bg-emerald-600,
+  .bg-emerald-500,
+  .bg-sky-600,
+  .bg-cyan-600,
+  .bg-blue-600,
+  .bg-indigo-600,
+  .bg-amber-500,
+  .bg-amber-600,
+  .bg-orange-600,
+  .bg-pink-600,
+  .bg-purple-600,
+  [class*="bg-gradient-to-"]
+):hover:not(:disabled) {
+  background-color: var(--gc-adm-primary-hover) !important;
+  border-color: var(--gc-adm-primary-hover) !important;
+}
+
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) :is(button, a):is(
+  .bg-\[\#0077d9\],
+  .bg-emerald-600,
+  .bg-emerald-500,
+  .bg-sky-600,
+  .bg-cyan-600,
+  .bg-blue-600,
+  .bg-indigo-600,
+  .bg-amber-500,
+  .bg-amber-600,
+  .bg-orange-600,
+  .bg-pink-600,
+  .bg-purple-600,
+  [class*="bg-gradient-to-"]
+) * {
+  color: var(--gc-adm-primary-text) !important;
+}
+
+/* Unified Secondary, Tinted & Destructive Buttons -> Clean Neutral Control */
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) :is(button, a):is(
+  .gc-admin-secondary-btn,
+  .gc-admin-header-secondary-btn,
+  .bg-slate-700,
+  .bg-slate-750,
+  .bg-slate-800,
+  .bg-slate-600,
+  .bg-white,
+  [class*="bg-rose-"],
+  [class*="bg-red-"],
+  [class*="bg-amber-500/"],
+  [class*="bg-amber-600/"],
+  [class*="bg-emerald-500/"],
+  [class*="bg-emerald-600/"],
+  [class*="bg-sky-500/"],
+  [class*="bg-sky-600/"],
+  [class*="bg-cyan-500/"],
+  [class*="bg-blue-500/"],
+  [class*="bg-indigo-500/"],
+  [class*="bg-pink-500/"],
+  [class*="bg-purple-500/"],
+  [class*="bg-orange-500/"]
+) {
+  background-color: var(--gc-adm-surface-elevated) !important;
+  border: 1px solid var(--gc-adm-border-strong) !important;
+  color: var(--gc-adm-text) !important;
+  box-shadow: none !important;
+}
+
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) :is(button, a):is(
+  .gc-admin-secondary-btn,
+  .gc-admin-header-secondary-btn,
+  .bg-slate-700,
+  .bg-slate-750,
+  .bg-slate-800,
+  .bg-slate-600,
+  .bg-white,
+  [class*="bg-rose-"],
+  [class*="bg-red-"],
+  [class*="bg-amber-500/"],
+  [class*="bg-amber-600/"],
+  [class*="bg-emerald-500/"],
+  [class*="bg-emerald-600/"],
+  [class*="bg-sky-500/"],
+  [class*="bg-sky-600/"],
+  [class*="bg-cyan-500/"],
+  [class*="bg-blue-500/"],
+  [class*="bg-indigo-500/"],
+  [class*="bg-pink-500/"],
+  [class*="bg-purple-500/"],
+  [class*="bg-orange-500/"]
+):hover:not(:disabled) {
+  background-color: var(--gc-adm-surface-hover) !important;
+  border-color: var(--gc-adm-border-strong) !important;
+  color: var(--gc-adm-text) !important;
+}
+
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) :is(button, a):is(
+  .gc-admin-secondary-btn,
+  .gc-admin-header-secondary-btn,
+  .bg-slate-700,
+  .bg-slate-750,
+  .bg-slate-800,
+  .bg-slate-600,
+  .bg-white,
+  [class*="bg-rose-"],
+  [class*="bg-red-"],
+  [class*="bg-amber-500/"],
+  [class*="bg-amber-600/"],
+  [class*="bg-emerald-500/"],
+  [class*="bg-emerald-600/"],
+  [class*="bg-sky-500/"],
+  [class*="bg-sky-600/"],
+  [class*="bg-cyan-500/"],
+  [class*="bg-blue-500/"],
+  [class*="bg-indigo-500/"],
+  [class*="bg-pink-500/"],
+  [class*="bg-purple-500/"],
+  [class*="bg-orange-500/"]
+) * {
+  color: var(--gc-adm-text) !important;
+}
+
+/* Explicit Semantic Primary Actions, Active Sidebar Tab & Header Badge (Highest Precedence) */
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) :is(
+  .gc-admin-primary-btn,
+  .gc-admin-header-primary-btn,
+  .gc-admin-tab-active,
+  .gc-admin-header-badge
+) {
+  background-color: var(--gc-adm-primary-bg) !important;
+  border: 1px solid var(--gc-adm-primary-bg) !important;
+  color: var(--gc-adm-primary-text) !important;
+  box-shadow: none !important;
+}
+
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) :is(
+  .gc-admin-primary-btn,
+  .gc-admin-header-primary-btn,
+  .gc-admin-tab-active
+):hover:not(:disabled) {
+  background-color: var(--gc-adm-primary-hover) !important;
+  border-color: var(--gc-adm-primary-hover) !important;
+}
+
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) :is(
+  .gc-admin-primary-btn,
+  .gc-admin-header-primary-btn,
+  .gc-admin-tab-active,
+  .gc-admin-header-badge
+) * {
+  color: var(--gc-adm-primary-text) !important;
+}
+
+/* Counter chip inside active tab maintains subtle inverted contrast */
+html body .gc-admin-shell .gc-admin-tab-active .gc-admin-tab-counter {
+  background-color: rgba(128, 128, 128, 0.22) !important;
+  border-color: transparent !important;
+  color: var(--gc-adm-primary-text) !important;
+}
+
+/* Unified Form Controls inside Admin */
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) :is(
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select
+) {
+  background-color: var(--gc-adm-canvas) !important;
+  border-color: var(--gc-adm-border-strong) !important;
+  color: var(--gc-adm-text) !important;
+}
+
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) :is(
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select
+):focus {
+  border-color: var(--gc-adm-primary-bg) !important;
+  box-shadow: none !important;
+}
+
+html body :is(.gc-admin-shell, .gc-admin-portal-modal, .gc-admin-help-modal, .gc-admin-edit-modal) :is(input, textarea)::placeholder {
+  color: var(--gc-adm-text-muted) !important;
+}
+
+/* --------------------------------------------------------------------------
+   8. Delayed Prominent Card Hover Expansion (Zero Layout Shift) & Compact Bar
+   -------------------------------------------------------------------------- */
+.gc-content-card-slot {
+  position: relative;
+  min-width: 0;
+}
+
+.gc-content-card-slot-expanded {
+  height: var(--gc-slot-height, auto);
+}
+
+.gc-content-card-slot-active {
+  z-index: 20;
+}
+
+.gc-content-card-actions {
+  white-space: nowrap;
+}
+
+.gc-content-card {
+  transform-origin: center top;
+  transition:
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html[data-style="daily-dev"] .gc-content-card {
+  transition:
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 300ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.gc-content-card.gc-content-card-elevated {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  min-height: 100%;
+  height: auto !important;
+  transform: translate3d(0, 0, 0) scale(1);
+  will-change: transform, box-shadow;
+}
+
+.gc-content-card.gc-content-card-elevated-active {
+  z-index: 20;
+  transform: translate3d(0, -6px, 0) scale(1.035);
+  box-shadow:
+    0 26px 52px -12px rgba(2, 6, 23, 0.78),
+    0 12px 26px -8px rgba(2, 6, 23, 0.45) !important;
+}
+
+.gc-content-card-body {
+  transition: padding 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.gc-content-card-body-expanded {
+  padding-bottom: 1rem !important;
+}
+
+/* Smooth 0fr -> 1fr description unfurl without resting height penalty */
+.gc-content-card-hover-desc-wrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  margin-top: 0 !important;
+  transition:
+    grid-template-rows 290ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 220ms ease,
+    margin-top 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+.gc-content-card-hover-desc-wrap.gc-content-card-hover-desc-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  margin-top: 0.45rem !important;
+  pointer-events: auto;
+}
+
+.gc-content-card-hover-desc-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.gc-content-card-hover-desc {
+  color: #cbd5e1;
+  border-top: 1px solid rgba(51, 65, 85, 0.48);
+  padding-top: 0.5rem;
+  transform: translateY(-6px);
+  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.gc-content-card-hover-desc-open .gc-content-card-hover-desc {
+  transform: translateY(0);
+}
+
+/* Light Mode Elevated Hover Surface (preserves resting card background & border) */
+html.light .gc-content-card.gc-content-card-elevated-active {
+  box-shadow:
+    0 26px 50px -12px rgba(15, 23, 42, 0.24),
+    0 12px 24px -10px rgba(15, 23, 42, 0.16) !important;
+}
+
+html.light .gc-content-card-hover-desc {
+  color: #475569 !important;
+  border-top-color: #e2e8f0;
+}
+
+/* Daily Modern Light Elevated Hover Surface (preserves resting card background & border) */
+html[data-style="daily-dev"].light .gc-content-card.gc-content-card-elevated-active {
+  box-shadow:
+    0 24px 48px -14px rgba(14, 18, 23, 0.26),
+    0 10px 22px -10px rgba(14, 18, 23, 0.14) !important;
+}
+
+html[data-style="daily-dev"].light .gc-content-card-hover-desc {
+  color: #525866 !important;
+  border-top-color: #e5e7eb;
+}
+
+/* Daily Modern Dark Elevated Hover Surface (preserves resting card background & border) */
+html[data-style="daily-dev"]:not(.light) .gc-content-card.gc-content-card-elevated-active {
+  box-shadow:
+    0 28px 54px -12px rgba(0, 0, 0, 0.82),
+    0 12px 26px -10px rgba(0, 0, 0, 0.55) !important;
+}
+
+html[data-style="daily-dev"]:not(.light) .gc-content-card-hover-desc {
+  color: #a8b3cf !important;
+  border-top-color: #2d323c;
+}
+
+/* Elevated Hover Shadow for Other Non-Classic Presets (preserves resting card border) */
+html[data-style]:not([data-style="classic"]):not([data-style="daily-dev"]) .gc-content-card.gc-content-card-elevated-active {
+  box-shadow:
+    0 26px 52px -12px rgba(2, 6, 23, 0.78),
+    0 12px 26px -8px rgba(2, 6, 23, 0.45) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gc-content-card,
+  .gc-content-card-body,
+  .gc-content-card-hover-desc-wrap,
+  .gc-content-card-hover-desc {
+    transition: none !important;
+  }
+}

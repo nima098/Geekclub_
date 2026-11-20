@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Youtube, 
   Instagram, 
@@ -18,7 +18,8 @@ import {
   Loader2,
   X,
   Layers,
-  Film
+  Film,
+  Send
 } from 'lucide-react';
 import { ContentItem, ViewMode, UserProfile, MediaSlide, shouldDisplayTitle } from '../../types/content';
 import { handleImageError, getPlatformFallbackImage, resolveCoverImageUrl } from '../../utils/imageHelper';
@@ -57,8 +58,146 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   onRestoreContent,
   onPermanentDelete
 }) => {
+  const HOVER_REVEAL_DELAY_MS = 240;
+  const HOVER_COLLAPSE_DURATION_MS = 230;
+
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [isHoverExpanded, setIsHoverExpanded] = useState(false);
+  const [isHoverActive, setIsHoverActive] = useState(false);
+
+  const slotRef = useRef<HTMLDivElement | null>(null);
+  const hoverTimerRef = useRef<number | null>(null);
+  const collapseTimerRef = useRef<number | null>(null);
+  const rafRef = useRef<number | null>(null);
+
+  const clearHoverTimers = () => {
+    if (hoverTimerRef.current !== null) {
+      window.clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    if (collapseTimerRef.current !== null) {
+      window.clearTimeout(collapseTimerRef.current);
+      collapseTimerRef.current = null;
+    }
+    if (rafRef.current !== null) {
+      window.cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+  };
+
+  const collapseHoverCard = (immediate = false) => {
+    clearHoverTimers();
+    setIsHoverActive(false);
+
+    if (immediate) {
+      setIsHoverExpanded(false);
+      if (slotRef.current) {
+        slotRef.current.style.removeProperty('--gc-slot-height');
+      }
+      return;
+    }
+
+    collapseTimerRef.current = window.setTimeout(() => {
+      collapseTimerRef.current = null;
+      setIsHoverExpanded(false);
+      if (slotRef.current) {
+        slotRef.current.style.removeProperty('--gc-slot-height');
+      }
+    }, HOVER_COLLAPSE_DURATION_MS);
+  };
+
+  const handleCardMouseEnter = () => {
+    // Only trigger delayed hover expansion on devices that support fine pointer hover
+    if (typeof window === 'undefined' || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      return;
+    }
+
+    // If the card was mid-collapse, cancel collapse and smoothly re-expand
+    if (collapseTimerRef.current !== null) {
+      window.clearTimeout(collapseTimerRef.current);
+      collapseTimerRef.current = null;
+      rafRef.current = window.requestAnimationFrame(() => {
+        rafRef.current = null;
+        setIsHoverActive(true);
+      });
+      return;
+    }
+
+    if (isHoverActive) return;
+
+    clearHoverTimers();
+    hoverTimerRef.current = window.setTimeout(() => {
+      hoverTimerRef.current = null;
+      if (slotRef.current) {
+        const measuredHeight = slotRef.current.getBoundingClientRect().height;
+        if (measuredHeight > 0) {
+          slotRef.current.style.setProperty('--gc-slot-height', `${measuredHeight}px`);
+        }
+      }
+      setIsHoverExpanded(true);
+      rafRef.current = window.requestAnimationFrame(() => {
+        rafRef.current = window.requestAnimationFrame(() => {
+          rafRef.current = null;
+          setIsHoverActive(true);
+        });
+      });
+    }, HOVER_REVEAL_DELAY_MS);
+  };
+
+  const handleCardMouseLeave = () => {
+    if (!isHoverExpanded) {
+      clearHoverTimers();
+      return;
+    }
+    collapseHoverCard(false);
+  };
+
+  useEffect(() => {
+    const handleViewportResize = () => {
+      collapseHoverCard(true);
+    };
+    window.addEventListener('resize', handleViewportResize);
+    return () => {
+      clearHoverTimers();
+      window.removeEventListener('resize', handleViewportResize);
+    };
+  }, []);
+
+  const hoverDescription = useMemo(() => {
+    const stripHtml = (raw: string) =>
+      raw
+        .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+        .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&amp;/gi, '&')
+        .replace(/&quot;/gi, '"')
+        .replace(/&#39;/gi, "'")
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const cleanDesc = item.description ? stripHtml(item.description) : '';
+    const cleanArticle = item.articleContent ? stripHtml(item.articleContent) : '';
+    const candidate = cleanDesc || cleanArticle;
+    if (!candidate) return '';
+
+    const normalizedTitle = (item.title || '').replace(/\s+/g, ' ').trim();
+    if (normalizedTitle && candidate === normalizedTitle) {
+      return cleanArticle && cleanArticle !== normalizedTitle ? cleanArticle : '';
+    }
+    return candidate;
+  }, [item.description, item.articleContent, item.title]);
+
+  const handleOpenReader = () => {
+    collapseHoverCard(true);
+    onOpenArticleReader(item);
+  };
+
+  const handleOpenCommentsModal = () => {
+    collapseHoverCard(true);
+    onOpenComments(item);
+  };
 
   // Check if current user is admin or author of post
   const isAdmin = Boolean(
@@ -116,6 +255,20 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           badgeBg: 'gc-chip-platform-aparat px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs font-bold shadow-md',
           accentColor: 'hover:border-rose-500/60'
         };
+      case 'telegram':
+        return {
+          icon: <Send className="w-4 h-4 shrink-0 text-slate-100" />,
+          label: 'تلگرام',
+          badgeBg: 'gc-chip-platform-telegram px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs font-bold shadow-md',
+          accentColor: 'hover:border-sky-500/60'
+        };
+      default:
+        return {
+          icon: <Newspaper className="w-4 h-4 shrink-0 text-slate-100" />,
+          label: 'مقاله وب',
+          badgeBg: 'gc-chip-platform-article px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs font-bold shadow-md',
+          accentColor: 'hover:border-emerald-500/60'
+        };
     }
   };
 
@@ -147,11 +300,26 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   const sourceInfo = resolveContentSource(item, matchedSharer);
 
   return (
-    <article id={item.id} className={`group flex flex-col bg-slate-900/95 backdrop-blur-xl border border-slate-800/80 rounded-[1.75rem] overflow-hidden shadow-xl transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1 ${meta.accentColor} ${
-      viewMode === 'compact' ? 'sm:flex-row' : ''
-    }`}>
+    <div
+      ref={slotRef}
+      onMouseEnter={handleCardMouseEnter}
+      onMouseLeave={handleCardMouseLeave}
+      className={`gc-content-card-slot relative h-full ${
+        isHoverExpanded ? 'gc-content-card-slot-expanded' : ''
+      } ${
+        isHoverActive ? 'gc-content-card-slot-active z-20' : isHoverExpanded ? 'z-10' : 'z-0'
+      }`}
+    >
+      <article
+        id={item.id}
+        className={`gc-content-card group flex flex-col h-full bg-slate-900/95 backdrop-blur-xl border border-slate-800/80 rounded-[1.75rem] overflow-hidden shadow-xl ${
+          viewMode === 'compact' ? 'gc-content-card-compact sm:flex-row' : ''
+        } ${isHoverExpanded ? 'gc-content-card-elevated' : ''} ${
+          isHoverActive ? 'gc-content-card-elevated-active' : ''
+        }`}
+      >
       {/* Media / Embed Container */}
-      <div className={`relative bg-slate-950 overflow-hidden ${
+      <div className={`gc-content-card-media relative bg-slate-950 overflow-hidden ${
         viewMode === 'compact' 
           ? 'sm:w-64 sm:shrink-0 aspect-video sm:aspect-auto' 
           : 'aspect-video w-full'
@@ -169,7 +337,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             ) : (
               <div 
                 className="relative w-full h-full cursor-pointer group/media"
-                onClick={() => onOpenArticleReader(item)}
+                onClick={handleOpenReader}
               >
                 <img
                   src={resolveCoverImageUrl(item.thumbnail, 'youtube', 'card')}
@@ -249,7 +417,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 ) : (
                   <div
                     className="relative w-full h-full cursor-pointer overflow-hidden flex items-center justify-center bg-slate-950"
-                    onClick={() => onOpenArticleReader(item)}
+                    onClick={handleOpenReader}
                   >
                     <img
                       src={resolveCoverImageUrl(firstSlide.thumbnail || firstSlide.url || item.thumbnail, 'instagram', 'card')}
@@ -270,7 +438,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               ) : (
                 <div 
                   className="relative w-full h-full cursor-pointer overflow-hidden flex items-center justify-center bg-slate-950"
-                  onClick={() => onOpenArticleReader(item)}
+                  onClick={handleOpenReader}
                 >
                   <img
                     src={resolveCoverImageUrl(firstSlide.url || firstSlide.thumbnail || item.thumbnail, 'instagram', 'card')}
@@ -293,14 +461,6 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   </span>
                 </div>
               )}
-
-              {/* CDN Media Badge Top-Left */}
-              <div className="absolute top-3 left-3 z-10 flex items-center gap-1">
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-600/90 text-white flex items-center gap-1 shadow-md backdrop-blur-md border border-emerald-400/30">
-                  <Video className="w-3 h-3 text-emerald-200" />
-                  {hasMultipleSlides ? 'اسلایدهای CDN' : (item.videoUrl ? 'ویدیو روی CDN' : 'عکس روی CDN')}
-                </span>
-              </div>
             </div>
           );
         })()}
@@ -318,7 +478,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             ) : (
               <div 
                 className="relative w-full h-full cursor-pointer group/media"
-                onClick={() => onOpenArticleReader(item)}
+                onClick={handleOpenReader}
               >
                 <img
                   src={resolveCoverImageUrl(item.thumbnail, 'aparat', 'card')}
@@ -341,10 +501,42 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           </>
         )}
 
+        {item.platform === 'telegram' && (
+          <div
+            className="relative w-full h-full cursor-pointer group/tg bg-slate-950"
+            onClick={handleOpenReader}
+          >
+            <img
+              src={resolveCoverImageUrl(item.thumbnail, 'telegram', 'card')}
+              alt={item.title || 'پست تلگرام'}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover/tg:scale-105 opacity-90 group-hover/tg:opacity-100"
+              loading="lazy"
+              decoding="async"
+              onError={(e) => handleImageError(e, getPlatformFallbackImage('telegram', item.url), 'telegram', item.id)}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/25 to-black/30" />
+
+            {item.videoUrl ? (
+              <div className="absolute inset-0 flex items-center justify-center z-20">
+                <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-sky-600 text-white flex items-center justify-center shadow-xl shadow-sky-600/40 group-hover/tg:scale-110 transition-all duration-300 backdrop-blur-sm">
+                  <Play className="w-6 h-6 fill-white ml-0.5" />
+                </div>
+              </div>
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/tg:opacity-100 transition-opacity duration-300">
+                <div className="px-4 py-2 rounded-2xl bg-sky-600 text-white text-xs font-bold flex items-center gap-2 shadow-xl shadow-sky-600/40 transform translate-y-2 group-hover/tg:translate-y-0 transition-transform">
+                  <Send className="w-4 h-4" />
+                  مشاهده پست تلگرام
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {item.platform === 'article' && (
           <div 
             className="relative w-full h-full cursor-pointer group/art"
-            onClick={() => onOpenArticleReader(item)}
+            onClick={handleOpenReader}
           >
             <img
               src={resolveCoverImageUrl(item.thumbnail, 'article', 'card')}
@@ -390,11 +582,13 @@ export const ContentCard: React.FC<ContentCardProps> = ({
       </div>
 
       {/* Content Body */}
-      <div className="@container p-3.5 @[260px]:p-4 @[320px]:p-5 flex-1 flex flex-col justify-between bg-slate-900/95 backdrop-blur-xl min-w-0">
-        <div className="space-y-3">
+      <div className={`gc-content-card-body @container p-3 @[260px]:p-3.5 @[320px]:p-4 flex-1 flex flex-col justify-between bg-slate-900/95 backdrop-blur-xl min-w-0 ${
+        isHoverActive ? 'gc-content-card-body-expanded' : ''
+      }`}>
+        <div className="space-y-2">
           {/* Author & Published Info - Unboxed Text Metadata */}
-          <div className="flex items-center justify-between gap-2 mb-2.5">
-            <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <div className="flex items-center gap-2 min-w-0">
               <img
                 src={item.author.avatar}
                 alt={item.author.name}
@@ -440,43 +634,62 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           {/* Title */}
           {shouldDisplayTitle(item) && (
             <h3 
-              className="text-base sm:text-lg font-black text-slate-100 group-hover:text-indigo-300 transition-colors line-clamp-2 leading-relaxed cursor-pointer"
-              onClick={() => onOpenArticleReader(item)}
+              className={`gc-content-card-title text-base sm:text-lg font-black text-slate-100 group-hover:text-indigo-300 transition-colors leading-relaxed cursor-pointer ${
+                isHoverActive ? 'line-clamp-4' : 'line-clamp-2'
+              }`}
+              onClick={handleOpenReader}
             >
               {item.title}
             </h3>
           )}
 
-          {/* Description */}
-          <p className="text-xs sm:text-sm text-slate-400 line-clamp-3 mt-2 leading-relaxed sm:leading-loose">
-            {item.description}
-          </p>
+          {/* Description Smoothly Animated On Delayed Prominent Hover */}
+          {hoverDescription && (
+            <div
+              className={`gc-content-card-hover-desc-wrap ${
+                isHoverActive ? 'gc-content-card-hover-desc-open' : ''
+              }`}
+              aria-hidden={!isHoverActive}
+            >
+              <div className="gc-content-card-hover-desc-inner">
+                <p
+                  onClick={handleOpenReader}
+                  className="gc-content-card-hover-desc text-xs text-slate-300 leading-6 line-clamp-5 cursor-pointer"
+                >
+                  {hoverDescription}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Tags & Actions Bottom Block */}
-        <div className="mt-auto pt-6">
-          {/* Tags - Matched with Bottom Action Buttons & Centered Text */}
-          <div className="flex flex-wrap gap-1.5 mb-3.5">
-            {item.tags.map((tag) => (
-              <button
-                key={tag}
-                onClick={() => onTagClick(tag)}
-                className="gc-tag-item inline-flex items-center justify-center text-center px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/60 text-[11px] font-normal leading-none transition cursor-pointer"
-              >
-                #{tag}
-              </button>
-            ))}
-          </div>
+        <div className={`gc-content-card-footer-block mt-auto transition-[padding] duration-300 ease-out ${isHoverActive ? 'pt-4' : 'pt-2.5'}`}>
+          {/* Tags - Compact Resting Spacing */}
+          {item.tags.length > 0 && (
+            <div className="gc-content-card-tags flex flex-wrap gap-1 mb-2.5">
+              {item.tags.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => onTagClick(tag)}
+                  className="gc-tag-item inline-flex items-center justify-center text-center px-2 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/60 text-[11px] font-normal leading-none transition cursor-pointer"
+                >
+                  #{tag}
+                </button>
+              ))}
+            </div>
+          )}
 
-          {/* M3 Joined Reaction Bar & Action Controls */}
-          <div className="pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-1.5 @[280px]:gap-2 min-w-0">
+          {/* M3 Joined Reaction Bar & Compact Single-Line Action Controls */}
+          <div className="gc-content-card-actions pt-2.5 border-t border-slate-800/80 flex flex-nowrap items-center justify-between gap-1 min-w-0">
             {/* M3 Segmented Reaction Controls (Like / Dislike) */}
-            <div className="flex items-center gap-0.5 bg-slate-800/80 border border-slate-700/60 rounded-xl p-0.5 shrink-0">
+            <div className="gc-reaction-group flex flex-nowrap items-center gap-0 bg-slate-800/80 border border-slate-700/60 rounded-xl p-0.5 shrink-0">
               {/* Like */}
               <button
                 type="button"
                 onClick={() => onLike(item.id)}
-                className={`px-1.5 @[260px]:px-2 py-1 rounded-lg text-[11px] @[260px]:text-xs font-bold inline-flex items-center justify-center gap-1 transition-all cursor-pointer shrink-0 ${
+                className={`gc-card-like-btn px-1.5 py-1 rounded-lg text-[11px] font-bold inline-flex items-center justify-center gap-0.5 transition-all cursor-pointer shrink-0 tabular-nums ${
                   item.userReaction === 'like'
                     ? 'gc-reaction-like-active'
                     : 'text-slate-300 hover:text-white hover:bg-slate-750'
@@ -488,13 +701,13 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               </button>
 
               {/* Separator */}
-              <span className="w-px h-3 bg-slate-700/80 mx-0.25 shrink-0"></span>
+              <span className="w-px h-3 bg-slate-700/80 mx-0.5 shrink-0"></span>
 
               {/* Dislike */}
               <button
                 type="button"
                 onClick={() => onDislike(item.id)}
-                className={`px-1.5 @[260px]:px-2 py-1 rounded-lg text-[11px] @[260px]:text-xs font-bold inline-flex items-center justify-center gap-1 transition-all cursor-pointer shrink-0 ${
+                className={`gc-card-dislike-btn px-1.5 py-1 rounded-lg text-[11px] font-bold inline-flex items-center justify-center gap-0.5 transition-all cursor-pointer shrink-0 tabular-nums ${
                   item.userReaction === 'dislike'
                     ? 'gc-reaction-dislike-active'
                     : 'text-slate-300 hover:text-white hover:bg-slate-750'
@@ -506,13 +719,13 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               </button>
             </div>
 
-            {/* Action Buttons: Comments, Bookmark, Share */}
-            <div className="flex items-center flex-wrap justify-end gap-1 min-w-0">
+            {/* Compact Single-Line Action Buttons: Comments, Bookmark, Share, Admin */}
+            <div className="gc-card-actions-cluster flex flex-nowrap items-center justify-end gap-0.5 min-w-0 shrink-0">
               {/* Comments button */}
               <button
                 type="button"
-                onClick={() => onOpenComments(item)}
-                className="px-2 @[260px]:px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-indigo-300 border border-slate-700/60 text-[11px] @[260px]:text-xs font-bold inline-flex items-center justify-center gap-1 @[260px]:gap-1.5 transition cursor-pointer shrink-0"
+                onClick={handleOpenCommentsModal}
+                className="gc-card-action-btn gc-card-comments-btn h-6.5 @[260px]:h-7 px-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-indigo-300 border border-slate-700/60 text-[11px] font-bold inline-flex items-center justify-center gap-1 transition cursor-pointer shrink-0 tabular-nums"
                 title="مشاهده و ثبت نظر"
               >
                 <MessageSquare className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
@@ -523,27 +736,29 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               <button
                 type="button"
                 onClick={() => onToggleSave(item.id)}
-                className={`w-7 h-7 @[260px]:w-8 @[260px]:h-8 p-0 rounded-xl border transition cursor-pointer inline-flex items-center justify-center shrink-0 ${
+                className={`gc-card-action-btn gc-card-bookmark-btn w-6.5 h-6.5 @[260px]:w-7 @[260px]:h-7 p-0 rounded-lg border transition cursor-pointer inline-flex items-center justify-center shrink-0 ${
                   item.saved
                     ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                     : 'bg-slate-800/80 hover:bg-slate-750 text-slate-400 hover:text-white border-slate-700/60'
                 }`}
                 title={item.saved ? 'حذف از ذخیره‌ها' : 'ذخیره محتوا'}
+                aria-label={item.saved ? 'حذف از ذخیره‌ها' : 'ذخیره محتوا'}
               >
-                <Bookmark className={`w-3.5 h-3.5 @[260px]:w-4 @[260px]:h-4 shrink-0 ${item.saved ? 'fill-amber-400 text-amber-400' : ''}`} />
+                <Bookmark className={`w-3.5 h-3.5 shrink-0 ${item.saved ? 'fill-amber-400 text-amber-400' : ''}`} />
               </button>
 
               {/* Share button */}
               <button
                 type="button"
                 onClick={handleShare}
-                className="w-7 h-7 @[260px]:w-8 @[260px]:h-8 p-0 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-400 hover:text-white border border-slate-700/60 transition cursor-pointer inline-flex items-center justify-center shrink-0"
+                className="gc-card-action-btn gc-card-share-btn w-6.5 h-6.5 @[260px]:w-7 @[260px]:h-7 p-0 rounded-lg bg-slate-800/80 hover:bg-slate-750 text-slate-400 hover:text-white border border-slate-700/60 transition cursor-pointer inline-flex items-center justify-center shrink-0"
                 title="کپی لینک اشتراک"
+                aria-label="کپی لینک اشتراک"
               >
                 {isCopied ? (
-                  <Check className="w-3.5 h-3.5 @[260px]:w-4 @[260px]:h-4 text-emerald-400 shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                 ) : (
-                  <Share2 className="w-3.5 h-3.5 @[260px]:w-4 @[260px]:h-4 shrink-0" />
+                  <Share2 className="w-3.5 h-3.5 shrink-0" />
                 )}
               </button>
 
@@ -553,13 +768,14 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
+                    collapseHoverCard(true);
                     onDeleteContent(item.id);
                   }}
-                  className="px-2 @[320px]:px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 active:scale-95 text-rose-400 hover:text-rose-300 border border-slate-700/60 text-[11px] @[260px]:text-xs font-bold inline-flex items-center justify-center gap-1.5 transition cursor-pointer shadow-sm group shrink-0"
+                  className="gc-card-action-btn gc-card-admin-delete-btn w-6.5 h-6.5 @[260px]:w-7 @[260px]:h-7 p-0 rounded-lg bg-slate-800/80 hover:bg-slate-750 active:scale-95 text-rose-400 hover:text-rose-300 border border-slate-700/60 transition cursor-pointer inline-flex items-center justify-center shrink-0"
                   title="حذف و انتقال به سطل زباله (مخصوص مدیریت)"
+                  aria-label="حذف و انتقال به سطل زباله"
                 >
-                  <Trash2 className="w-3.5 h-3.5 text-rose-400 group-hover:scale-110 transition-transform shrink-0" />
-                  <span className="hidden @[320px]:inline">حذف</span>
+                  <Trash2 className="w-3.5 h-3.5 text-rose-400 shrink-0" />
                 </button>
               )}
 
@@ -569,13 +785,14 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
+                    collapseHoverCard(true);
                     onRestoreContent(item.id);
                   }}
-                  className="px-2 @[320px]:px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 hover:text-emerald-100 border border-emerald-500/30 text-[11px] @[260px]:text-xs font-bold inline-flex items-center justify-center gap-1.5 transition cursor-pointer shadow-sm shrink-0"
+                  className="gc-card-action-btn gc-card-admin-restore-btn w-6.5 h-6.5 @[260px]:w-7 @[260px]:h-7 p-0 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 hover:text-emerald-100 border border-emerald-500/30 transition cursor-pointer inline-flex items-center justify-center shrink-0"
                   title="بازگردانی محتوا از سطل زباله به صفحه اصلی"
+                  aria-label="بازگردانی محتوا"
                 >
                   <RotateCcw className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span className="hidden @[320px]:inline">بازگردانی</span>
                 </button>
               )}
 
@@ -585,18 +802,21 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
+                    collapseHoverCard(true);
                     onPermanentDelete(item.id);
                   }}
-                  className="w-7 h-7 @[260px]:w-8 @[260px]:h-8 p-0 rounded-xl bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 hover:text-rose-100 border border-rose-500/40 transition cursor-pointer inline-flex items-center justify-center shrink-0"
+                  className="gc-card-action-btn gc-card-admin-permdelete-btn w-6.5 h-6.5 @[260px]:w-7 @[260px]:h-7 p-0 rounded-lg bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 hover:text-rose-100 border border-rose-500/40 transition cursor-pointer inline-flex items-center justify-center shrink-0"
                   title="حذف دائمی از دیتابیس"
+                  aria-label="حذف دائمی از دیتابیس"
                 >
-                  <Trash2 className="w-3.5 h-3.5 @[260px]:w-4 @[260px]:h-4 text-rose-400 shrink-0" />
+                  <Trash2 className="w-3.5 h-3.5 text-rose-400 shrink-0" />
                 </button>
               )}
             </div>
           </div>
         </div>
       </div>
-    </article>
+      </article>
+    </div>
   );
 };

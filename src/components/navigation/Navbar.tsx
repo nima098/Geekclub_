@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Share2, 
   PlusCircle, 
   LogIn, 
   LogOut, 
@@ -93,8 +92,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, [showProfileMenu]);
 
   return (
-    <header className="sticky top-0 z-30 w-full max-w-full overflow-x-clip bg-slate-900/95 backdrop-blur-xl border-b border-slate-800/80 shadow-md shadow-slate-950/20">
-      <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 h-16 sm:h-18 flex items-center justify-between gap-1.5 sm:gap-4 w-full min-w-0">
+    <header className="gc-site-header sticky top-0 z-30 w-full max-w-full overflow-x-clip bg-slate-900/95 backdrop-blur-xl border-b border-slate-800/80 shadow-md shadow-slate-950/20">
+      <div className="gc-site-header-inner max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 h-16 sm:h-18 flex items-center justify-between gap-1.5 sm:gap-4 w-full min-w-0">
         {/* Brand & Wordmark Zone */}
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 min-w-0">
           <a 
@@ -111,11 +110,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             }}
             title="صفحه اصلی گیک کلاب"
           >
-            <div className="w-8.5 h-8.5 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-[#0077d9] text-white flex items-center justify-center shadow-lg shadow-[#0077d9]/30 group-hover:scale-105 transition-transform duration-200 shrink-0">
-              <Share2 className="w-5 h-5 text-white" />
+            <div className="site-brand-icon-wrap w-8.5 h-8.5 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-white p-0.5 flex items-center justify-center shadow-lg shadow-slate-950/20 ring-1 ring-slate-200/80 group-hover:scale-105 transition-transform duration-200 shrink-0 overflow-hidden">
+              <img
+                src="/site-icon.png"
+                alt="گیک کلاب"
+                className="site-brand-icon-img w-full h-full object-contain rounded-lg sm:rounded-xl"
+              />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm sm:text-xl font-black text-slate-100 tracking-tight whitespace-nowrap hover:text-[#0077d9] transition-colors">
+              <span className="gc-brand-wordmark text-sm sm:text-xl font-black text-slate-100 tracking-tight whitespace-nowrap hover:text-[#0077d9] transition-colors">
                 گیک کلاب
               </span>
             </div>
@@ -128,7 +131,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Theme Mode Toggle Button (Sun / Moon) - Moved to Right Side */}
           <button
             onClick={onToggleTheme}
-            className="p-2 sm:p-2.5 rounded-xl bg-slate-800/80 shrink-0 hover:bg-slate-750 text-slate-300 hover:text-amber-400 border border-slate-700/60 transition cursor-pointer flex items-center justify-center group order-first"
+            className="gc-navbar-action-btn p-2 sm:p-2.5 rounded-xl bg-slate-800/80 shrink-0 hover:bg-slate-750 text-slate-300 hover:text-amber-400 border border-slate-700/60 transition cursor-pointer flex items-center justify-center group order-first"
             title={theme === 'dark' ? 'تغییر به حالت روشن (Light Mode)' : 'تغییر به حالت تاریک (Dark Mode)'}
             aria-label="تغییر پوسته"
           >
@@ -143,7 +146,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {user && (
             <button
               onClick={onOpenFeedbackModal}
-              className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-sky-300 border border-slate-700/60 font-medium text-xs flex items-center gap-1.5 transition cursor-pointer shrink-0"
+              className="gc-navbar-action-btn p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-sky-300 border border-slate-700/60 font-medium text-xs flex items-center gap-1.5 transition cursor-pointer shrink-0"
               title="ثبت انتقادات و پیشنهادات"
             >
               <MessageSquarePlus className="w-4 h-4 text-[#0077d9]" />
@@ -155,7 +158,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {Boolean(user?.isAdmin || user?.email?.toLowerCase() === '3dsaz1990@gmail.com') && (
             <button
               onClick={onOpenRSSModal}
-              className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-amber-400 border border-slate-700/60 font-medium text-xs flex items-center gap-1.5 transition cursor-pointer shrink-0"
+              className="gc-navbar-action-btn p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-amber-400 border border-slate-700/60 font-medium text-xs flex items-center gap-1.5 transition cursor-pointer shrink-0"
               title="فید خبرخوان RSS سایت"
             >
               <Rss className="w-4 h-4 text-amber-400" />
@@ -166,7 +169,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Primary Material Add Content Button */}
           <button
             onClick={onOpenAddModal}
-            className="px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#0077d9] hover:bg-[#0066bd] active:scale-95 text-white font-bold text-xs sm:text-sm flex items-center gap-1 sm:gap-1.5 shadow-lg shadow-[#0077d9]/30 transition-all cursor-pointer shrink-0"
+            className="gc-navbar-primary-btn px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#0077d9] hover:bg-[#0066bd] active:scale-95 text-white font-bold text-xs sm:text-sm flex items-center gap-1 sm:gap-1.5 shadow-lg shadow-[#0077d9]/30 transition-all cursor-pointer shrink-0"
           >
             <PlusCircle className="w-4 h-4 text-white fill-none" />
             <span className="whitespace-nowrap text-white">اشتراک محتوا</span>

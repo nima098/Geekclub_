@@ -16,7 +16,8 @@ import {
   Clock,
   Video,
   AlertTriangle,
-  ExternalLink
+  ExternalLink,
+  Send
 } from 'lucide-react';
 import { ImageCDNUpload } from '../common/ImageCDNUpload';
 import { transferExternalUrlToCDN } from '../../services/cdnService';
@@ -325,6 +326,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
       const allowYT = siteSettings?.allowYouTube ?? true;
       const allowIG = siteSettings?.allowInstagram ?? true;
       const allowAparat = siteSettings?.allowAparat ?? true;
+      const allowTelegram = siteSettings?.allowTelegram ?? true;
       const allowArt = siteSettings?.allowArticles ?? true;
 
       if (finalPlatform === 'youtube' && !allowYT) {
@@ -337,6 +339,10 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
       }
       if (finalPlatform === 'aparat' && !allowAparat) {
         alert('خطا: انتشار و ورود محتوا از پلتفرم آپارات در حال حاضر توسط مدیریت غیرفعال شده است.');
+        return;
+      }
+      if (finalPlatform === 'telegram' && !allowTelegram) {
+        alert('خطا: انتشار و ورود محتوا از کانال‌های تلگرام در حال حاضر توسط مدیریت غیرفعال شده است.');
         return;
       }
       if (finalPlatform === 'article' && !allowArt) {
@@ -357,6 +363,8 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
               ? 'ویدیوی یوتیوب'
               : finalPlatform === 'aparat'
               ? 'ویدیوی آپارات'
+              : finalPlatform === 'telegram'
+              ? 'پست کانال تلگرام'
               : `مقاله در ${parsed.sourceDomain}`
           ));
 
@@ -369,6 +377,8 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
               ? 'ویدیوی به اشتراک گذاشته شده از یوتیوب.'
               : finalPlatform === 'aparat'
               ? 'ویدیوی به اشتراک گذاشته شده از آپارات.'
+              : finalPlatform === 'telegram'
+              ? 'محتوای به اشتراک گذاشته شده از کانال تلگرام.'
               : `مقاله تخصصی در ${parsed.sourceDomain}.`
           ));
 
@@ -380,6 +390,8 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
           ? FALLBACK_IMAGES.instagram
           : finalPlatform === 'aparat'
           ? FALLBACK_IMAGES.aparat
+          : finalPlatform === 'telegram'
+          ? FALLBACK_IMAGES.telegram
           : FALLBACK_IMAGES.article
       );
 
@@ -422,7 +434,15 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
 
       const finalTags = rawTags.length > 0 ? rawTags : (fetchedMeta?.tags || ['محتوا', 'گیک_کلاب']);
       const finalDuration = readingOrWatchTime.trim() || fetchedMeta?.readingOrWatchTime || (
-        finalPlatform === 'youtube' ? '۱۰ دقیقه ویدیو' : finalPlatform === 'instagram' ? '۶۰ ثانیه ریلز' : finalPlatform === 'aparat' ? '۱۵ دقیقه ویدیو' : '۵ دقیقه مطالعه'
+        finalPlatform === 'youtube'
+          ? '۱۰ دقیقه ویدیو'
+          : finalPlatform === 'instagram'
+          ? '۶۰ ثانیه ریلز'
+          : finalPlatform === 'aparat'
+          ? '۱۵ دقیقه ویدیو'
+          : finalPlatform === 'telegram'
+          ? 'پست تلگرام'
+          : '۵ دقیقه مطالعه'
       );
 
       // Resolve final Category:
@@ -565,7 +585,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
                 </span>
               </h3>
               <p className="text-xs text-slate-400">
-                فقط لینک را قرار دهید؛ پلتفرم (یوتیوب، آپارات، اینستاگرام، مقاله)، دسته‌بندی و عنوان استخراج می‌شوند.
+                فقط لینک را قرار دهید؛ پلتفرم (یوتیوب، آپارات، اینستاگرام، تلگرام، مقاله)، دسته‌بندی و عنوان استخراج می‌شوند.
               </p>
             </div>
           </div>
@@ -601,7 +621,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
               required
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="مثال: https://www.youtube.com/watch?v=... یا اینستاگرام یا لینک مقاله"
+              placeholder="مثال: یوتیوب، اینستاگرام، آپارات، https://t.me/channel/123 یا لینک مقاله وب"
               className={`w-full px-3.5 py-2.5 rounded-2xl bg-slate-800/80 border text-slate-100 placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:ring-2 font-mono dir-ltr text-left transition ${
                 duplicateItem
                   ? 'border-rose-500 focus:ring-rose-500/50 bg-rose-950/20'
@@ -733,6 +753,8 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
                 ? `article/${parseContentUrl(url).sourceDomain.replace(/\.[a-z]+$/, '') || 'web'}`
                 : detectedPlatform === 'instagram'
                 ? `instagram/${authorName ? authorName.replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase() : 'page'}`
+                : detectedPlatform === 'telegram'
+                ? `telegram/${parseContentUrl(url).detectedId?.split('/')[0] || 'channel'}`
                 : detectedPlatform === 'youtube'
                 ? `youtube/${parseContentUrl(url).sourceDomain.replace(/\.[a-z]+$/, '') || 'youtube'}`
                 : detectedPlatform === 'aparat'
@@ -937,6 +959,13 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({
                   {detectedPlatform === 'instagram' && (
                     <div className="p-4 text-center rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300">
                       پست اینستاگرام شناسایی شده از آدرس: <span className="font-mono text-pink-400">{url}</span>
+                    </div>
+                  )}
+
+                  {detectedPlatform === 'telegram' && (
+                    <div className="p-4 text-center rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 flex items-center justify-center gap-2">
+                      <Send className="w-4 h-4 text-sky-400 shrink-0" />
+                      <span>پست تلگرام شناسایی شده از کانال: <span className="font-mono text-sky-400 dir-ltr">{authorName || url}</span></span>
                     </div>
                   )}
 

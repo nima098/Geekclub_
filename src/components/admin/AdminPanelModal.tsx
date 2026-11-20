@@ -47,7 +47,17 @@ import {
   Copy,
   Bug,
   Terminal,
-  Code
+  Code,
+  Edit3,
+  UserCog,
+  Globe,
+  ChevronLeft,
+  ChevronRight,
+  FilePlus2,
+  Award,
+  Link2,
+  Tag,
+  Save
 } from 'lucide-react';
 import { 
   signInWithGoogleDrive, 
@@ -60,7 +70,12 @@ import {
   FeedbackItem, 
   UserProfile, 
   InboxMessage, 
-  SiteAdminSettings 
+  SiteAdminSettings,
+  Platform,
+  Category,
+  SITE_CATEGORIES,
+  getContentScore,
+  getUserReputationStats
 } from '../../types/content';
 import { 
   resolveCoverImageUrl, 
@@ -77,6 +92,7 @@ import {
   CDNHealthReport
 } from '../../services/cdnService';
 import { InstagramPipelineDebugger } from './InstagramPipelineDebugger';
+import { ImageCDNUpload } from '../common/ImageCDNUpload';
 
 interface AdminPanelModalProps {
   isOpen: boolean;
@@ -95,6 +111,7 @@ interface AdminPanelModalProps {
   onApproveContent: (contentId: string) => void;
   onRejectContent: (contentId: string) => void;
   onUpdateContents?: (updatedContents: ContentItem[]) => void;
+  onEditContent?: (contentId: string, updates: Partial<ContentItem>, customSuccessMsg?: string) => Promise<boolean> | boolean | void;
 }
 
 export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
@@ -113,10 +130,11 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   onUpdateUserPermissions,
   onApproveContent,
   onRejectContent,
-  onUpdateContents
+  onUpdateContents,
+  onEditContent
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'dashboard' | 'contents' | 'users' | 'database' | 'diagnostic' | 'instagram_debug' | 'feedback' | 'broadcast' | 'settings' | 'composio'
+    'dashboard' | 'contents' | 'batch_import' | 'users' | 'database' | 'diagnostic' | 'instagram_debug' | 'feedback' | 'broadcast' | 'settings' | 'composio'
   >('dashboard');
 
   // Composio Instagram Connection & Sync State
@@ -619,6 +637,266 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [contentFilter, setContentFilter] = useState<'all' | 'active' | 'pending' | 'trash'>('all');
   const [contentSearch, setContentSearch] = useState('');
 
+  // Admin Content Edit & Ownership Transfer Modal State
+  const [adminEditingItem, setAdminEditingItem] = useState<ContentItem | null>(null);
+  const [adminEditTitle, setAdminEditTitle] = useState('');
+  const [adminEditDesc, setAdminEditDesc] = useState('');
+  const [adminEditUrl, setAdminEditUrl] = useState('');
+  const [adminEditCategory, setAdminEditCategory] = useState<Category>('tech');
+  const [adminEditPlatform, setAdminEditPlatform] = useState<Platform>('article');
+  const [adminEditThumbnail, setAdminEditThumbnail] = useState('');
+  const [adminEditTags, setAdminEditTags] = useState('');
+  const [adminEditDuration, setAdminEditDuration] = useState('');
+  const [adminEditSourceName, setAdminEditSourceName] = useState('');
+  const [adminEditSourceHandle, setAdminEditSourceHandle] = useState('');
+  const [adminEditArticleContent, setAdminEditArticleContent] = useState('');
+  const [adminEditOwnerUid, setAdminEditOwnerUid] = useState('');
+  const [isSavingAdminEdit, setIsSavingAdminEdit] = useState(false);
+  const [adminEditError, setAdminEditError] = useState<string | null>(null);
+
+  // Admin Batch Source Importer State (10 items/page)
+  const [batchSourceUrl, setBatchSourceUrl] = useState('');
+  const [batchSourceType, setBatchSourceType] = useState<'auto' | 'website' | 'instagram' | 'youtube' | 'aparat' | 'telegram'>('auto');
+  const [batchPage, setBatchPage] = useState(1);
+  const [batchItems, setBatchItems] = useState<any[]>([]);
+  const [batchSelectedUrls, setBatchSelectedUrls] = useState<Set<string>>(new Set());
+  const [batchMeta, setBatchMeta] = useState<{
+    platform?: Platform;
+    sourceName?: string;
+    sourceHandle?: string;
+    hasMore?: boolean;
+    totalCount?: number | null;
+  }>({});
+  const [isFetchingBatch, setIsFetchingBatch] = useState(false);
+  const [isImportingBatch, setIsImportingBatch] = useState(false);
+  const [batchError, setBatchError] = useState<string | null>(null);
+  const [batchSuccessMsg, setBatchSuccessMsg] = useState<string | null>(null);
+  const [batchOwnerUid, setBatchOwnerUid] = useState<string>('');
+  const [batchCategoryOverride, setBatchCategoryOverride] = useState<Category | 'auto'>('auto');
+
+  const openAdminEditModal = (item: ContentItem) => {
+    setAdminEditingItem(item);
+    setAdminEditTitle(item.title || '');
+    setAdminEditDesc(item.description || '');
+    setAdminEditUrl(item.url || '');
+    setAdminEditCategory((item.category as Category) || 'tech');
+    setAdminEditPlatform(item.platform || 'article');
+    setAdminEditThumbnail(item.thumbnail || '');
+    setAdminEditTags(Array.isArray(item.tags) ? item.tags.join('، ') : '');
+    setAdminEditDuration(item.readingOrWatchTime || '');
+    setAdminEditSourceName(item.sourceName || '');
+    setAdminEditSourceHandle(item.sourceHandle || '');
+    setAdminEditArticleContent(item.articleContent || '');
+    // Match current owner uid in usersList
+    const matchedOwner = usersList.find(
+      (u) =>
+        (item.authorUid && u.uid === item.authorUid) ||
+        (item.sharedBy?.uid && u.uid === item.sharedBy.uid) ||
+        (item.author?.name && u.displayName.trim().toLowerCase() === item.author.name.trim().toLowerCase())
+    );
+    setAdminEditOwnerUid(matchedOwner?.uid || item.authorUid || '');
+    setAdminEditError(null);
+  };
+
+  const handleSaveAdminEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminEditingItem) return;
+    if (!adminEditTitle.trim()) {
+      setAdminEditError('عنوان محتوا نمی‌تواند خالی باشد.');
+      return;
+    }
+
+    setIsSavingAdminEdit(true);
+    setAdminEditError(null);
+    try {
+      const parsedTags = adminEditTags
+        .split(/[,،]+/)
+        .map((t) => t.trim().replace(/^#/, ''))
+        .filter(Boolean);
+
+      const selectedOwner = usersList.find((u) => u.uid === adminEditOwnerUid);
+      const ownershipChanged = Boolean(
+        selectedOwner &&
+        selectedOwner.uid !== adminEditingItem.authorUid &&
+        selectedOwner.uid !== adminEditingItem.sharedBy?.uid
+      );
+
+      const updates: Partial<ContentItem> = {
+        title: adminEditTitle.trim(),
+        hasCustomTitle: true,
+        description: adminEditDesc.trim(),
+        url: adminEditUrl.trim() || adminEditingItem.url,
+        category: adminEditCategory,
+        platform: adminEditPlatform,
+        thumbnail: adminEditThumbnail.trim() || adminEditingItem.thumbnail,
+        tags: parsedTags.length > 0 ? parsedTags : adminEditingItem.tags,
+        readingOrWatchTime: adminEditDuration.trim() || adminEditingItem.readingOrWatchTime,
+        sourceName: adminEditSourceName.trim() || undefined,
+        sourceHandle: adminEditSourceHandle.trim() || undefined,
+        ...(adminEditPlatform === 'article' ? { articleContent: adminEditArticleContent } : {}),
+        ...(selectedOwner
+          ? {
+              authorUid: selectedOwner.uid,
+              sharedBy: {
+                uid: selectedOwner.uid,
+                name: selectedOwner.displayName,
+                username: selectedOwner.username,
+                avatar: selectedOwner.photoURL
+              },
+              author: {
+                ...adminEditingItem.author,
+                name: selectedOwner.displayName,
+                avatar: selectedOwner.photoURL,
+                handle: selectedOwner.username
+                  ? `@${selectedOwner.username.replace(/^@/, '')}`
+                  : adminEditingItem.author.handle
+              }
+            }
+          : {})
+      };
+
+      const msg = ownershipChanged
+        ? `تغییرات ذخیره شد و مالکیت به ${selectedOwner?.displayName} منتقل گردید.`
+        : 'جزییات محتوا توسط ادمین با موفقیت به‌روزرسانی شد.';
+
+      let ok = true;
+      if (onEditContent) {
+        const res = await onEditContent(adminEditingItem.id, updates, msg);
+        ok = res !== false;
+      } else {
+        const res = await api.updateContent(adminEditingItem.id, updates);
+        ok = res.success;
+      }
+
+      if (!ok) {
+        setAdminEditError('ذخیره تغییرات روی سرور با خطا مواجه شد.');
+        return;
+      }
+
+      setPanelContents((prev) =>
+        prev.map((c) => (c.id === adminEditingItem.id ? { ...c, ...updates } : c))
+      );
+      setAdminEditingItem(null);
+    } catch (err: any) {
+      setAdminEditError(err?.message || 'خطا در ذخیره تغییرات');
+    } finally {
+      setIsSavingAdminEdit(false);
+    }
+  };
+
+  const handleFetchBatchPage = async (targetPage: number) => {
+    const cleanInput = batchSourceUrl.trim();
+    if (!cleanInput) {
+      setBatchError('لطفاً آدرس وب‌سایت، صفحه اینستاگرام، کانال یوتیوب، آپارات یا تلگرام را وارد کنید.');
+      return;
+    }
+
+    setIsFetchingBatch(true);
+    setBatchError(null);
+    setBatchSuccessMsg(null);
+    try {
+      const res = await api.fetchSourceFeed({
+        url: cleanInput,
+        sourceType: batchSourceType,
+        page: targetPage
+      });
+
+      if (!res.success || !Array.isArray(res.items)) {
+        setBatchError(res.message || 'خطا در استخراج لیست محتواهای منبع');
+        if (targetPage === 1) {
+          setBatchItems([]);
+        }
+        return;
+      }
+
+      setBatchPage(res.page || targetPage);
+      setBatchItems(res.items);
+      setBatchMeta({
+        platform: res.platform,
+        sourceName: res.sourceName,
+        sourceHandle: res.sourceHandle,
+        hasMore: Boolean(res.hasMore),
+        totalCount: res.totalCount ?? null
+      });
+      const initialSelected = new Set<string>(
+        res.items.filter((it: any) => !it.alreadyExists && it.url).map((it: any) => it.url)
+      );
+      setBatchSelectedUrls(initialSelected);
+    } catch (err: any) {
+      setBatchError(err?.message || 'خطا در ارتباط با سرور هنگام واکشی منبع');
+    } finally {
+      setIsFetchingBatch(false);
+    }
+  };
+
+  const handleToggleBatchItem = (url: string) => {
+    setBatchSelectedUrls((prev) => {
+      const next = new Set(prev);
+      if (next.has(url)) next.delete(url);
+      else next.add(url);
+      return next;
+    });
+  };
+
+  const handleSelectAllNewBatch = (selectAll: boolean) => {
+    if (!selectAll) {
+      setBatchSelectedUrls(new Set());
+      return;
+    }
+    const next = new Set<string>(
+      batchItems.filter((it) => !it.alreadyExists && it.url).map((it) => it.url)
+    );
+    setBatchSelectedUrls(next);
+  };
+
+  const handleRunBatchImport = async () => {
+    const selectedItems = batchItems.filter((it) => batchSelectedUrls.has(it.url));
+    if (selectedItems.length === 0) {
+      setBatchError('حداقل یک مورد جدید برای افزودن به سایت انتخاب کنید.');
+      return;
+    }
+
+    setIsImportingBatch(true);
+    setBatchError(null);
+    setBatchSuccessMsg(null);
+    try {
+      const res = await api.batchImportContents({
+        items: selectedItems,
+        ownerUid: batchOwnerUid || undefined,
+        categoryOverride: batchCategoryOverride
+      });
+
+      if (!res.success) {
+        setBatchError(res.message || 'خطا در افزودن دسته‌ای محتواها');
+        return;
+      }
+
+      const addedItems = Array.isArray(res.data) ? res.data : [];
+      if (addedItems.length > 0) {
+        setPanelContents((prev) => {
+          const existingIds = new Set(prev.map((p) => p.id));
+          const merged = [...addedItems.filter((a) => !existingIds.has(a.id)), ...prev];
+          onUpdateContents?.(merged);
+          return merged;
+        });
+      }
+
+      const importedUrlSet = new Set(selectedItems.map((it) => it.url));
+      setBatchItems((prev) =>
+        prev.map((it) => (importedUrlSet.has(it.url) ? { ...it, alreadyExists: true } : it))
+      );
+      setBatchSelectedUrls(new Set());
+      setBatchSuccessMsg(
+        res.message ||
+          `تعداد ${res.addedCount ?? addedItems.length} محتوا با موفقیت به سایت اضافه شد.`
+      );
+    } catch (err: any) {
+      setBatchError(err?.message || 'خطا در ارتباط با سرور هنگام درون‌ریزی');
+    } finally {
+      setIsImportingBatch(false);
+    }
+  };
+
   // Users filter & search
   const [userSearch, setUserSearch] = useState('');
   const [userFilter, setUserFilter] = useState<'all' | 'auto_approved' | 'need_approval' | 'admins'>('all');
@@ -1040,18 +1318,18 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-50 w-screen h-screen bg-slate-950 flex flex-col overflow-hidden animate-in fade-in duration-200"
+      className="gc-admin-shell fixed inset-0 z-50 w-screen h-screen bg-slate-950 flex flex-col overflow-hidden animate-in fade-in duration-200"
       dir="rtl"
       onClick={onClose}
     >
       <div 
-        className="w-full h-full bg-slate-900 flex flex-col overflow-hidden"
+        className="gc-admin-container w-full h-full bg-slate-900 flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Fullscreen Top Header */}
-        <div className="px-4 sm:px-6 lg:px-8 py-3.5 sm:py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/95 backdrop-blur-md shrink-0">
+        <div className="gc-admin-header-bar px-4 sm:px-6 lg:px-8 py-3.5 sm:py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/95 backdrop-blur-md shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-500 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-orange-500/20 ring-2 ring-amber-400/30 shrink-0">
+            <div className="gc-admin-header-badge w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center shrink-0">
               <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div>
@@ -1059,11 +1337,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 <h3 className="text-sm sm:text-lg font-black text-slate-100">
                   پنل مدیریت و نظارت کل گیک کلاب
                 </h3>
-                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500 text-slate-950 flex items-center gap-1 shadow-sm">
-                  <Crown className="w-3 h-3 text-slate-950" />
-                  مدیر سیستم (فول اسکرین)
+                <span className="gc-admin-meta-badge text-[10px] font-bold px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+                  مدیر سیستم
                 </span>
-                <span className="text-[10px] font-mono text-slate-200 bg-slate-800 px-2 py-0.5 rounded-md hidden md:inline border border-slate-700">
+                <span className="gc-admin-meta-badge text-[10px] font-mono px-2 py-0.5 rounded-md hidden md:inline">
                   3dsaz1990@gmail.com
                 </span>
               </div>
@@ -1078,7 +1355,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             <button
               type="button"
               onClick={toggleBrowserFullscreen}
-              className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-100 hover:text-white border border-slate-700/60 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+              className="gc-admin-header-secondary-btn px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-100 hover:text-white border border-slate-700/60 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
               title={isBrowserFullscreen ? 'خروج از حالت تمام‌صفحه مرورگر' : 'ورود به حالت تمام‌صفحه مرورگر'}
             >
               {isBrowserFullscreen ? (
@@ -1098,7 +1375,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-3.5 py-2 rounded-xl bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs flex items-center gap-2 shadow-md transition cursor-pointer active:scale-95"
+              className="gc-admin-header-primary-btn px-3.5 py-2 rounded-xl bg-[#0077d9] hover:bg-[#0062b3] text-white font-bold text-xs flex items-center gap-2 shadow-md transition cursor-pointer active:scale-95"
               title="بستن پنل و بازگشت به صفحه اصلی سایت"
             >
               <Home className="w-4 h-4" />
@@ -1117,41 +1394,43 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             dir="rtl"
           >
             <button
+              type="button"
               id="admin-tab-btn-dashboard"
               onClick={() => setActiveTab('dashboard')}
-              className={`btn-admin-sidebar-tab admin-tab-btn-dashboard w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
+              className={`btn-admin-sidebar-tab admin-tab-btn-dashboard w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
                 activeTab === 'dashboard'
-                  ? 'bg-[#0077d9] text-white shadow-lg shadow-indigo-600/20 font-bold border border-indigo-400/30'
+                  ? 'gc-admin-tab-active font-bold'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <LayoutDashboard className="w-4 h-4 text-white shrink-0" />
+                <LayoutDashboard className="w-4 h-4 shrink-0" />
                 <span>داشبورد و وضعیت</span>
               </div>
             </button>
 
             <button
+              type="button"
               id="admin-tab-btn-contents"
               onClick={() => setActiveTab('contents')}
-              className={`btn-admin-sidebar-tab admin-tab-btn-contents w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
+              className={`btn-admin-sidebar-tab admin-tab-btn-contents w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
                 activeTab === 'contents'
-                  ? 'bg-[#0077d9] text-white shadow-lg shadow-indigo-600/20 font-bold border border-indigo-400/30'
+                  ? 'gc-admin-tab-active font-bold'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Layers className="w-4 h-4 text-white shrink-0" />
+                <Layers className="w-4 h-4 shrink-0" />
                 <span>مدیریت محتوا</span>
               </div>
               <div className="flex items-center gap-1">
                 {pendingCount > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px] animate-pulse">
+                  <span className="gc-admin-tab-counter px-1.5 py-0.5 rounded-md font-mono font-bold text-[10px]">
                     {pendingCount}
                   </span>
                 )}
                 {trashCount > 0 && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-600 text-white font-bold">
+                  <span className="gc-admin-tab-counter text-[10px] px-1.5 py-0.5 rounded-md font-mono font-bold">
                     {trashCount}
                   </span>
                 )}
@@ -1159,149 +1438,175 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             </button>
 
             <button
-              id="composio-tab-btn"
-              onClick={() => setActiveTab('composio')}
-              className={`btn-admin-sidebar-tab composio-tab-btn w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition text-xs font-semibold text-right cursor-pointer ring-1 ring-amber-500/30 ${
-                activeTab === 'composio'
-                  ? 'bg-amber-500 text-slate-950 font-black shadow-lg border border-amber-400'
-                  : 'text-amber-400 hover:text-white bg-slate-800/80 border border-transparent'
+              type="button"
+              id="admin-tab-btn-batch-import"
+              onClick={() => setActiveTab('batch_import')}
+              className={`btn-admin-sidebar-tab admin-tab-btn-batch-import w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
+                activeTab === 'batch_import'
+                  ? 'gc-admin-tab-active font-bold'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Instagram className="w-4 h-4 text-rose-400 shrink-0" />
+                <FilePlus2 className="w-4 h-4 shrink-0" />
+                <span>درون‌ریزی گروهی منابع</span>
+              </div>
+              <span className="gc-admin-tab-counter text-[10px] px-1.5 py-0.5 rounded-md font-mono font-bold">
+                10/صفحه
+              </span>
+            </button>
+
+            <button
+              type="button"
+              id="composio-tab-btn"
+              onClick={() => setActiveTab('composio')}
+              className={`btn-admin-sidebar-tab composio-tab-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
+                activeTab === 'composio'
+                  ? 'gc-admin-tab-active font-bold'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Instagram className="w-4 h-4 shrink-0" />
                 <span>اتصال اینستاگرام (Composio)</span>
               </div>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-600 text-white font-mono font-bold">
+              <span className="gc-admin-tab-counter text-[10px] px-1.5 py-0.5 rounded-md font-mono font-bold">
                 @esmaeelgray
               </span>
             </button>
 
             <button
+              type="button"
               id="admin-tab-btn-users"
               onClick={() => setActiveTab('users')}
-              className={`btn-admin-sidebar-tab admin-tab-btn-users w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
+              className={`btn-admin-sidebar-tab admin-tab-btn-users w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
                 activeTab === 'users'
-                  ? 'bg-[#0077d9] text-white shadow-lg shadow-indigo-600/20 font-bold border border-indigo-400/30'
+                  ? 'gc-admin-tab-active font-bold'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Users className="w-4 h-4 text-white shrink-0" />
+                <Users className="w-4 h-4 shrink-0" />
                 <span>مدیریت کاربران</span>
               </div>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-mono font-bold">
+              <span className="gc-admin-tab-counter text-[10px] px-1.5 py-0.5 rounded-md font-mono font-bold">
                 {usersList.length}
               </span>
             </button>
 
             <button
+              type="button"
               id="admin-tab-btn-database"
               onClick={() => setActiveTab('database')}
-              className={`btn-admin-sidebar-tab admin-tab-btn-database w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
+              className={`btn-admin-sidebar-tab admin-tab-btn-database w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
                 activeTab === 'database'
-                  ? 'bg-[#0077d9] text-white shadow-lg shadow-indigo-600/20 font-bold border border-indigo-400/30'
+                  ? 'gc-admin-tab-active font-bold'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Database className="w-4 h-4 text-white shrink-0" />
+                <Database className="w-4 h-4 shrink-0" />
                 <span>پایداری و پشتیبان‌گیری</span>
               </div>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-600 text-white font-mono font-bold">
+              <span className="gc-admin-tab-counter text-[10px] px-1.5 py-0.5 rounded-md font-mono font-bold">
                 JSON + Postgres
               </span>
             </button>
 
             <button
+              type="button"
               id="admin-tab-btn-diagnostic"
               onClick={() => setActiveTab('diagnostic')}
-              className={`btn-admin-sidebar-tab admin-tab-btn-diagnostic w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
+              className={`btn-admin-sidebar-tab admin-tab-btn-diagnostic w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
                 activeTab === 'diagnostic'
-                  ? 'bg-[#0077d9] text-white shadow-lg shadow-indigo-600/20 font-bold border border-indigo-400/30'
+                  ? 'gc-admin-tab-active font-bold'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <ShieldAlert className="w-4 h-4 text-white animate-pulse shrink-0" />
+                <ShieldAlert className="w-4 h-4 shrink-0" />
                 <span>تست جامع و دیباگر</span>
               </div>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-mono font-bold">
+              <span className="gc-admin-tab-counter text-[10px] px-1.5 py-0.5 rounded-md font-mono font-bold">
                 Live Ping
               </span>
             </button>
 
             <button
+              type="button"
               id="admin-tab-btn-instagram-debug"
               onClick={() => setActiveTab('instagram_debug')}
-              className={`btn-admin-sidebar-tab admin-tab-btn-instagram-debug w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
+              className={`btn-admin-sidebar-tab admin-tab-btn-instagram-debug w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
                 activeTab === 'instagram_debug'
-                  ? 'bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 text-white shadow-lg shadow-pink-600/20 font-bold border border-pink-400/40'
+                  ? 'gc-admin-tab-active font-bold'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Instagram className="w-4 h-4 text-pink-400 shrink-0" />
+                <Instagram className="w-4 h-4 shrink-0" />
                 <span>دیباگر اینستاگرام</span>
               </div>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 font-mono font-bold border border-pink-500/30">
-                Instagram Debug
+              <span className="gc-admin-tab-counter text-[10px] px-1.5 py-0.5 rounded-md font-mono font-bold">
+                Debug
               </span>
             </button>
 
             <button
+              type="button"
               id="admin-tab-btn-settings"
               onClick={() => setActiveTab('settings')}
-              className={`btn-admin-sidebar-tab admin-tab-btn-settings w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
+              className={`btn-admin-sidebar-tab admin-tab-btn-settings w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
                 activeTab === 'settings'
-                  ? 'bg-[#0077d9] text-white shadow-lg shadow-indigo-600/20 font-bold border border-indigo-400/30'
+                  ? 'gc-admin-tab-active font-bold'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Settings className="w-4 h-4 text-white shrink-0" />
+                <Settings className="w-4 h-4 shrink-0" />
                 <span>تنظیمات، Apify و CDN</span>
               </div>
-              <span className={`w-2.5 h-2.5 rounded-full ${siteSettings.requireContentApproval ? 'bg-amber-500' : 'bg-emerald-400'}`} />
             </button>
 
             <button
+              type="button"
               id="admin-tab-btn-feedback"
               onClick={() => setActiveTab('feedback')}
-              className={`btn-admin-sidebar-tab admin-tab-btn-feedback w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
+              className={`btn-admin-sidebar-tab admin-tab-btn-feedback w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
                 activeTab === 'feedback'
-                  ? 'bg-[#0077d9] text-white shadow-lg shadow-indigo-600/20 font-bold border border-indigo-400/30'
+                  ? 'gc-admin-tab-active font-bold'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <MessageSquarePlus className="w-4 h-4 text-white shrink-0" />
+                <MessageSquarePlus className="w-4 h-4 shrink-0" />
                 <span>انتقادات و پیشنهادات</span>
               </div>
               {pendingFeedbackCount > 0 && (
-                <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px] flex items-center justify-center">
+                <span className="gc-admin-tab-counter px-1.5 py-0.5 rounded-md font-mono font-bold text-[10px]">
                   {pendingFeedbackCount}
                 </span>
               )}
             </button>
 
             <button
+              type="button"
               id="admin-tab-btn-broadcast"
               onClick={() => setActiveTab('broadcast')}
-              className={`btn-admin-sidebar-tab admin-tab-btn-broadcast w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
+              className={`btn-admin-sidebar-tab admin-tab-btn-broadcast w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition text-xs font-semibold text-right cursor-pointer ${
                 activeTab === 'broadcast'
-                  ? 'bg-[#0077d9] text-white shadow-lg shadow-indigo-600/20 font-bold border border-indigo-400/30'
+                  ? 'gc-admin-tab-active font-bold'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Send className="w-4 h-4 text-white shrink-0" />
+                <Send className="w-4 h-4 shrink-0" />
                 <span>ارسال پیام همگانی</span>
               </div>
             </button>
           </nav>
 
           {/* Tab Content Area */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-950/40">
+          <div className="gc-admin-main-pane flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-950/40">
             <div className="max-w-7xl mx-auto w-full">
 
             {/* 1. Dashboard Tab */}
@@ -1309,10 +1614,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               <div className="space-y-6">
                 {/* Metric Cards Grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                  <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-2">
-                    <span className="text-xs px-2.5 py-1 rounded-lg bg-[#0077d9] text-white font-bold inline-block">محتواهای فعال و منتشرشده</span>
-                    <div className="text-2xl sm:text-3xl font-black text-white">{activeCount}</div>
-                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-600 text-white font-bold inline-block">نمایش عمومی در سایت</span>
+                  <div className="gc-admin-stat-card p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 space-y-1.5">
+                    <span className="text-xs font-semibold text-slate-400 block">محتواهای فعال و منتشرشده</span>
+                    <div className="text-2xl sm:text-3xl font-black text-white tabular-nums">{activeCount}</div>
+                    <span className="text-[11px] text-slate-400 block">نمایش عمومی در سایت</span>
                   </div>
 
                   <div 
@@ -1320,44 +1625,40 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       setActiveTab('contents');
                       setContentFilter('pending');
                     }}
-                    className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-2 cursor-pointer hover:bg-slate-750 transition"
+                    className="gc-admin-stat-card p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 space-y-1.5 cursor-pointer hover:bg-slate-750 transition"
                   >
-                    <span className="text-xs px-2.5 py-1 rounded-lg bg-amber-600 text-slate-950 font-bold inline-block">در انتظار تایید ادمین</span>
-                    <div className="text-2xl sm:text-3xl font-black text-white">{pendingCount}</div>
-                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500 text-slate-950 font-bold inline-block">بررسی و تایید انتشار ←</span>
+                    <span className="text-xs font-semibold text-slate-400 block">در انتظار تایید ادمین</span>
+                    <div className="text-2xl sm:text-3xl font-black text-white tabular-nums">{pendingCount}</div>
+                    <span className="text-[11px] text-slate-400 block">بررسی و تایید انتشار ←</span>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-2">
-                    <span className="text-xs px-2.5 py-1 rounded-lg bg-rose-600 text-white font-bold inline-block">سطل بازیافت (حذف نرم)</span>
-                    <div className="text-2xl sm:text-3xl font-black text-white">{trashCount}</div>
-                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-rose-600 text-white font-bold inline-block">قابل بازگردانی مجدد</span>
+                  <div className="gc-admin-stat-card p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 space-y-1.5">
+                    <span className="text-xs font-semibold text-slate-400 block">سطل بازیافت (حذف نرم)</span>
+                    <div className="text-2xl sm:text-3xl font-black text-white tabular-nums">{trashCount}</div>
+                    <span className="text-[11px] text-slate-400 block">قابل بازگردانی مجدد</span>
                   </div>
 
                   <div 
                     onClick={() => setActiveTab('users')}
-                    className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-2 cursor-pointer hover:bg-slate-750 transition"
+                    className="gc-admin-stat-card p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 space-y-1.5 cursor-pointer hover:bg-slate-750 transition"
                   >
-                    <span className="text-xs px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-bold inline-block">کاربران ثبت‌نام شده</span>
-                    <div className="text-2xl sm:text-3xl font-black text-white">{usersList.length}</div>
-                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-600 text-white font-bold inline-block">
+                    <span className="text-xs font-semibold text-slate-400 block">کاربران ثبت‌نام شده</span>
+                    <div className="text-2xl sm:text-3xl font-black text-white tabular-nums">{usersList.length}</div>
+                    <span className="text-[11px] text-slate-400 block">
                       {autoApprovedUsersCount} کاربر با انتشار مستقیم
                     </span>
                   </div>
                 </div>
 
                 {/* Main Quick Toggle: Content Approval Mode */}
-                <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <ShieldAlert className="w-5 h-5 text-white" />
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <ShieldAlert className="w-5 h-5" />
                       <h4 className="text-sm font-bold text-slate-100">
                         وضعیت تأیید محتوا قبل از انتشار در سایت
                       </h4>
-                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                        siteSettings.requireContentApproval 
-                          ? 'bg-amber-500 text-slate-950'
-                          : 'bg-emerald-600 text-white'
-                      }`}>
+                      <span className="gc-admin-meta-badge text-[10px] font-bold px-2 py-0.5 rounded-md">
                         {siteSettings.requireContentApproval ? 'تایید دستی فعال است' : 'انتشار مستقیم و آزاد'}
                       </span>
                     </div>
@@ -1376,18 +1677,18 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     })}
                     className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition active:scale-95 cursor-pointer shrink-0 ${
                       siteSettings.requireContentApproval
-                        ? 'bg-amber-500 text-slate-950 hover:bg-amber-400 shadow-md'
-                        : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
+                        ? 'gc-admin-primary-btn'
+                        : 'gc-admin-secondary-btn'
                     }`}
                   >
                     {siteSettings.requireContentApproval ? (
                       <>
-                        <ToggleRight className="w-5 h-5 text-slate-950" />
+                        <ToggleRight className="w-5 h-5" />
                         تایید محتوا: فعال
                       </>
                     ) : (
                       <>
-                        <ToggleLeft className="w-5 h-5 text-slate-300" />
+                        <ToggleLeft className="w-5 h-5" />
                         تایید محتوا: غیرفعال
                       </>
                     )}
@@ -1395,19 +1696,17 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 </div>
 
                 {/* Composio Instagram Quick Access Banner Card */}
-                <div className="p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border border-amber-500/30 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-3.5">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 p-0.5 shadow-lg shadow-rose-500/20 shrink-0">
-                      <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-                        <Instagram className="w-6 h-6 text-rose-400" />
-                      </div>
+                    <div className="gc-admin-icon-surface w-11 h-11 rounded-xl flex items-center justify-center shrink-0">
+                      <Instagram className="w-5 h-5" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <h4 className="text-sm sm:text-base font-black text-slate-100">
                           همگام‌سازی و اتصال اینستاگرام Composio.dev
                         </h4>
-                        <span className="text-[10px] font-mono text-amber-400 font-bold px-2.5 py-0.5 rounded-md bg-slate-950 border border-amber-500/40">
+                        <span className="gc-admin-meta-badge text-[10px] font-mono font-bold px-2 py-0.5 rounded-md">
                           @esmaeelgray
                         </span>
                       </div>
@@ -1422,37 +1721,37 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       type="button"
                       onClick={handleRunComposioSyncNow}
                       disabled={isRunningComposioSync}
-                      className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 disabled:opacity-50 text-slate-950 font-black text-xs rounded-xl flex items-center gap-1.5 shadow-md transition active:scale-95 cursor-pointer"
+                      className="gc-admin-primary-btn px-4 py-2.5 disabled:opacity-50 font-bold text-xs rounded-xl flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
                     >
-                      <RefreshCw className={`w-4 h-4 text-slate-950 ${isRunningComposioSync ? 'animate-spin' : ''}`} />
+                      <RefreshCw className={`w-4 h-4 ${isRunningComposioSync ? 'animate-spin' : ''}`} />
                       <span>{isRunningComposioSync ? 'در حال دریافت...' : 'انتشار فوری پست‌های جدید'}</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setActiveTab('composio')}
-                      className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition cursor-pointer"
+                      className="gc-admin-secondary-btn px-4 py-2.5 font-bold text-xs rounded-xl flex items-center gap-1.5 transition cursor-pointer"
                     >
-                      <Settings className="w-4 h-4 text-slate-300" />
+                      <Settings className="w-4 h-4" />
                       <span>تنظیمات Composio</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Quick Actions & Guidelines */}
-                <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-3">
+                <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 space-y-3">
                   <h4 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-white" />
+                    <ShieldCheck className="w-4 h-4" />
                     راهنمای مدیریت دسترسی‌ها و محتوا
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-300 leading-relaxed">
-                    <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-750 space-y-1">
-                      <span className="bg-amber-500 text-slate-950 px-2 py-0.5 rounded-md font-bold text-xs inline-block mb-1">⚡ کاربران با انتشار مستقیم</span>
-                      <p className="text-slate-200">شما می‌توانید در تب <strong className="text-white">«مدیریت کاربران»</strong>، به نویسندگان معتمد، تیم تحریریه یا کاربران ویژه، دسترسی <span className="bg-emerald-600 text-white px-1.5 py-0.2 rounded font-bold text-[10px]">انتشار مستقیم بدون تایید</span> اعطا کنید تا حتی در زمان فعال بودن تایید محتوا، پست‌هایشان فوراً پخش شود.</p>
+                    <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-750 space-y-1.5">
+                      <span className="font-bold text-slate-100 text-xs block">کاربران با انتشار مستقیم</span>
+                      <p className="text-slate-300">شما می‌توانید در تب <strong className="text-white">«مدیریت کاربران»</strong>، به نویسندگان معتمد، تیم تحریریه یا کاربران ویژه، دسترسی <strong className="text-white">انتشار مستقیم بدون تایید</strong> اعطا کنید تا حتی در زمان فعال بودن تایید محتوا، پست‌هایشان فوراً پخش شود.</p>
                     </div>
-                    <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-750 space-y-1">
-                      <span className="bg-emerald-600 text-white px-2 py-0.5 rounded-md font-bold text-xs inline-block mb-1">♻️ سطل بازیافت محتوا</span>
-                      <p className="text-slate-200">هر محتوایی که توسط مدیر یا منتشرکننده حذف شود، در حافظه سیستم باقی می‌ماند و در تب <strong className="text-white">«مدیریت محتوا»</strong> قابل بازیابی است.</p>
+                    <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-750 space-y-1.5">
+                      <span className="font-bold text-slate-100 text-xs block">سطل بازیافت محتوا</span>
+                      <p className="text-slate-300">هر محتوایی که توسط مدیر یا منتشرکننده حذف شود، در حافظه سیستم باقی می‌ماند و در تب <strong className="text-white">«مدیریت محتوا»</strong> قابل بازیابی است.</p>
                     </div>
                   </div>
                 </div>
@@ -1463,45 +1762,49 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             {activeTab === 'contents' && (
               <div className="space-y-4">
                 {/* Filter controls */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700/80 shadow-md">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700/80">
                   <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto">
                     <button
+                      type="button"
                       onClick={() => setContentFilter('all')}
                       className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
                         contentFilter === 'all'
-                          ? 'bg-[#0077d9] text-white shadow-sm font-bold'
-                          : 'bg-slate-800 text-slate-300 hover:text-white'
+                          ? 'gc-admin-primary-btn font-bold'
+                          : 'gc-admin-secondary-btn'
                       }`}
                     >
                       همه ({currentContents.length})
                     </button>
                     <button
+                      type="button"
                       onClick={() => setContentFilter('active')}
                       className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
                         contentFilter === 'active'
-                          ? 'bg-emerald-600 text-white shadow-sm font-bold'
-                          : 'bg-slate-800 text-slate-300 hover:text-white'
+                          ? 'gc-admin-primary-btn font-bold'
+                          : 'gc-admin-secondary-btn'
                       }`}
                     >
                       فعال‌ها ({activeCount})
                     </button>
                     <button
+                      type="button"
                       onClick={() => setContentFilter('pending')}
                       className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
                         contentFilter === 'pending'
-                          ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
-                          : 'bg-slate-800 text-slate-200 hover:text-white'
+                          ? 'gc-admin-primary-btn font-bold'
+                          : 'gc-admin-secondary-btn'
                       }`}
                     >
-                      <Clock className="w-3.5 h-3.5 text-white" />
+                      <Clock className="w-3.5 h-3.5" />
                       در انتظار تایید ({pendingCount})
                     </button>
                     <button
+                      type="button"
                       onClick={() => setContentFilter('trash')}
                       className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
                         contentFilter === 'trash'
-                          ? 'bg-rose-600 text-white shadow-sm font-bold'
-                          : 'bg-slate-800 text-slate-300 hover:text-white'
+                          ? 'gc-admin-primary-btn font-bold'
+                          : 'gc-admin-secondary-btn'
                       }`}
                     >
                       سطل بازیافت ({trashCount})
@@ -1566,7 +1869,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       {contentFilter === 'trash' ? 'سطل بازیافت خالی است (هیچ محتوای حذف‌شده‌ای یافت نشد).' : 'محتوایی در این بخش یافت نشد.'}
                     </div>
                   ) : (
-                    filteredContents.map((item) => (
+                    filteredContents.map((item) => {
+                      const itemScore = getContentScore(item);
+                      const ownerLabel = item.sharedBy?.name || item.author.name;
+                      return (
                       <div
                         key={item.id}
                         className={`p-4 rounded-2xl border shadow-md transition flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
@@ -1605,10 +1911,22 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                   فعال در فید
                                 </span>
                               )}
+                              <span
+                                className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full dir-ltr ${
+                                  itemScore > 0
+                                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                                    : itemScore < 0
+                                      ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                                      : 'bg-slate-700 text-slate-200'
+                                }`}
+                                title={`امتیاز محتوا: ${item.likesCount || 0} لایک منهای ${item.dislikesCount || 0} دیس‌لایک`}
+                              >
+                                امتیاز: {itemScore > 0 ? `+${itemScore}` : itemScore}
+                              </span>
                             </div>
 
                             <div className="flex items-center gap-3 text-[11px] text-slate-300 flex-wrap">
-                              <span>منتشرکننده: <strong className="text-white">{item.author.name}</strong></span>
+                              <span>مالک / منتشرکننده: <strong className="text-white">{ownerLabel}</strong></span>
                               <span>پلتفرم: <strong className="text-white">{item.platform}</strong></span>
                               <span>دسته‌بندی: <strong className="bg-[#0077d9] text-white px-1.5 py-0.2 rounded">{item.category}</strong></span>
                               <span>{item.publishedAt}</span>
@@ -1617,7 +1935,18 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         </div>
 
                         {/* Action buttons */}
-                        <div className="flex items-center gap-2 mr-auto md:mr-0 shrink-0 w-full sm:w-auto justify-end">
+                        <div className="flex items-center gap-2 mr-auto md:mr-0 shrink-0 w-full sm:w-auto justify-end flex-wrap">
+                          <button
+                            type="button"
+                            id={`btn-admin-edit-content-${item.id}`}
+                            onClick={() => openAdminEditModal(item)}
+                            className="btn-admin-edit-content px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border border-amber-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                            title="ویرایش جزییات یا انتقال مالکیت این محتوا به کاربر دیگر"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>ویرایش / مالکیت</span>
+                          </button>
+
                           {item.approvalStatus === 'pending' && (
                             <>
                               <button
@@ -1681,9 +2010,278 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                           </a>
                         </div>
                       </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* 2.5. Admin Batch Source Importer Tab (10 items per page) */}
+            {activeTab === 'batch_import' && (
+              <div id="admin-batch-import-panel" className="space-y-5 max-w-5xl mx-auto">
+                <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
+                  <div className="flex items-center gap-3 border-b border-slate-700 pb-3">
+                    <div className="p-2.5 rounded-xl bg-sky-600 text-white shadow-md">
+                      <Globe className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm sm:text-base font-bold text-slate-100">
+                        استخراج و درون‌ریزی دسته‌ای از منابع خارجی
+                      </h4>
+                      <p className="text-xs text-slate-300 mt-0.5">
+                        وب‌سایت یا فید RSS، پیج اینستاگرام، کانال یوتیوب، کانال آپارات یا کانال تلگرام را معرفی کنید و ۱۰ مورد ۱۰ مورد به سایت اضافه نمایید.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                    <div className="md:col-span-3">
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">نوع منبع</label>
+                      <select
+                        id="batchSourceTypeSelect"
+                        value={batchSourceType}
+                        onChange={(e) => setBatchSourceType(e.target.value as any)}
+                        className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/50"
+                      >
+                        <option value="auto">تشخیص خودکار از آدرس</option>
+                        <option value="website">وب‌سایت / وبلاگ / RSS</option>
+                        <option value="instagram">پیج اینستاگرام</option>
+                        <option value="youtube">کانال یوتیوب</option>
+                        <option value="aparat">کانال آپارات</option>
+                        <option value="telegram">کانال تلگرام</option>
+                      </select>
+                    </div>
+
+                    <div className="md:col-span-6">
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">آدرس منبع یا آیدی کانال / پیج</label>
+                      <input
+                        type="text"
+                        id="batchSourceUrlInput"
+                        value={batchSourceUrl}
+                        onChange={(e) => setBatchSourceUrl(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleFetchBatchPage(1);
+                          }
+                        }}
+                        placeholder="https://t.me/channel یا youtube.com/@channel یا aparat.com/user یا آدرس سایت..."
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 font-mono dir-ltr text-left placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/50"
+                      />
+                    </div>
+
+                    <div className="md:col-span-3 flex items-end">
+                      <button
+                        type="button"
+                        id="btn-fetch-batch-source"
+                        onClick={() => handleFetchBatchPage(1)}
+                        disabled={isFetchingBatch || !batchSourceUrl.trim()}
+                        className="btn-fetch-batch-source w-full py-2.5 px-4 rounded-xl bg-[#0077d9] hover:bg-[#0062b3] disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-md cursor-pointer"
+                      >
+                        <RefreshCw className={`w-4 h-4 ${isFetchingBatch ? 'animate-spin' : ''}`} />
+                        <span>{isFetchingBatch ? 'در حال دریافت...' : 'دریافت لیست ۱۰ تایی'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {batchError && (
+                    <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-500/40 text-rose-300 text-xs font-bold">
+                      {batchError}
+                    </div>
+                  )}
+
+                  {batchSuccessMsg && (
+                    <div className="p-3 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      <span>{batchSuccessMsg}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Batch Results Toolbar & List */}
+                {batchItems.length > 0 && (
+                  <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-4">
+                    {/* Meta & Target Owner / Category Toolbar */}
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-slate-700">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-black text-white">
+                          منبع: {batchMeta.sourceName || batchSourceUrl}
+                        </span>
+                        {batchMeta.platform && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30 font-mono uppercase">
+                            {batchMeta.platform}
+                          </span>
+                        )}
+                        <span className="text-[11px] text-slate-300 font-mono">
+                          صفحه {batchPage} • {batchItems.length} مورد بارگزاری شده
+                          {batchMeta.totalCount ? ` از ${batchMeta.totalCount}` : ''}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <select
+                          id="batchImportOwnerSelect"
+                          value={batchOwnerUid}
+                          onChange={(e) => setBatchOwnerUid(e.target.value)}
+                          className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100"
+                          title="ثبت مالکیت محتواها به نام کاربر"
+                        >
+                          <option value="">مالک پیش‌فرض (ادمین / منبع)</option>
+                          {usersList.map((u) => (
+                            <option key={u.uid} value={u.uid}>
+                              {u.displayName} (@{u.username})
+                            </option>
+                          ))}
+                        </select>
+
+                        <select
+                          id="batchImportCategorySelect"
+                          value={batchCategoryOverride}
+                          onChange={(e) => setBatchCategoryOverride(e.target.value as any)}
+                          className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100"
+                          title="تعیین دسته‌بندی موارد اضافه‌شده"
+                        >
+                          <option value="auto">دسته‌بندی خودکار</option>
+                          {SITE_CATEGORIES.filter((c) => c.id !== 'all').map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.label}
+                            </option>
+                          ))}
+                        </select>
+
+                        <button
+                          type="button"
+                          id="btn-batch-select-all"
+                          onClick={() =>
+                            handleSelectAllNewBatch(
+                              batchSelectedUrls.size < batchItems.filter((it) => !it.alreadyExists).length
+                            )
+                          }
+                          className="btn-batch-select-all px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold cursor-pointer"
+                        >
+                          {batchSelectedUrls.size > 0 ? 'لغو انتخاب همه' : 'انتخاب همه موارد جدید'}
+                        </button>
+
+                        <button
+                          type="button"
+                          id="btn-batch-import-selected"
+                          onClick={handleRunBatchImport}
+                          disabled={isImportingBatch || batchSelectedUrls.size === 0}
+                          className="btn-batch-import-selected px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5 shadow cursor-pointer"
+                        >
+                          <FilePlus2 className="w-4 h-4" />
+                          <span>
+                            {isImportingBatch
+                              ? 'در حال افزودن...'
+                              : `افزودن ${batchSelectedUrls.size} مورد انتخاب‌شده به سایت`}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 10-Item Checklist */}
+                    <div className="space-y-2.5">
+                      {batchItems.map((it, idx) => {
+                        const checked = batchSelectedUrls.has(it.url);
+                        return (
+                          <div
+                            key={`${it.url}-${idx}`}
+                            onClick={() => !it.alreadyExists && handleToggleBatchItem(it.url)}
+                            className={`p-3 rounded-xl border transition flex items-center justify-between gap-3 ${
+                              it.alreadyExists
+                                ? 'bg-slate-900/40 border-slate-800 opacity-65'
+                                : checked
+                                  ? 'bg-sky-950/30 border-sky-500/50 cursor-pointer'
+                                  : 'bg-slate-900/80 border-slate-700/80 hover:border-slate-600 cursor-pointer'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                disabled={Boolean(it.alreadyExists)}
+                                onChange={() => handleToggleBatchItem(it.url)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-4 h-4 rounded accent-sky-500 cursor-pointer shrink-0"
+                              />
+                              <img
+                                src={resolveCoverImageUrl(it.thumbnail, it.platform || batchMeta.platform || 'article', 'card')}
+                                alt={it.title}
+                                className="w-16 h-12 rounded-lg object-cover bg-slate-800 shrink-0"
+                                onError={(e) =>
+                                  handleImageError(
+                                    e,
+                                    getPlatformFallbackImage(it.platform || batchMeta.platform || 'article', it.url),
+                                    it.platform || batchMeta.platform || 'article'
+                                  )
+                                }
+                              />
+                              <div className="min-w-0 flex-1 space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs font-bold text-slate-100 line-clamp-1">{it.title}</span>
+                                  {it.alreadyExists && (
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-600/30 text-emerald-300 border border-emerald-500/40">
+                                      قبلاً در سایت ثبت شده
+                                    </span>
+                                  )}
+                                </div>
+                                {it.description && (
+                                  <p className="text-[11px] text-slate-400 line-clamp-1">{it.description}</p>
+                                )}
+                                <div className="flex items-center gap-3 text-[10px] text-slate-400 font-mono">
+                                  <span>{it.publishedAt || 'جدید'}</span>
+                                  {it.readingOrWatchTime && <span>• {it.readingOrWatchTime}</span>}
+                                  <span className="truncate max-w-xs dir-ltr">{it.url}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <a
+                              href={it.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white shrink-0"
+                              title="باز کردن در منبع"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* 10-per-page Pagination Controls */}
+                    <div className="pt-3 border-t border-slate-700 flex items-center justify-between gap-3">
+                      <button
+                        type="button"
+                        id="btn-batch-prev-page"
+                        disabled={isFetchingBatch || batchPage <= 1}
+                        onClick={() => handleFetchBatchPage(Math.max(1, batchPage - 1))}
+                        className="btn-batch-prev-page px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                        <span>صفحه قبلی</span>
+                      </button>
+
+                      <span className="text-xs font-bold text-slate-300">
+                        صفحه <span className="font-mono text-white px-1.5">{batchPage}</span> (لیست ۱۰ تایی)
+                      </span>
+
+                      <button
+                        type="button"
+                        id="btn-batch-next-page"
+                        disabled={isFetchingBatch || !batchMeta.hasMore}
+                        onClick={() => handleFetchBatchPage(batchPage + 1)}
+                        className="btn-batch-next-page px-4 py-2 rounded-xl bg-[#0077d9] hover:bg-[#0062b3] disabled:opacity-40 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow"
+                      >
+                        <span>{isFetchingBatch ? 'در حال بارگذاری...' : 'صفحه بعدی (۱۰ مورد بعدی)'}</span>
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1764,6 +2362,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   ) : (
                     filteredUsers.map((u) => {
                       const isDirectPublishing = Boolean(u.autoApproveContent || u.isAdmin);
+                      const userRep = getUserReputationStats(currentContents, u);
                       return (
                         <div
                           key={u.uid}
@@ -1789,6 +2388,22 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                     مدیر ارشد
                                   </span>
                                 )}
+                                <span
+                                  className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 border dir-ltr ${
+                                    userRep.netScore > 0
+                                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                      : userRep.netScore < 0
+                                        ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                                        : 'bg-slate-900 text-slate-300 border-slate-700'
+                                  }`}
+                                  title={`امتیاز کل کاربر از ${userRep.totalContents} محتوای فعال (${userRep.totalLikes} لایک منهای ${userRep.totalDislikes} دیس‌لایک)`}
+                                >
+                                  <Award className="w-3 h-3 text-amber-400" />
+                                  {userRep.netScore > 0 ? `+${userRep.netScore}` : userRep.netScore}
+                                </span>
+                                <span className="text-[10px] text-slate-300 bg-slate-900 px-2 py-0.5 rounded-md border border-slate-700">
+                                  {userRep.totalContents} محتوا
+                                </span>
                               </div>
 
                               <div className="flex items-center gap-3 text-xs text-slate-300 flex-wrap">
@@ -2153,6 +2768,31 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       }`}
                     >
                       {siteSettings.requireContentApproval ? <ToggleRight className="w-9 h-9" /> : <ToggleLeft className="w-9 h-9" />}
+                    </button>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-750 flex items-center justify-between gap-4">
+                    <div>
+                      <span className="text-xs sm:text-sm font-bold text-slate-100 block">
+                        امکان افزودن پست و کانال تلگرام
+                      </span>
+                      <p className="text-[11px] text-slate-300 mt-0.5">
+                        فعال‌سازی ثبت لینک‌های پست تلگرام و دریافت مستقیم متن، تصویر یا ویدیوی آن توسط کاربران
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      id="btn-toggle-allow-telegram"
+                      onClick={() => onUpdateSiteSettings({
+                        ...siteSettings,
+                        allowTelegram: !(siteSettings.allowTelegram ?? true)
+                      })}
+                      className={`btn-toggle-allow-telegram p-1 text-2xl transition cursor-pointer ${
+                        (siteSettings.allowTelegram ?? true) ? 'text-sky-400' : 'text-slate-500'
+                      }`}
+                    >
+                      {(siteSettings.allowTelegram ?? true) ? <ToggleRight className="w-9 h-9" /> : <ToggleLeft className="w-9 h-9" />}
                     </button>
                   </div>
                 </div>
@@ -2962,6 +3602,235 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
         </div>
       </div>
     </div>
+
+    {/* Admin Content Edit & Ownership Transfer Modal */}
+    {adminEditingItem && (
+      <div
+        id="admin-edit-content-dialog"
+        className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-5 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-150"
+        onClick={() => !isSavingAdminEdit && setAdminEditingItem(null)}
+      >
+        <div
+          className="gc-admin-edit-modal w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="gc-admin-portal-header px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="gc-admin-icon-surface w-9 h-9 rounded-xl flex items-center justify-center shrink-0">
+                <UserCog className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-sm font-black text-slate-100">ویرایش جزییات و انتقال مالکیت محتوا</h4>
+                <p className="text-[11px] text-slate-400 truncate max-w-xs sm:max-w-md">{adminEditingItem.title}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              id="btn-close-admin-edit-dialog"
+              disabled={isSavingAdminEdit}
+              onClick={() => setAdminEditingItem(null)}
+              className="gc-admin-secondary-btn w-8 h-8 rounded-xl flex items-center justify-center transition cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <form onSubmit={handleSaveAdminEdit} className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
+            {adminEditError && (
+              <div className="p-3 rounded-xl bg-rose-950/50 border border-rose-500/40 text-rose-300 font-bold">
+                {adminEditError}
+              </div>
+            )}
+
+            {/* Ownership Transfer Card */}
+            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+              <label className="block font-bold text-amber-300 flex items-center gap-1.5">
+                <UserCog className="w-4 h-4" />
+                انتقال مالکیت محتوا به کاربر دیگر:
+              </label>
+              <select
+                id="adminEditOwnerTransferSelect"
+                value={adminEditOwnerUid}
+                onChange={(e) => setAdminEditOwnerUid(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-amber-500/40 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+              >
+                <option value="">حفظ مالک فعلی ({adminEditingItem.sharedBy?.name || adminEditingItem.author.name})</option>
+                {usersList.map((u) => (
+                  <option key={u.uid} value={u.uid}>
+                    {u.displayName} (@{u.username}) — {u.email}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-slate-300">
+                با انتخاب کاربر جدید، این محتوا و تمام امتیازات لایک و دیس‌لایک آن به حساب آن کاربر منتقل می‌شود.
+              </p>
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-200 mb-1.5">عنوان محتوا *</label>
+              <input
+                type="text"
+                id="adminEditTitleInput"
+                required
+                value={adminEditTitle}
+                onChange={(e) => setAdminEditTitle(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0077d9]"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block font-bold text-slate-200 mb-1.5">پلتفرم</label>
+                <select
+                  id="adminEditPlatformSelect"
+                  value={adminEditPlatform}
+                  onChange={(e) => setAdminEditPlatform(e.target.value as Platform)}
+                  className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0077d9]"
+                >
+                  <option value="youtube">یوتیوب</option>
+                  <option value="instagram">اینستاگرام</option>
+                  <option value="telegram">تلگرام</option>
+                  <option value="aparat">آپارات</option>
+                  <option value="article">مقاله / وب‌سایت</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-200 mb-1.5">دسته‌بندی موضوعی</label>
+                <select
+                  id="adminEditCategorySelect"
+                  value={adminEditCategory}
+                  onChange={(e) => setAdminEditCategory(e.target.value as Category)}
+                  className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0077d9]"
+                >
+                  {SITE_CATEGORIES.filter((c) => c.id !== 'all').map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-200 mb-1.5">مدت زمان</label>
+                <input
+                  type="text"
+                  id="adminEditDurationInput"
+                  value={adminEditDuration}
+                  onChange={(e) => setAdminEditDuration(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0077d9]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                <Link2 className="w-3.5 h-3.5 text-[#0077d9]" />
+                لینک اصلی منبع
+              </label>
+              <input
+                type="url"
+                id="adminEditUrlInput"
+                value={adminEditUrl}
+                onChange={(e) => setAdminEditUrl(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 font-mono dir-ltr text-left focus:outline-none focus:ring-2 focus:ring-[#0077d9]"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-200 mb-1.5">کپشن / توضیحات کامل</label>
+              <textarea
+                id="adminEditDescInput"
+                rows={3}
+                value={adminEditDesc}
+                onChange={(e) => setAdminEditDesc(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0077d9] resize-y leading-relaxed"
+              />
+            </div>
+
+            {adminEditPlatform === 'article' && (
+              <div>
+                <label className="block font-bold text-slate-200 mb-1.5">متن کامل مقاله</label>
+                <textarea
+                  id="adminEditArticleContentInput"
+                  rows={5}
+                  value={adminEditArticleContent}
+                  onChange={(e) => setAdminEditArticleContent(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0077d9] resize-y leading-relaxed"
+                />
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label className="block font-bold text-slate-200 mb-1.5">نام منبع / کانال</label>
+                <input
+                  type="text"
+                  id="adminEditSourceNameInput"
+                  value={adminEditSourceName}
+                  onChange={(e) => setAdminEditSourceName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0077d9]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-200 mb-1.5">آیدی منبع</label>
+                <input
+                  type="text"
+                  id="adminEditSourceHandleInput"
+                  value={adminEditSourceHandle}
+                  onChange={(e) => setAdminEditSourceHandle(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 font-mono dir-ltr text-left focus:outline-none focus:ring-2 focus:ring-[#0077d9]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5 text-[#0077d9]" />
+                برچسب‌ها (با ویرگول جدا کنید)
+              </label>
+              <input
+                type="text"
+                id="adminEditTagsInput"
+                value={adminEditTags}
+                onChange={(e) => setAdminEditTags(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0077d9]"
+              />
+            </div>
+
+            <ImageCDNUpload
+              currentUrl={adminEditThumbnail}
+              onUrlChange={(newUrl) => setAdminEditThumbnail(newUrl)}
+              label="تصویر کاور محتوا"
+              placeholder="https://..."
+              folder="contents"
+            />
+
+            <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-800">
+              <button
+                type="button"
+                id="btn-cancel-admin-edit"
+                disabled={isSavingAdminEdit}
+                onClick={() => setAdminEditingItem(null)}
+                className="gc-admin-secondary-btn px-4 py-2 rounded-xl font-bold transition cursor-pointer"
+              >
+                انصراف
+              </button>
+              <button
+                type="submit"
+                id="btn-save-admin-edit"
+                disabled={isSavingAdminEdit}
+                className="gc-admin-primary-btn px-5 py-2 rounded-xl disabled:opacity-50 font-bold flex items-center gap-1.5 transition cursor-pointer"
+              >
+                <Save className="w-4 h-4" />
+                <span>{isSavingAdminEdit ? 'در حال ذخیره...' : 'ذخیره تغییرات و مالکیت'}</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
   </div>
 );
 };

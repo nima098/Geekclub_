@@ -43,13 +43,13 @@ export const DomainAuthHelpModal: React.FC<DomainAuthHelpModalProps> = ({
       onClick={onClose}
     >
       <div 
-        className="w-full max-w-lg bg-slate-900 border border-amber-500/40 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        className="gc-admin-help-modal w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-amber-950/20">
+        <div className="gc-admin-portal-header p-5 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30 shrink-0">
+            <div className="gc-admin-header-badge w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
               <ShieldAlert className="w-5 h-5" />
             </div>
             <div>
@@ -66,7 +66,7 @@ export const DomainAuthHelpModal: React.FC<DomainAuthHelpModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="بستن"
-            className="w-9 h-9 p-0 m-0 leading-none text-center rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition cursor-pointer inline-flex items-center justify-center shrink-0"
+            className="gc-admin-secondary-btn w-9 h-9 p-0 m-0 leading-none text-center rounded-xl transition cursor-pointer inline-flex items-center justify-center shrink-0"
           >
             <X className="w-5 h-5 block m-0 shrink-0" />
           </button>
@@ -84,15 +84,15 @@ export const DomainAuthHelpModal: React.FC<DomainAuthHelpModalProps> = ({
               دامنه فعلی شما جهت افزودن به فایربیس:
             </span>
             <div className="flex items-center gap-2">
-              <div className="flex-1 p-2.5 rounded-xl bg-slate-900 border border-slate-700 font-mono text-xs text-amber-300 dir-ltr select-all truncate">
+              <div className="flex-1 p-2.5 rounded-xl bg-slate-900 border border-slate-700 font-mono text-xs dir-ltr select-all truncate">
                 {currentDomain}
               </div>
               <button
                 type="button"
                 onClick={handleCopy}
-                className="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold border border-slate-700 flex items-center gap-1.5 transition cursor-pointer shrink-0"
+                className="gc-admin-secondary-btn px-3 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shrink-0"
               >
-                {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 <span>{copied ? 'کپی شد' : 'کپی دامنه'}</span>
               </button>
             </div>
@@ -102,7 +102,7 @@ export const DomainAuthHelpModal: React.FC<DomainAuthHelpModalProps> = ({
                 href={firebaseSettingsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-semibold underline"
+                className="text-xs flex items-center gap-1 font-semibold underline"
               >
                 <span>باز کردن تنظیمات فایربیس و افزودن دامنه</span>
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -111,9 +111,9 @@ export const DomainAuthHelpModal: React.FC<DomainAuthHelpModalProps> = ({
           </div>
 
           {/* Instant Bypass Form so they can proceed immediately */}
-          <div className="p-4 rounded-2xl bg-indigo-950/20 border border-indigo-800/40 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-bold text-indigo-300">
-              <Sparkles className="w-4 h-4 text-indigo-400" />
+          <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/80 space-y-3">
+            <div className="flex items-center gap-2 text-xs font-bold">
+              <Sparkles className="w-4 h-4" />
               <span>ورود فوری بدون نیاز به انتظار ثبت دامنه:</span>
             </div>
             <p className="text-[11px] text-slate-400 leading-relaxed">
@@ -128,7 +128,7 @@ export const DomainAuthHelpModal: React.FC<DomainAuthHelpModalProps> = ({
                 placeholder="نام شما"
                 value={manualName}
                 onChange={(e) => setManualName(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-slate-800/80 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                className="w-full px-3 py-2 rounded-xl bg-slate-800/80 border border-slate-700 text-xs text-slate-200 focus:outline-none"
               />
               <input
                 type="email"
@@ -137,7 +137,7 @@ export const DomainAuthHelpModal: React.FC<DomainAuthHelpModalProps> = ({
                 placeholder="ایمیل گوگل شما"
                 value={manualEmail}
                 onChange={(e) => setManualEmail(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-slate-800/80 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 dir-ltr text-right font-mono"
+                className="w-full px-3 py-2 rounded-xl bg-slate-800/80 border border-slate-700 text-xs text-slate-200 focus:outline-none dir-ltr text-right font-mono"
               />
 
               <button
@@ -148,7 +148,7 @@ export const DomainAuthHelpModal: React.FC<DomainAuthHelpModalProps> = ({
                     onClose();
                   }
                 }}
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition cursor-pointer"
+                className="gc-admin-primary-btn w-full py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
               >
                 <span>ادامه و انتخاب نام کاربری</span>
                 <ArrowLeft className="w-3.5 h-3.5" />

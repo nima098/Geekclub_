@@ -80,6 +80,20 @@ export function parseContentUrl(inputUrl: string): ParsedUrlResult {
     };
   }
 
+  // Check Telegram (t.me/channel/123 or t.me/s/channel/123 or telegram.me/channel/123)
+  const tgMatch = url.match(/(?:t\.me|telegram\.me|telegram\.dog)\/(?:s\/)?([a-zA-Z0-9_]{3,})(?:\/(\d+))?/i);
+  if (tgMatch && tgMatch[1]) {
+    const channel = tgMatch[1];
+    const msgId = tgMatch[2];
+    const slug = msgId ? `${channel}/${msgId}` : channel;
+    return {
+      platform: 'telegram',
+      embedUrl: msgId ? `https://t.me/${channel}/${msgId}?embed=1` : `https://t.me/s/${channel}`,
+      sourceDomain: 't.me',
+      detectedId: slug
+    };
+  }
+
   // Fallback to website article
   let domain = 'web';
   try {
@@ -333,6 +347,28 @@ export async function fetchMetadataFromUrl(rawUrl: string): Promise<ExtractedMet
       category: inferredAparatCat,
       readingOrWatchTime,
       sourceDomain: 'aparat.com'
+    };
+  }
+
+  // 3.5 Telegram fallback metadata
+  if (parsed.platform === 'telegram') {
+    const channelMatch = cleanUrl.match(/(?:t\.me|telegram\.me|telegram\.dog)\/(?:s\/)?([a-zA-Z0-9_]{3,})/i);
+    const channelHandle = channelMatch?.[1] || 'telegram';
+    const inferredTitle = `پست کانال @${channelHandle} در تلگرام`;
+    const inferredDesc = `محتوای منتشر شده در کانال تلگرامی @${channelHandle}.`;
+    return {
+      platform: 'telegram',
+      title: inferredTitle,
+      description: inferredDesc,
+      authorName: `@${channelHandle}`,
+      thumbnail: FALLBACK_IMAGES.telegram,
+      embedUrl: parsed.embedUrl,
+      tags: ['تلگرام', channelHandle, 'محتوا'],
+      category: inferCategoryFromContent(inferredTitle, inferredDesc, ['تلگرام']),
+      readingOrWatchTime: 'پست تلگرام',
+      sourceDomain: 't.me',
+      sourceName: channelHandle,
+      sourceHandle: `@${channelHandle}`
     };
   }
 

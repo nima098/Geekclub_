@@ -33,7 +33,10 @@ import {
   InboxMessage,
   ProfileComment,
   FeedbackItem,
-  SiteAdminSettings
+  SiteAdminSettings,
+  SiteStyleId,
+  SITE_STYLES,
+  getContentScore
 } from './types/content';
 import { 
   INITIAL_CONTENT, 
@@ -66,7 +69,8 @@ import {
   PlusCircle,
   Trash2,
   RotateCcw,
-  Rss
+  Rss,
+  Palette
 } from 'lucide-react';
 import { api } from './services/api';
 import { fetchMetadataFromUrl } from './utils/urlHelper';
@@ -83,8 +87,8 @@ const STORAGE_KEYS = {
 // the response REPLACED the local state. A poll that was already in flight (or hit a stale server
 // instance) therefore brought the deleted item back. We now remember local delete/restore actions and
 // re-apply them on top of every poll result until the server confirms the change.
-type PendingKind = 'soft' | 'restore' | 'perm' | 'add';
-interface PendingOverride { kind: PendingKind; at: number; deletedAt?: string; item?: ContentItem; }
+type PendingKind = 'soft' | 'restore' | 'perm' | 'add' | 'edit';
+interface PendingOverride { kind: PendingKind; at: number; deletedAt?: string; item?: ContentItem; updates?: Partial<ContentItem>; }
 const PENDING_OVERRIDE_TTL_MS = 2 * 60 * 1000;
 const stripContentPrefix = (id: string) => id.replace(/^(post|content)-/, '');
 
@@ -121,6 +125,19 @@ export default function App() {
       } else if (ov.kind === 'restore') {
         if (serverItem && !serverItem.isDeleted) { overrides.delete(id); continue; } // confirmed
         result = result.map((c) => (isMatch(c) ? { ...c, isDeleted: false, deletedAt: undefined } : c));
+      } else if (ov.kind === 'edit' && ov.updates) {
+        const up = ov.updates;
+        const confirmed = Boolean(
+          serverItem &&
+          (!up.title || serverItem.title === up.title) &&
+          (!up.authorUid || serverItem.authorUid === up.authorUid) &&
+          (!up.category || serverItem.category === up.category)
+        );
+        if (confirmed && now - ov.at > 8000) {
+          overrides.delete(id);
+          continue;
+        }
+        result = result.map((c) => (isMatch(c) ? { ...c, ...up } : c));
       }
     }
     return result;
@@ -305,11 +322,30 @@ export default function App() {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
+  // Site Visual Style Preset (Preserves 'classic' by default)
+  const [siteStyle, setSiteStyle] = useState<SiteStyleId>(() => {
+    try {
+      const saved = localStorage.getItem('geekclub_style_v1') as SiteStyleId | null;
+      return saved && SITE_STYLES.some((s) => s.id === saved) ? saved : 'classic';
+    } catch {
+      return 'classic';
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('geekclub_style_v1', siteStyle);
+      document.documentElement.setAttribute('data-style', siteStyle);
+    } catch {
+      // ignore
+    }
+  }, [siteStyle]);
+
   // Filters & Controls
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState<Platform | 'all'>('all');
   const [selectedCategory, setSelectedCategory] = useState<Category>('all');
-  const [sortOption, setSortOption] = useState<SortOption>('newest');
+  const [sortOption, setSortOption] = useState<SortOption>('highest_score');
   const [viewMode, setViewMode] = useState<ViewMode>('grid4');
   const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [showTrashOnly, setShowTrashOnly] = useState(false);
@@ -1353,6 +1389,60 @@ export default function App() {
     addToast('error', 'محتوا به طور کامل از حافظه دیتابیس حذف گردید.');
   };
 
+  const handleEditContent = async (
+    contentId: string,
+    updates: Partial<ContentItem>,
+    customSuccessMsg?: string
+  ): Promise<boolean> => {
+    const cleanId = stripContentPrefix(contentId);
+    const prevSnapshot = contents;
+
+    pendingOverridesRef.current.set(contentId, {
+      kind: 'edit',
+      at: Date.now(),
+      updates
+    });
+
+    setContents((prev) => {
+      const updated = prev.map((c) => {
+        if (c.id === contentId || stripContentPrefix(c.id) === cleanId) {
+          return { ...c, ...updates };
+        }
+        return c;
+      });
+      try {
+        localStorage.setItem('mediahub_content_v2', JSON.stringify(updated.filter((c) => !c.isDeleted)));
+      } catch {}
+      return updated;
+    });
+
+    const res = await api.updateContent(contentId, updates);
+    if (!res.success) {
+      pendingOverridesRef.current.delete(contentId);
+      setContents(prevSnapshot);
+      try {
+        localStorage.setItem('mediahub_content_v2', JSON.stringify(prevSnapshot.filter((c) => !c.isDeleted)));
+      } catch {}
+      addToast('error', res.error || 'ذخیره تغییرات محتوا روی سرور انجام نشد.');
+      return false;
+    }
+
+    if (res.data) {
+      setContents((prev) => {
+        const updated = prev.map((c) =>
+          c.id === contentId || stripContentPrefix(c.id) === cleanId ? { ...c, ...res.data } : c
+        );
+        try {
+          localStorage.setItem('mediahub_content_v2', JSON.stringify(updated.filter((c) => !c.isDeleted)));
+        } catch {}
+        return updated;
+      });
+    }
+
+    addToast('success', customSuccessMsg || 'تغییرات محتوا با موفقیت ذخیره شد.');
+    return true;
+  };
+
   // --- Feedback & Suggestions Handlers ---
   const handleSubmitFeedback = (data: Omit<FeedbackItem, 'id' | 'createdAt' | 'status'>) => {
     const newItem: FeedbackItem = {
@@ -1397,6 +1487,7 @@ export default function App() {
     setSearchQuery('');
     setSelectedPlatform('all');
     setSelectedCategory('all');
+    setSortOption('highest_score');
     setShowSavedOnly(false);
     setShowTrashOnly(false);
   };
@@ -1479,6 +1570,11 @@ export default function App() {
         return true;
       })
       .sort((a, b) => {
+        if (sortOption === 'highest_score') {
+          const scoreDiff = getContentScore(b) - getContentScore(a);
+          if (scoreDiff !== 0) return scoreDiff;
+          return (b.likesCount || 0) - (a.likesCount || 0);
+        }
         if (sortOption === 'newest') {
           return 0; // Maintain recent insertion order
         }
@@ -1709,7 +1805,7 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-800/80 bg-slate-900/95 backdrop-blur-xl py-8 text-xs text-slate-400 mt-12 shadow-lg shadow-slate-950/20">
+      <footer className="gc-site-footer border-t border-slate-800/80 bg-slate-900/95 backdrop-blur-xl py-8 text-xs text-slate-400 mt-12 shadow-lg shadow-slate-950/20">
         <div className="w-full px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <a
@@ -1718,15 +1814,42 @@ export default function App() {
                 e.preventDefault();
                 handleGoHome();
               }}
-              className="font-bold text-slate-200 hover:text-[#0077d9] transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 font-bold text-slate-200 hover:text-[#0077d9] transition-colors cursor-pointer"
               title="بازگشت به صفحه اصلی سایت"
             >
-              گیک کلاب (GeekClub)
+              <span className="site-brand-icon-wrap w-6 h-6 rounded-lg bg-white p-0.5 inline-flex items-center justify-center shadow-sm ring-1 ring-slate-200/70 overflow-hidden shrink-0">
+                <img
+                  src="/site-icon.png"
+                  alt="گیک کلاب"
+                  className="site-brand-icon-img w-full h-full object-contain rounded-md"
+                />
+              </span>
+              <span>گیک کلاب (GeekClub)</span>
             </a>
             <span>- پلتفرم اشتراک محتوای مناسب گیک‌ها</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+            <div className="footer-style-switcher flex items-center gap-2 bg-slate-800/70 light:bg-slate-200/80 border border-slate-700/70 light:border-slate-300 rounded-xl px-2.5 py-1.5">
+              <Palette className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+              <label htmlFor="footerStyleSelect" className="text-[11px] font-bold text-slate-300 light:text-slate-700 whitespace-nowrap">
+                انتخاب استایل:
+              </label>
+              <select
+                id="footerStyleSelect"
+                value={siteStyle}
+                onChange={(e) => setSiteStyle(e.target.value as SiteStyleId)}
+                className="footer-style-select bg-transparent text-slate-100 light:text-slate-900 font-bold text-xs outline-none cursor-pointer"
+                title="تغییر تم و استایل بصری سایت با حفظ استایل فعلی"
+              >
+                {SITE_STYLES.map((styleOpt) => (
+                  <option key={styleOpt.id} value={styleOpt.id} className="bg-slate-900 text-slate-100">
+                    {styleOpt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <button
               onClick={() => setIsFeedbackModalOpen(true)}
               className="flex items-center gap-1.5 text-slate-400 hover:text-pink-300 transition cursor-pointer"
@@ -1835,6 +1958,7 @@ export default function App() {
           onAddProfileComment={handleAddProfileComment}
           onOpenArticle={(item) => setActiveArticleItem(item)}
           onOpenComments={(item) => setActiveCommentsItem(item)}
+          onEditContent={handleEditContent}
         />
       )}
 
@@ -1864,6 +1988,7 @@ export default function App() {
         onApproveContent={handleApproveContent}
         onRejectContent={handleRejectContent}
         onUpdateContents={(updatedItems) => setContents(updatedItems)}
+        onEditContent={handleEditContent}
       />
 
       {/* Dedicated Admin Portal Login Modal */}

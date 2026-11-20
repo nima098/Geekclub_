@@ -1077,7 +1077,7 @@ export interface MediaSlide {
 
 export interface ExtractedMetaResult {
   success: boolean;
-  platform: 'youtube' | 'aparat' | 'instagram' | 'article';
+  platform: 'youtube' | 'aparat' | 'instagram' | 'telegram' | 'article';
   title: string;
   description: string;
   authorName: string;
@@ -2117,6 +2117,149 @@ async function fetchInstagramViaPublicBridges(instagramUrl: string): Promise<Ext
     };
   }
 
+  // 3.5. Telegram post / channel metadata extraction
+  const tgMatch = cleanUrl.match(/(?:t\.me|telegram\.me)\/(?:s\/)?([a-zA-Z0-9_]{4,})(?:\/(\d+))?/i);
+  if (tgMatch && tgMatch[1] && !['joinchat', 'addstickers', 'addtheme', 'proxy', 'socks', 'share', 'iv'].includes(tgMatch[1].toLowerCase())) {
+    const channel = tgMatch[1];
+    const msgId = tgMatch[2] || '';
+    const decodeTgHtml = (str: string) =>
+      String(str || '')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/p>/gi, '\n')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&amp;/gi, '&')
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/&quot;/gi, '"')
+        .replace(/&#39;/gi, "'")
+        .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+        .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+        .replace(/[ \t]+/g, ' ')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+
+    let channelTitle = `@${channel}`;
+    let textContent = '';
+    let rawThumb = '';
+    let rawVideo = '';
+    const rawImages: string[] = [];
+
+    try {
+      const fetchTarget = msgId
+        ? `https://t.me/s/${channel}?before=${Number(msgId) + 1}`
+        : `https://t.me/s/${channel}`;
+      const tgRes = await safeAxiosGet(fetchTarget, {
+        timeout: 9000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept-Language': 'fa-IR,fa;q=0.9,en-US;q=0.8,en;q=0.7'
+        }
+      });
+      const html = typeof tgRes.data === 'string' ? tgRes.data : '';
+      if (html) {
+        const headerTitleMatch = html.match(/class=["']tgme_channel_info_header_title["'][^>]*>([\s\S]*?)<\/div>/i) ||
+          html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i);
+        if (headerTitleMatch?.[1]) {
+          const parsedHeader = decodeTgHtml(headerTitleMatch[1]);
+          if (parsedHeader && !parsedHeader.toLowerCase().includes('telegram: contact')) {
+            channelTitle = parsedHeader;
+          }
+        }
+
+        // Isolate matching post block or latest post block if channel URL
+        const blocks = html.split(/class=["']tgme_widget_message\s/i);
+        let targetBlock = '';
+        if (msgId) {
+          targetBlock = blocks.find((b: string) => new RegExp(`data-post=["']${channel}\\/${msgId}["']`, 'i').test(b)) || '';
+        } else if (blocks.length > 1) {
+          targetBlock = blocks[blocks.length - 1];
+        }
+
+        if (targetBlock) {
+          const textMatch = targetBlock.match(/class=["'][^"']*tgme_widget_message_text[^"']*["'][^>]*>([\s\S]*?)<\/div>/i);
+          if (textMatch?.[1]) {
+            textContent = decodeTgHtml(textMatch[1]);
+          }
+
+          const photoMatches = [...targetBlock.matchAll(/class=["'][^"']*tgme_widget_message_photo_wrap[^"']*["'][^>]*style=["'][^"']*background-image:\s*url\(['"]?([^'")]+)['"]?\)/gi)];
+          for (const pm of photoMatches) {
+            if (pm[1] && !rawImages.includes(pm[1])) {
+              rawImages.push(pm[1].replace(/&amp;/g, '&'));
+            }
+          }
+
+          const videoMatch = targetBlock.match(/<video[^>]+src=["']([^"']+)["']/i);
+          if (videoMatch?.[1]) {
+            rawVideo = videoMatch[1].replace(/&amp;/g, '&');
+          }
+
+          const vidThumbMatch = targetBlock.match(/class=["'][^"']*tgme_widget_message_video_thumb[^"']*["'][^>]*style=["'][^"']*background-image:\s*url\(['"]?([^'")]+)['"]?\)/i);
+          if (vidThumbMatch?.[1]) {
+            rawThumb = vidThumbMatch[1].replace(/&amp;/g, '&');
+          }
+        }
+
+        if (!rawThumb && rawImages.length > 0) {
+          rawThumb = rawImages[0];
+        }
+        if (!rawThumb) {
+          const ogImgMatch = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
+            html.match(/class=["']tgme_page_photo_image["'][^>]*>\s*<img[^>]+src=["']([^"']+)["']/i);
+          if (ogImgMatch?.[1]) {
+            rawThumb = ogImgMatch[1].replace(/&amp;/g, '&');
+          }
+        }
+      }
+    } catch (err: any) {
+      console.warn('[Telegram Extractor] Warning:', err.message);
+    }
+
+    let finalThumb = rawThumb;
+    if (rawThumb && rawThumb.startsWith('http')) {
+      finalThumb = await downloadAndCacheImage(rawThumb, `cover_tg_${channel}_${msgId || 'ch'}`, 'telegram', channel.toLowerCase());
+    }
+
+    const cachedSlides: MediaSlide[] = [];
+    for (let i = 0; i < Math.min(rawImages.length, 10); i++) {
+      const imgUrl = await downloadAndCacheImage(rawImages[i], `tg_${channel}_${msgId || 'ch'}_img_${i}`, 'telegram', channel.toLowerCase());
+      cachedSlides.push({ type: 'image', url: imgUrl, thumbnail: imgUrl });
+    }
+    if (rawVideo) {
+      cachedSlides.unshift({ type: 'video', url: rawVideo, thumbnail: finalThumb || rawThumb });
+    }
+
+    const firstLine = (textContent || '').split('\n').map((s) => s.trim()).find((s) => s.length > 4) || '';
+    const cleanTitle = firstLine
+      ? (firstLine.length > 95 ? `${firstLine.slice(0, 92)}...` : firstLine)
+      : (msgId ? `پست تلگرام از ${channelTitle}` : `کانال تلگرام ${channelTitle}`);
+
+    return {
+      success: true,
+      platform: 'telegram',
+      title: cleanTitle,
+      description: textContent || `محتوای منتشر شده در کانال تلگرام ${channelTitle}`,
+      authorName: channelTitle,
+      sourceName: channelTitle,
+      sourceHandle: `@${channel}`,
+      author: channelTitle,
+      thumbnail: finalThumb || '',
+      image: finalThumb || '',
+      videoUrl: rawVideo || undefined,
+      mediaType: cachedSlides.length > 1 ? 'carousel' : (rawVideo ? 'video' : 'image'),
+      images: cachedSlides.filter((s) => s.type === 'image').map((s) => s.url),
+      slides: cachedSlides.length > 0 ? cachedSlides : undefined,
+      embedUrl: msgId ? `https://t.me/${channel}/${msgId}?embed=1` : `https://t.me/s/${channel}`,
+      readingOrWatchTime: rawVideo ? 'ویدیو تلگرام' : 'پست تلگرام',
+      tags: ['تلگرام', channel],
+      data: {
+        channel,
+        msgId,
+        channelTitle
+      }
+    };
+  }
+
   // 4. General Web Article / Webpage
   try {
     const pageRes = await safeAxiosGet(cleanUrl, {
@@ -2711,9 +2854,9 @@ function isTombstoned(db: DatabaseSchema, id: string): boolean {
   return db.deletedIds.includes(id) || db.deletedIds.includes(cleanId);
 }
 
-// Fields a NON-admin client may change (used by the background metadata enrichment after adding a link)
+// Fields a NON-admin owner or background metadata enrichment may update
 const NON_ADMIN_UPDATABLE_FIELDS = new Set([
-  'title', 'description', 'thumbnail', 'videoUrl', 'mediaType', 'images', 'slides',
+  'title', 'description', 'url', 'category', 'hasCustomTitle', 'thumbnail', 'videoUrl', 'mediaType', 'images', 'slides',
   'needsEnrichment', 'apifyFetched', 'articleContent', 'embedUrl', 'readingOrWatchTime', 'tags', 'sourceDomain',
   'sourceName', 'sourceHandle', 'author'
 ]);
@@ -2738,18 +2881,8 @@ const handleContentUpdate = async (req: Request, res: Response) => {
   const db = loadDatabase();
   const cleanId = id.replace(/^(post|content)-/, '');
 
-  // Non-admin clients may only push enrichment fields - never moderation/delete/like state.
-  let updates: Record<string, any> = rawUpdates;
-  if (!admin) {
-    updates = {};
-    for (const k of Object.keys(rawUpdates)) {
-      if (NON_ADMIN_UPDATABLE_FIELDS.has(k)) updates[k] = rawUpdates[k];
-    }
-  }
-  delete updates.id; // the id can never be changed through an update
-
   const index = db.contents.findIndex((c) => matchesContentId(c, id));
-  const explicitRestore = admin && updates.isDeleted === false;
+  const explicitRestore = admin && rawUpdates.isDeleted === false;
 
   // BUGFIX: an update must NEVER re-create an item that was deleted (this made deleted posts "come back").
   if (index === -1) {
@@ -2758,6 +2891,41 @@ const handleContentUpdate = async (req: Request, res: Response) => {
     }
     return res.status(404).json({ success: false, error: 'Content not found' });
   }
+
+  const targetItem = db.contents[index];
+  const reqUserUid = String(req.headers['x-user-uid'] || '').trim();
+  const reqUserEmail = String(req.headers['x-user-email'] || '').trim().toLowerCase();
+  const reqUserUsername = String(req.headers['x-user-username'] || '').replace(/^@+/, '').trim().toLowerCase();
+  const itemSharerUsername = String(targetItem.sharedBy?.username || '').replace(/^@+/, '').trim().toLowerCase();
+  const matchingProfile = reqUserEmail && Array.isArray(db.profiles)
+    ? db.profiles.find((p: any) => String(p.email || '').trim().toLowerCase() === reqUserEmail)
+    : undefined;
+  const isOwner = Boolean(
+    (reqUserUid && (targetItem.authorUid === reqUserUid || targetItem.sharedBy?.uid === reqUserUid)) ||
+    (reqUserUsername && itemSharerUsername && reqUserUsername === itemSharerUsername) ||
+    (matchingProfile?.uid && (targetItem.authorUid === matchingProfile.uid || targetItem.sharedBy?.uid === matchingProfile.uid))
+  );
+
+  const isBackgroundEnrichOnly = Object.keys(rawUpdates).every((k) =>
+    ['title', 'description', 'thumbnail', 'videoUrl', 'mediaType', 'images', 'slides', 'needsEnrichment', 'apifyFetched', 'articleContent', 'embedUrl', 'readingOrWatchTime', 'tags', 'sourceDomain', 'sourceName', 'sourceHandle', 'author'].includes(k)
+  );
+
+  if (!admin && !isOwner && !isBackgroundEnrichOnly) {
+    return res.status(403).json({
+      success: false,
+      error: 'شما مجاز به ویرایش این محتوا نیستید.'
+    });
+  }
+
+  // Non-admin clients may only push content detail/enrichment fields - never ownership transfer or moderation/delete/like state.
+  let updates: Record<string, any> = { ...rawUpdates };
+  if (!admin) {
+    updates = {};
+    for (const k of Object.keys(rawUpdates)) {
+      if (NON_ADMIN_UPDATABLE_FIELDS.has(k)) updates[k] = rawUpdates[k];
+    }
+  }
+  delete updates.id; // the id can never be changed through an update
 
   if (explicitRestore && db.deletedIds) {
     db.deletedIds = db.deletedIds.filter((dId) => dId !== id && dId !== cleanId);
@@ -3391,6 +3559,862 @@ app.post('/api/site-settings', requireAdminAuth, (req: Request, res: Response) =
   saveDatabase(db);
   recentExtractCache.clear();
   res.json({ success: true, data: db.settings });
+});
+
+// 8.1 Admin Batch Source Feed Extractor (10 items per page across Website, Instagram, YouTube, Aparat, Telegram)
+interface BatchSourceFeedItem {
+  tempId: string;
+  title: string;
+  description: string;
+  url: string;
+  platform: 'youtube' | 'aparat' | 'instagram' | 'telegram' | 'article';
+  embedUrl: string;
+  thumbnail: string;
+  videoUrl?: string;
+  mediaType?: 'video' | 'image' | 'carousel';
+  images?: string[];
+  slides?: MediaSlide[];
+  sourceName: string;
+  sourceHandle: string;
+  publishedAt: string;
+  readingOrWatchTime: string;
+  tags: string[];
+  alreadyExists?: boolean;
+}
+
+interface SourceFeedCacheEntry {
+  fetchedAt: number;
+  platform: BatchSourceFeedItem['platform'];
+  sourceName: string;
+  sourceHandle: string;
+  items: BatchSourceFeedItem[];
+  extraMeta?: Record<string, any>;
+}
+
+const sourceFeedCache = new Map<string, SourceFeedCacheEntry>();
+
+function normalizeFeedUrlForDedup(rawUrl: string): string {
+  try {
+    const u = new URL(rawUrl.trim().startsWith('http') ? rawUrl.trim() : `https://${rawUrl.trim()}`);
+    u.hash = '';
+    if (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be')) {
+      const m = u.toString().match(/(?:v=|youtu\.be\/|shorts\/)([a-zA-Z0-9_-]{11})/i);
+      if (m?.[1]) return `yt:${m[1]}`;
+    }
+    if (u.hostname.includes('instagram.com') || u.hostname.includes('instagr.am')) {
+      const sc = extractInstagramShortcode(u.toString());
+      if (sc) return `ig:${sc}`;
+    }
+    if (u.hostname.includes('aparat.com')) {
+      const ap = u.pathname.match(/\/v\/([a-zA-Z0-9]+)/i);
+      if (ap?.[1]) return `ap:${ap[1].toLowerCase()}`;
+    }
+    if (u.hostname === 't.me' || u.hostname === 'telegram.me') {
+      const tg = u.pathname.match(/\/(?:s\/)?([a-zA-Z0-9_]+)\/(\d+)/i);
+      if (tg?.[1] && tg?.[2]) return `tg:${tg[1].toLowerCase()}/${tg[2]}`;
+    }
+    return `${u.hostname.replace(/^www\./, '').toLowerCase()}${u.pathname.replace(/\/$/, '').toLowerCase()}${u.search}`;
+  } catch {
+    return String(rawUrl || '').trim().toLowerCase().replace(/\/$/, '');
+  }
+}
+
+function decodeFeedText(input: string): string {
+  return String(input || '')
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function resolveBatchInputSource(rawInput: string, requestedType: string): {
+  platform: BatchSourceFeedItem['platform'];
+  normalizedUrl: string;
+  handle: string;
+} {
+  const trimmed = String(rawInput || '').trim();
+  const type = (requestedType || 'auto').toLowerCase();
+
+  const detectFromString = (): BatchSourceFeedItem['platform'] => {
+    if (type !== 'auto' && ['website', 'instagram', 'youtube', 'aparat', 'telegram'].includes(type)) {
+      return type === 'website' ? 'article' : (type as BatchSourceFeedItem['platform']);
+    }
+    const lower = trimmed.toLowerCase();
+    if (lower.includes('youtube.com') || lower.includes('youtu.be')) return 'youtube';
+    if (lower.includes('instagram.com') || lower.includes('instagr.am')) return 'instagram';
+    if (lower.includes('aparat.com')) return 'aparat';
+    if (lower.includes('t.me') || lower.includes('telegram.me')) return 'telegram';
+    return 'article';
+  };
+
+  const platform = detectFromString();
+  const cleanHandle = trimmed.replace(/^@+/, '').split('/')[0].split('?')[0].trim();
+
+  if (platform === 'telegram') {
+    const m = trimmed.match(/(?:t\.me|telegram\.me)\/(?:s\/)?([a-zA-Z0-9_]{3,})/i);
+    const ch = (m?.[1] || cleanHandle).replace(/[^a-zA-Z0-9_]/g, '');
+    return {
+      platform: 'telegram',
+      normalizedUrl: `https://t.me/s/${ch}`,
+      handle: ch
+    };
+  }
+  if (platform === 'instagram') {
+    const m = trimmed.match(/(?:instagram\.com|instagr\.am)\/([a-zA-Z0-9._]+)/i);
+    const uname = (m?.[1] || cleanHandle).replace(/^@+/, '');
+    return {
+      platform: 'instagram',
+      normalizedUrl: `https://www.instagram.com/${uname}/`,
+      handle: uname
+    };
+  }
+  if (platform === 'aparat') {
+    const m = trimmed.match(/aparat\.com\/(?:v\/[^/]+|([a-zA-Z0-9_.-]+))/i);
+    const uname = (m?.[1] || cleanHandle).replace(/^@+/, '');
+    return {
+      platform: 'aparat',
+      normalizedUrl: `https://www.aparat.com/${uname}`,
+      handle: uname
+    };
+  }
+  if (platform === 'youtube') {
+    const url = trimmed.startsWith('http')
+      ? trimmed
+      : `https://www.youtube.com/${trimmed.startsWith('@') ? trimmed : `@${trimmed}`}`;
+    const handleMatch = url.match(/youtube\.com\/(@[a-zA-Z0-9_.-]+|channel\/[a-zA-Z0-9_-]+|c\/[a-zA-Z0-9_.-]+|user\/[a-zA-Z0-9_.-]+)/i);
+    return {
+      platform: 'youtube',
+      normalizedUrl: url,
+      handle: handleMatch?.[1] || trimmed
+    };
+  }
+  const webUrl = trimmed.startsWith('http') ? trimmed : `https://${trimmed}`;
+  let host = trimmed;
+  try {
+    host = new URL(webUrl).hostname.replace(/^www\./, '');
+  } catch {}
+  return {
+    platform: 'article',
+    normalizedUrl: webUrl,
+    handle: host
+  };
+}
+
+app.post('/api/admin/fetch-source-feed', requireAdminAuth, async (req: Request, res: Response) => {
+  const { url, sourceType = 'auto', page = 1 } = req.body || {};
+  const pageNum = Math.max(1, Number(page) || 1);
+  const PAGE_SIZE = 10;
+
+  if (!url || !String(url).trim()) {
+    return res.status(400).json({ success: false, message: 'آدرس منبع یا شناسه کانال/صفحه را وارد کنید.' });
+  }
+
+  const resolved = resolveBatchInputSource(String(url), String(sourceType));
+  const cacheKey = `${resolved.platform}:${resolved.normalizedUrl.toLowerCase()}`;
+  const db = loadDatabase();
+  const existingSet = new Set(
+    (db.contents || [])
+      .filter((c: any) => !c.isDeleted && c.url)
+      .map((c: any) => normalizeFeedUrlForDedup(c.url))
+  );
+
+  const annotatePage = (items: BatchSourceFeedItem[], sourceName: string, sourceHandle: string, hasMore: boolean, totalCount?: number, message?: string) => {
+    const annotated = items.map((it) => ({
+      ...it,
+      alreadyExists: existingSet.has(normalizeFeedUrlForDedup(it.url))
+    }));
+    return res.json({
+      success: true,
+      platform: resolved.platform,
+      sourceName,
+      sourceHandle,
+      page: pageNum,
+      pageSize: PAGE_SIZE,
+      totalCount: totalCount ?? null,
+      hasMore,
+      items: annotated,
+      message
+    });
+  };
+
+  try {
+    // 1. APARAT CHANNEL FEED (Native 10-per-page API)
+    if (resolved.platform === 'aparat') {
+      const uname = resolved.handle;
+      const offset = (pageNum - 1) * PAGE_SIZE;
+      const apiRes = await axios.get(
+        `https://www.aparat.com/etc/api/videoByUser/username/${encodeURIComponent(uname)}/perpage/${PAGE_SIZE}/curoffset/${offset}`,
+        {
+          timeout: 12000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+            'Referer': 'https://www.aparat.com/'
+          }
+        }
+      );
+      const rawVideos = Array.isArray(apiRes.data?.videobyuser) ? apiRes.data.videobyuser : [];
+      const hasMore = Boolean(apiRes.data?.ui?.pagingForward) || rawVideos.length >= PAGE_SIZE;
+      const channelName = rawVideos[0]?.sender_name || uname;
+
+      const items: BatchSourceFeedItem[] = rawVideos.map((v: any) => ({
+        tempId: `ap_${v.uid}`,
+        title: v.title || 'ویدیوی آپارات',
+        description: decodeFeedText(v.description || '') || `ویدیو منتشر شده در کانال آپارات ${channelName}`,
+        url: `https://www.aparat.com/v/${v.uid}`,
+        platform: 'aparat',
+        embedUrl: `https://www.aparat.com/video/video/embed/videohash/${v.uid}/vt/frame`,
+        thumbnail: v.big_poster || v.small_poster || '',
+        mediaType: 'video',
+        sourceName: channelName,
+        sourceHandle: `@${uname}`,
+        publishedAt: v.sdate || 'آپارات',
+        readingOrWatchTime: v.duration ? `${Math.max(1, Math.ceil(Number(v.duration) / 60))} دقیقه ویدیو` : 'ویدیو آپارات',
+        tags: ['آپارات', 'ویدیو', uname]
+      }));
+
+      return annotatePage(items, channelName, `@${uname}`, hasMore);
+    }
+
+    // 2. TELEGRAM CHANNEL FEED (Cumulative page cache with ?before= cursor for exact 10-per-page slices)
+    if (resolved.platform === 'telegram') {
+      const channel = resolved.handle;
+      let cached = sourceFeedCache.get(cacheKey);
+      if (!cached || Date.now() - cached.fetchedAt > 10 * 60_000) {
+        cached = {
+          fetchedAt: Date.now(),
+          platform: 'telegram',
+          sourceName: `@${channel}`,
+          sourceHandle: `@${channel}`,
+          items: [],
+          extraMeta: { lowestId: null, exhausted: false, seenIds: new Set<number>() }
+        };
+      }
+
+      const seenIds: Set<number> = cached.extraMeta?.seenIds || new Set<number>();
+      let lowestId: number | null = cached.extraMeta?.lowestId ?? null;
+      let exhausted: boolean = Boolean(cached.extraMeta?.exhausted);
+
+      const neededCount = pageNum * PAGE_SIZE + 1;
+      let safetyRounds = 0;
+
+      while (cached.items.length < neededCount && !exhausted && safetyRounds < 4) {
+        safetyRounds++;
+        const fetchUrl = lowestId
+          ? `https://t.me/s/${encodeURIComponent(channel)}?before=${lowestId}`
+          : `https://t.me/s/${encodeURIComponent(channel)}`;
+        const tgRes = await safeAxiosGet(fetchUrl, {
+          timeout: 12000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'fa-IR,fa;q=0.9,en-US;q=0.8,en;q=0.7'
+          }
+        });
+        const html = typeof tgRes.data === 'string' ? tgRes.data : '';
+        if (!html) {
+          exhausted = true;
+          break;
+        }
+
+        const headerMatch = html.match(/class=["']tgme_channel_info_header_title["'][^>]*>([\s\S]*?)<\/div>/i);
+        if (headerMatch?.[1]) {
+          const parsedHeader = decodeFeedText(headerMatch[1]);
+          if (parsedHeader) cached.sourceName = parsedHeader;
+        }
+
+        const blocks = html.split(/class=["']tgme_widget_message\s/i).slice(1);
+        const batchParsed: Array<{ idNum: number; item: BatchSourceFeedItem }> = [];
+        for (const block of blocks) {
+          const idMatch = block.match(/data-post=["']([^/"']+)\/(\d+)["']/i);
+          if (!idMatch?.[2]) continue;
+          const idNum = Number(idMatch[2]);
+          if (seenIds.has(idNum)) continue;
+          seenIds.add(idNum);
+          if (lowestId === null || idNum < lowestId) lowestId = idNum;
+
+          const textMatch = block.match(/class=["'][^"']*tgme_widget_message_text[^"']*["'][^>]*>([\s\S]*?)<\/div>/i);
+          const textContent = textMatch?.[1] ? decodeFeedText(textMatch[1]) : '';
+
+          const photos: string[] = [];
+          for (const pm of block.matchAll(/class=["'][^"']*tgme_widget_message_photo_wrap[^"']*["'][^>]*style=["'][^"']*background-image:\s*url\(['"]?([^'")]+)['"]?\)/gi)) {
+            if (pm[1]) photos.push(pm[1].replace(/&amp;/g, '&'));
+          }
+          const videoMatch = block.match(/<video[^>]+src=["']([^"']+)["']/i);
+          const rawVideo = videoMatch?.[1] ? videoMatch[1].replace(/&amp;/g, '&') : '';
+          const vidThumbMatch = block.match(/class=["'][^"']*tgme_widget_message_video_thumb[^"']*["'][^>]*style=["'][^"']*background-image:\s*url\(['"]?([^'")]+)['"]?\)/i);
+          const thumb = vidThumbMatch?.[1]?.replace(/&amp;/g, '&') || photos[0] || '';
+          const timeMatch = block.match(/<time[^>]+datetime=["']([^"']+)["']/i);
+
+          // Skip pure service notices with neither text nor media
+          if (!textContent && !thumb && !rawVideo) continue;
+
+          const firstLine = textContent.split('\n').map((s) => s.trim()).find((s) => s.length > 3) || '';
+          const title = firstLine
+            ? (firstLine.length > 95 ? `${firstLine.slice(0, 92)}...` : firstLine)
+            : `پست #${idNum} کانال ${cached.sourceName}`;
+
+          const slides: MediaSlide[] = [];
+          if (rawVideo) slides.push({ type: 'video', url: rawVideo, thumbnail: thumb });
+          for (const ph of photos) slides.push({ type: 'image', url: ph, thumbnail: ph });
+
+          batchParsed.push({
+            idNum,
+            item: {
+              tempId: `tg_${channel}_${idNum}`,
+              title,
+              description: textContent || `پست منتشر شده در کانال تلگرام ${cached.sourceName}`,
+              url: `https://t.me/${channel}/${idNum}`,
+              platform: 'telegram',
+              embedUrl: `https://t.me/${channel}/${idNum}?embed=1`,
+              thumbnail: thumb,
+              videoUrl: rawVideo || undefined,
+              mediaType: slides.length > 1 ? 'carousel' : (rawVideo ? 'video' : 'image'),
+              images: photos,
+              slides: slides.length > 0 ? slides : undefined,
+              sourceName: cached.sourceName,
+              sourceHandle: `@${channel}`,
+              publishedAt: timeMatch?.[1] ? new Date(timeMatch[1]).toLocaleDateString('fa-IR') : 'تلگرام',
+              readingOrWatchTime: rawVideo ? 'ویدیو تلگرام' : 'پست تلگرام',
+              tags: ['تلگرام', channel]
+            }
+          });
+        }
+
+        if (batchParsed.length === 0 || (lowestId !== null && lowestId <= 1)) {
+          exhausted = true;
+          break;
+        }
+        batchParsed.sort((a, b) => b.idNum - a.idNum);
+        cached.items.push(...batchParsed.map((x) => x.item));
+        cached.items.sort((a, b) => Number(b.tempId.split('_').pop() || 0) - Number(a.tempId.split('_').pop() || 0));
+      }
+
+      cached.extraMeta = { lowestId, exhausted, seenIds };
+      sourceFeedCache.set(cacheKey, cached);
+
+      const start = (pageNum - 1) * PAGE_SIZE;
+      const slice = cached.items.slice(start, start + PAGE_SIZE);
+      const hasMore = cached.items.length > start + PAGE_SIZE || (!exhausted && Boolean(lowestId && lowestId > 1));
+      return annotatePage(slice, cached.sourceName, cached.sourceHandle, hasMore);
+    }
+
+    // 3. YOUTUBE CHANNEL FEED (ytInitialData videos tab + RSS XML fallback -> 10 per page)
+    if (resolved.platform === 'youtube') {
+      let cached = sourceFeedCache.get(cacheKey);
+      if (!cached || Date.now() - cached.fetchedAt > 10 * 60_000) {
+        let baseUrl = resolved.normalizedUrl.replace(/\/+$/, '');
+        if (!/\/(videos|shorts|streams)$/i.test(baseUrl)) {
+          baseUrl = `${baseUrl}/videos`;
+        }
+        let sourceName = resolved.handle || 'کانال یوتیوب';
+        let sourceHandle = resolved.handle.startsWith('@') ? resolved.handle : `@${resolved.handle.replace(/^@/, '')}`;
+        const items: BatchSourceFeedItem[] = [];
+        const seenIds = new Set<string>();
+        let channelId = '';
+
+        try {
+          const chRes = await safeAxiosGet(baseUrl, {
+            timeout: 12000,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+              'Accept-Language': 'fa-IR,fa;q=0.9,en-US;q=0.8,en;q=0.7'
+            }
+          });
+          const html = typeof chRes.data === 'string' ? chRes.data : '';
+          if (html) {
+            const cidMatch = html.match(/"channelId"\s*:\s*"(UC[a-zA-Z0-9_-]{20,})"/i) ||
+              html.match(/<meta[^>]+itemprop=["']channelId["'][^>]+content=["']([^"']+)["']/i);
+            if (cidMatch?.[1]) channelId = cidMatch[1];
+
+            const titleMatch = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i);
+            if (titleMatch?.[1]) sourceName = decodeFeedText(titleMatch[1]);
+
+            const initialMatch = html.match(/var\s+ytInitialData\s*=\s*(\{[\s\S]*?\});\s*<\/script>/i) ||
+              html.match(/ytInitialData"\s*:\s*(\{[\s\S]*?\})\s*;/i);
+            if (initialMatch?.[1]) {
+              const jsonData = JSON.parse(initialMatch[1]);
+              const walkVideos = (node: any) => {
+                if (!node || typeof node !== 'object') return;
+                if (Array.isArray(node)) {
+                  for (const el of node) walkVideos(el);
+                  return;
+                }
+                const vr = node.videoRenderer || node.gridVideoRenderer;
+                if (vr?.videoId && !seenIds.has(vr.videoId)) {
+                  seenIds.add(vr.videoId);
+                  const vidTitle = vr.title?.runs?.[0]?.text || vr.title?.simpleText || `ویدیو ${vr.videoId}`;
+                  const desc = vr.descriptionSnippet?.runs?.map((r: any) => r.text).join('') || '';
+                  const duration = vr.lengthText?.simpleText || 'ویدیو یوتیوب';
+                  const pub = vr.publishedTimeText?.simpleText || 'یوتیوب';
+                  items.push({
+                    tempId: `yt_${vr.videoId}`,
+                    title: vidTitle,
+                    description: desc || `ویدیوی منتشر شده در کانال یوتیوب ${sourceName}`,
+                    url: `https://www.youtube.com/watch?v=${vr.videoId}`,
+                    platform: 'youtube',
+                    embedUrl: `https://www.youtube.com/embed/${vr.videoId}`,
+                    thumbnail: `https://img.youtube.com/vi/${vr.videoId}/hqdefault.jpg`,
+                    mediaType: 'video',
+                    sourceName,
+                    sourceHandle,
+                    publishedAt: pub,
+                    readingOrWatchTime: duration,
+                    tags: ['یوتیوب', 'ویدیو', sourceName]
+                  });
+                }
+                for (const key of Object.keys(node)) {
+                  if (key !== 'videoRenderer' && key !== 'gridVideoRenderer') {
+                    walkVideos(node[key]);
+                  }
+                }
+              };
+              walkVideos(jsonData);
+            }
+          }
+        } catch (ytErr: any) {
+          console.warn('[YouTube Batch Feed] HTML parse notice:', ytErr.message);
+        }
+
+        // Supplement / fallback with YouTube RSS Feed when channelId is known
+        if (channelId && items.length < 15) {
+          try {
+            const rssRes = await safeAxiosGet(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`, { timeout: 9000 });
+            const xml = typeof rssRes.data === 'string' ? rssRes.data : '';
+            const feedTitleMatch = xml.match(/<author>\s*<name>([\s\S]*?)<\/name>/i) || xml.match(/<title>([\s\S]*?)<\/title>/i);
+            if (feedTitleMatch?.[1]) sourceName = decodeFeedText(feedTitleMatch[1]);
+            for (const em of xml.matchAll(/<entry>([\s\S]*?)<\/entry>/gi)) {
+              const entry = em[1];
+              const vidMatch = entry.match(/<yt:videoId>([^<]+)<\/yt:videoId>/i);
+              if (!vidMatch?.[1] || seenIds.has(vidMatch[1])) continue;
+              seenIds.add(vidMatch[1]);
+              const vId = vidMatch[1].trim();
+              const tMatch = entry.match(/<title>([\s\S]*?)<\/title>/i);
+              const dMatch = entry.match(/<media:description>([\s\S]*?)<\/media:description>/i);
+              const pMatch = entry.match(/<published>([^<]+)<\/published>/i);
+              items.push({
+                tempId: `yt_${vId}`,
+                title: tMatch?.[1] ? decodeFeedText(tMatch[1]) : `ویدیو ${vId}`,
+                description: dMatch?.[1] ? decodeFeedText(dMatch[1]).slice(0, 600) : `ویدیوی یوتیوب از ${sourceName}`,
+                url: `https://www.youtube.com/watch?v=${vId}`,
+                platform: 'youtube',
+                embedUrl: `https://www.youtube.com/embed/${vId}`,
+                thumbnail: `https://img.youtube.com/vi/${vId}/hqdefault.jpg`,
+                mediaType: 'video',
+                sourceName,
+                sourceHandle,
+                publishedAt: pMatch?.[1] ? new Date(pMatch[1]).toLocaleDateString('fa-IR') : 'یوتیوب',
+                readingOrWatchTime: 'ویدیو یوتیوب',
+                tags: ['یوتیوب', 'ویدیو']
+              });
+            }
+          } catch {}
+        }
+
+        cached = { fetchedAt: Date.now(), platform: 'youtube', sourceName, sourceHandle, items };
+        sourceFeedCache.set(cacheKey, cached);
+      }
+
+      const start = (pageNum - 1) * PAGE_SIZE;
+      const slice = cached.items.slice(start, start + PAGE_SIZE);
+      return annotatePage(slice, cached.sourceName, cached.sourceHandle, cached.items.length > start + PAGE_SIZE, cached.items.length);
+    }
+
+    // 4. INSTAGRAM PAGE FEED (Apify Scraper -> 10 per page)
+    if (resolved.platform === 'instagram') {
+      const uname = resolved.handle;
+      const needed = Math.max(30, pageNum * PAGE_SIZE);
+      let cached = sourceFeedCache.get(cacheKey);
+      if (!cached || Date.now() - cached.fetchedAt > 10 * 60_000 || cached.items.length < pageNum * PAGE_SIZE) {
+        const apifyToken = String(process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN || db.settings?.apifyApiToken || db.settings?.apifyToken || '').trim();
+        const actorId = normalizeApifyActorId(process.env.APIFY_ACTOR_ID || db.settings?.apifyActorId || 'apify~instagram-scraper');
+        const items: BatchSourceFeedItem[] = [];
+        let sourceName = `@${uname}`;
+
+        if (apifyToken) {
+          const rawPosts = await runApifyActorWithAutoInput(actorId, apifyToken, resolved.normalizedUrl, {
+            timeoutSec: 55,
+            resultsLimit: needed,
+            isProfileUrl: true
+          });
+
+          for (const p of rawPosts) {
+            const sc = p.shortCode || p.code || '';
+            const postUrl = p.url || (sc ? `https://www.instagram.com/p/${sc}/` : '');
+            if (!postUrl) continue;
+            if (p.ownerFullName || p.ownerUsername) {
+              sourceName = p.ownerFullName || `@${p.ownerUsername}`;
+            }
+            const caption = String(p.caption || p.alt || '').trim();
+            const firstLine = caption.split('\n').map((s: string) => s.trim()).find((s: string) => s.length > 3) || '';
+            const thumb = p.displayUrl || p.thumbnailUrl || p.images?.[0] || '';
+            const vid = p.videoUrl || '';
+            const childPosts = Array.isArray(p.childPosts) ? p.childPosts : [];
+            const slides: MediaSlide[] = [];
+            for (const cp of childPosts) {
+              if (cp.videoUrl) slides.push({ type: 'video', url: cp.videoUrl, thumbnail: cp.displayUrl || thumb });
+              else if (cp.displayUrl) slides.push({ type: 'image', url: cp.displayUrl, thumbnail: cp.displayUrl });
+            }
+            if (slides.length === 0 && (vid || thumb)) {
+              slides.push(vid ? { type: 'video', url: vid, thumbnail: thumb } : { type: 'image', url: thumb, thumbnail: thumb });
+            }
+
+            items.push({
+              tempId: `ig_${sc || items.length}`,
+              title: firstLine ? (firstLine.length > 85 ? `${firstLine.slice(0, 82)}...` : firstLine) : `پست اینستاگرام @${uname}`,
+              description: caption,
+              url: postUrl,
+              platform: 'instagram',
+              embedUrl: sc ? `https://www.instagram.com/p/${sc}/embed` : postUrl,
+              thumbnail: thumb,
+              videoUrl: vid || undefined,
+              mediaType: slides.length > 1 ? 'carousel' : (vid ? 'video' : 'image'),
+              images: slides.filter((s) => s.type === 'image').map((s) => s.url),
+              slides,
+              sourceName,
+              sourceHandle: `@${uname}`,
+              publishedAt: p.timestamp ? new Date(p.timestamp).toLocaleDateString('fa-IR') : 'اینستاگرام',
+              readingOrWatchTime: slides.length > 1 ? `${slides.length} اسلاید اینستاگرام` : (vid ? 'ریلز اینستاگرام' : 'پست اینستاگرام'),
+              tags: ['اینستاگرام', uname]
+            });
+          }
+        } else {
+          return res.status(400).json({
+            success: false,
+            message: 'برای دریافت فهرست پست‌های یک پیج اینستاگرام، توکن Apify در تنظیمات سایت لازم است.'
+          });
+        }
+
+        cached = { fetchedAt: Date.now(), platform: 'instagram', sourceName, sourceHandle: `@${uname}`, items };
+        sourceFeedCache.set(cacheKey, cached);
+      }
+
+      const start = (pageNum - 1) * PAGE_SIZE;
+      const slice = cached.items.slice(start, start + PAGE_SIZE);
+      return annotatePage(slice, cached.sourceName, cached.sourceHandle, cached.items.length > start + PAGE_SIZE, cached.items.length);
+    }
+
+    // 5. WEBSITE / BLOG FEED (WordPress REST -> RSS/Atom -> HTML Article Links, 10 per page)
+    const targetWebUrl = resolved.normalizedUrl;
+    const baseOrigin = new URL(targetWebUrl).origin;
+    const siteHost = new URL(targetWebUrl).hostname.replace(/^www\./, '');
+
+    // Tier A: Try WordPress REST API natively paged 10 per page
+    try {
+      const wpRes = await safeAxiosGet(`${baseOrigin}/wp-json/wp/v2/posts?per_page=${PAGE_SIZE}&page=${pageNum}&_embed=1`, {
+        timeout: 9000,
+        headers: { 'Accept': 'application/json' }
+      });
+      if (Array.isArray(wpRes.data) && wpRes.data.length > 0) {
+        const totalHeader = Number(wpRes.headers?.['x-wp-total'] || 0) || undefined;
+        const totalPages = Number(wpRes.headers?.['x-wp-totalpages'] || 0) || undefined;
+        const items: BatchSourceFeedItem[] = wpRes.data.map((post: any) => {
+          const media = post._embedded?.['wp:featuredmedia']?.[0]?.source_url || '';
+          const authorName = post._embedded?.author?.[0]?.name || siteHost;
+          return {
+            tempId: `wp_${post.id || Math.random().toString(36).slice(2, 8)}`,
+            title: decodeFeedText(post.title?.rendered || 'مقاله وب'),
+            description: decodeFeedText(post.excerpt?.rendered || '').slice(0, 320),
+            url: post.link || targetWebUrl,
+            platform: 'article',
+            embedUrl: post.link || targetWebUrl,
+            thumbnail: media,
+            mediaType: 'image',
+            sourceName: siteHost,
+            sourceHandle: `@${siteHost}`,
+            publishedAt: post.date ? new Date(post.date).toLocaleDateString('fa-IR') : 'وب‌سایت',
+            readingOrWatchTime: '۵ دقیقه مطالعه',
+            tags: ['مقاله', siteHost, authorName].filter(Boolean)
+          };
+        });
+        const hasMore = totalPages ? pageNum < totalPages : items.length >= PAGE_SIZE;
+        return annotatePage(items, siteHost, `@${siteHost}`, hasMore, totalHeader);
+      }
+    } catch {}
+
+    // Tier B/C: RSS/Atom Feed discovery or HTML article listing (cached & sliced 10 per page)
+    let cached = sourceFeedCache.get(cacheKey);
+    if (!cached || Date.now() - cached.fetchedAt > 10 * 60_000) {
+      const items: BatchSourceFeedItem[] = [];
+      const seenLinks = new Set<string>();
+      let sourceName = siteHost;
+
+      let mainHtml = '';
+      try {
+        const pageRes = await safeAxiosGet(targetWebUrl, {
+          timeout: 11000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'fa-IR,fa;q=0.9,en-US;q=0.8,en;q=0.7'
+          }
+        });
+        mainHtml = typeof pageRes.data === 'string' ? pageRes.data : '';
+      } catch {}
+
+      if (mainHtml) {
+        const siteTitleMatch = mainHtml.match(/<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']+)["']/i) ||
+          mainHtml.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+        if (siteTitleMatch?.[1]) {
+          sourceName = decodeFeedText(siteTitleMatch[1]).split(/[|\-–—]/)[0].trim() || siteHost;
+        }
+      }
+
+      // Discover RSS / Atom feed links
+      const feedCandidates: string[] = [];
+      if (targetWebUrl.match(/\.(xml|rss|atom)(\?|$)|\/feed\/?$/i)) {
+        feedCandidates.push(targetWebUrl);
+      }
+      if (mainHtml) {
+        for (const fm of mainHtml.matchAll(/<link[^>]+type=["']application\/(?:rss|atom)\+xml["'][^>]+href=["']([^"']+)["']/gi)) {
+          try {
+            feedCandidates.push(new URL(fm[1], targetWebUrl).toString());
+          } catch {}
+        }
+      }
+      feedCandidates.push(`${baseOrigin}/feed`, `${baseOrigin}/rss`, `${baseOrigin}/rss.xml`, `${baseOrigin}/atom.xml`);
+
+      for (const feedUrl of Array.from(new Set(feedCandidates))) {
+        if (items.length > 0) break;
+        try {
+          const feedRes = await safeAxiosGet(feedUrl, { timeout: 8000 });
+          const xml = typeof feedRes.data === 'string' ? feedRes.data : '';
+          if (!xml || (!xml.includes('<item') && !xml.includes('<entry'))) continue;
+
+          const entryMatches = [...xml.matchAll(/<(?:item|entry)(?:\s[^>]*)?>([\s\S]*?)<\/(?:item|entry)>/gi)];
+          for (const em of entryMatches) {
+            const block = em[1];
+            const linkMatch = block.match(/<link[^>]+href=["']([^"']+)["']/i) || block.match(/<link>([\s\S]*?)<\/link>/i);
+            const rawLink = decodeFeedText(linkMatch?.[1] || '');
+            if (!rawLink.startsWith('http') || seenLinks.has(rawLink)) continue;
+            seenLinks.add(rawLink);
+
+            const titleMatch = block.match(/<title(?:\s[^>]*)?>([\s\S]*?)<\/title>/i);
+            const descMatch = block.match(/<(?:description|summary|content:encoded)(?:\s[^>]*)?>([\s\S]*?)<\/(?:description|summary|content:encoded)>/i);
+            const pubMatch = block.match(/<(?:pubDate|published|updated)>([^<]+)<\/(?:pubDate|published|updated)>/i);
+            const imgMatch = block.match(/<(?:media:content|media:thumbnail|enclosure)[^>]+url=["']([^"']+)["']/i) ||
+              block.match(/<img[^>]+src=["']([^"']+)["']/i);
+
+            let thumb = imgMatch?.[1] ? imgMatch[1].replace(/&amp;/g, '&') : '';
+            if (thumb && !thumb.startsWith('http')) {
+              try { thumb = new URL(thumb, rawLink).toString(); } catch {}
+            }
+
+            items.push({
+              tempId: `rss_${items.length}_${Date.now()}`,
+              title: decodeFeedText(titleMatch?.[1] || '') || 'مقاله وب',
+              description: decodeFeedText(descMatch?.[1] || '').slice(0, 350),
+              url: rawLink,
+              platform: 'article',
+              embedUrl: rawLink,
+              thumbnail: thumb,
+              mediaType: 'image',
+              sourceName,
+              sourceHandle: `@${siteHost}`,
+              publishedAt: pubMatch?.[1] ? new Date(pubMatch[1]).toLocaleDateString('fa-IR') : 'وب‌سایت',
+              readingOrWatchTime: '۵ دقیقه مطالعه',
+              tags: ['مقاله', siteHost]
+            });
+          }
+        } catch {}
+      }
+
+      // Tier C: Fallback HTML article/post link extraction
+      if (items.length === 0 && mainHtml) {
+        const articleRegex = /<article[^>]*>([\s\S]*?)<\/article>/gi;
+        const blocks = [...mainHtml.matchAll(articleRegex)].map((m) => m[1]);
+        const candidates = blocks.length > 0 ? blocks : [mainHtml];
+
+        for (const chunk of candidates) {
+          for (const lm of chunk.matchAll(/<a[^>]+href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi)) {
+            let href = lm[1].trim();
+            if (!href || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) continue;
+            try {
+              const resolvedLink = new URL(href, targetWebUrl);
+              if (resolvedLink.hostname.replace(/^www\./, '') !== siteHost) continue;
+              const cleanHref = resolvedLink.toString();
+              if (seenLinks.has(cleanHref)) continue;
+              if (/\.(png|jpe?g|webp|gif|svg|css|js|pdf|zip)$/i.test(resolvedLink.pathname)) continue;
+              if (resolvedLink.pathname === '/' || resolvedLink.pathname.length < 4) continue;
+
+              const text = decodeFeedText(lm[2]);
+              if (text.length < 18 || text.length > 220) continue;
+
+              seenLinks.add(cleanHref);
+              const imgMatch = chunk.match(/<img[^>]+(?:src|data-src)=["']([^"']+)["']/i);
+              let thumb = imgMatch?.[1] ? imgMatch[1].replace(/&amp;/g, '&') : '';
+              if (thumb && !thumb.startsWith('http')) {
+                try { thumb = new URL(thumb, targetWebUrl).toString(); } catch {}
+              }
+
+              items.push({
+                tempId: `web_${items.length}_${Date.now()}`,
+                title: text,
+                description: `مطلب منتشر شده در ${sourceName}`,
+                url: cleanHref,
+                platform: 'article',
+                embedUrl: cleanHref,
+                thumbnail: thumb,
+                mediaType: 'image',
+                sourceName,
+                sourceHandle: `@${siteHost}`,
+                publishedAt: 'وب‌سایت',
+                readingOrWatchTime: '۵ دقیقه مطالعه',
+                tags: ['مقاله', siteHost]
+              });
+              if (items.length >= 60) break;
+            } catch {}
+          }
+          if (items.length >= 60) break;
+        }
+      }
+
+      cached = { fetchedAt: Date.now(), platform: 'article', sourceName, sourceHandle: `@${siteHost}`, items };
+      sourceFeedCache.set(cacheKey, cached);
+    }
+
+    const start = (pageNum - 1) * PAGE_SIZE;
+    const slice = cached.items.slice(start, start + PAGE_SIZE);
+    return annotatePage(slice, cached.sourceName, cached.sourceHandle, cached.items.length > start + PAGE_SIZE, cached.items.length);
+  } catch (err: any) {
+    console.warn('[Admin Fetch Source Feed Error]:', err.message);
+    return res.status(400).json({
+      success: false,
+      message: `خطا در خواندن محتواهای منبع: ${err.message}`
+    });
+  }
+});
+
+// 8.2 Admin Batch Import Selected Items into Database
+app.post('/api/admin/batch-import', requireAdminAuth, async (req: Request, res: Response) => {
+  const { items = [], ownerUid = '', categoryOverride = 'auto' } = req.body || {};
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ success: false, message: 'هیچ محتوایی برای افزودن انتخاب نشده است.' });
+  }
+
+  const db = loadDatabase();
+  const targetOwner = ownerUid && Array.isArray(db.profiles)
+    ? db.profiles.find((p: any) => p.uid === ownerUid)
+    : undefined;
+
+  const existingUrls = new Set(
+    (db.contents || [])
+      .filter((c: any) => !c.isDeleted && c.url)
+      .map((c: any) => normalizeFeedUrlForDedup(c.url))
+  );
+
+  const addedItems: any[] = [];
+  let skippedCount = 0;
+
+  for (let i = 0; i < items.length; i++) {
+    const raw = items[i];
+    if (!raw?.url) {
+      skippedCount++;
+      continue;
+    }
+    const dedupKey = normalizeFeedUrlForDedup(raw.url);
+    if (existingUrls.has(dedupKey)) {
+      skippedCount++;
+      continue;
+    }
+    existingUrls.add(dedupKey);
+
+    const newId = `content-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 6)}`;
+    let cachedThumb = String(raw.thumbnail || '').trim();
+    if (cachedThumb && cachedThumb.startsWith('http') && !cachedThumb.includes('upc.geekclub.ir')) {
+      try {
+        cachedThumb = await Promise.race([
+          downloadAndCacheImage(cachedThumb, `batch_${newId}`, raw.platform || 'article', 'batch'),
+          new Promise<string>((resolve) => setTimeout(() => resolve(cachedThumb), 4000))
+        ]);
+      } catch {}
+    }
+
+    const combinedText = `${raw.title || ''} ${raw.description || ''} ${(raw.tags || []).join(' ')}`.toLowerCase();
+    let resolvedCategory = categoryOverride && categoryOverride !== 'auto' && categoryOverride !== 'all' ? categoryOverride : 'tech';
+    if (!categoryOverride || categoryOverride === 'auto' || categoryOverride === 'all') {
+      if (/(ai|هوش مصنوعی|gpt|llm|پرامپت)/i.test(combinedText)) resolvedCategory = 'ai';
+      else if (/(react|javascript|python|کدنویسی|برنامه‌نویسی|تایپ‌اسکریپت)/i.test(combinedText)) resolvedCategory = 'programming';
+      else if (/(ui|ux|طراحی|دیزاین|فیگما)/i.test(combinedText)) resolvedCategory = 'design';
+      else if (/(استارتاپ|کسب‌وکار|بیزینس|مارکتینگ)/i.test(combinedText)) resolvedCategory = 'business';
+      else if (/(علم|فیزیک|نجوم|پژوهش)/i.test(combinedText)) resolvedCategory = 'science';
+      else if (/(فیلم|بازی|سرگرمی|رسانه)/i.test(combinedText)) resolvedCategory = 'entertainment';
+    }
+
+    const authorObj = targetOwner
+      ? {
+          name: targetOwner.displayName || targetOwner.username || 'کاربر گیک کلاب',
+          avatar: targetOwner.photoURL || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect width="200" height="200" rx="100" fill="%231e293b"/><circle cx="100" cy="75" r="38" fill="%233b82f6"/><path d="M 35 175 C 35 130, 165 130, 165 175 Z" fill="%233b82f6"/></svg>',
+          handle: targetOwner.username ? `@${String(targetOwner.username).replace(/^@+/, '')}` : '@geek',
+          isVerified: Boolean(targetOwner.isAdmin)
+        }
+      : {
+          name: raw.sourceName || 'گیک کلاب',
+          avatar: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect width="200" height="200" rx="100" fill="%231e293b"/><circle cx="100" cy="75" r="38" fill="%233b82f6"/><path d="M 35 175 C 35 130, 165 130, 165 175 Z" fill="%233b82f6"/></svg>',
+          handle: raw.sourceHandle || '@geek',
+          isVerified: false
+        };
+
+    const newItem = {
+      id: newId,
+      title: raw.title || 'محتوای اشتراک‌گذاری شده',
+      description: raw.description || '',
+      url: raw.url,
+      platform: raw.platform || 'article',
+      embedUrl: raw.embedUrl || raw.url,
+      thumbnail: cachedThumb,
+      videoUrl: raw.videoUrl || '',
+      mediaType: raw.mediaType || 'image',
+      images: Array.isArray(raw.images) ? raw.images : [],
+      slides: Array.isArray(raw.slides) ? raw.slides : [],
+      sourceName: raw.sourceName || '',
+      sourceHandle: raw.sourceHandle || '',
+      author: authorObj,
+      authorUid: targetOwner?.uid || '',
+      sharedBy: targetOwner
+        ? {
+            uid: targetOwner.uid,
+            name: targetOwner.displayName,
+            username: targetOwner.username,
+            avatar: targetOwner.photoURL
+          }
+        : undefined,
+      category: resolvedCategory,
+      tags: Array.isArray(raw.tags) && raw.tags.length > 0 ? raw.tags : ['محتوا', 'گیک_کلاب'],
+      publishedAt: raw.publishedAt || 'همین الان',
+      readingOrWatchTime: raw.readingOrWatchTime || '۵ دقیقه',
+      likesCount: 1,
+      dislikesCount: 0,
+      commentsCount: 0,
+      approvalStatus: 'approved',
+      articleContent: raw.description || '',
+      sourceDomain: raw.platform || 'web',
+      hasCustomTitle: true
+    };
+
+    db.contents.unshift(newItem);
+    addedItems.push(newItem);
+  }
+
+  if (addedItems.length > 0) {
+    saveDatabase(db);
+  }
+
+  return res.json({
+    success: true,
+    addedCount: addedItems.length,
+    skippedCount,
+    data: addedItems,
+    message: `${addedItems.length} محتوای جدید با موفقیت به سایت اضافه شد${skippedCount > 0 ? ` (${skippedCount} مورد تکراری رد شد)` : ''}.`
+  });
 });
 
 // Helper: Composio.dev Instagram Sync Pipeline for @esmaeelgray

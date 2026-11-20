@@ -61,6 +61,22 @@ export const FALLBACK_IMAGES = {
 </svg>
 `.trim())}`,
 
+  telegram: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="tgbg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0ea5e9"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="#0f172a"/>
+  <circle cx="400" cy="190" r="66" fill="url(#tgbg)"/>
+  <path d="M 368 191 L 424 166 L 414 216 L 394 202 L 383 212 L 386 196 Z" fill="#ffffff"/>
+  <text x="400" y="305" font-family="Tahoma, Arial, sans-serif" font-size="22" font-weight="bold" fill="#f8fafc" text-anchor="middle">پست کانال تلگرام | GeekClub</text>
+  <text x="400" y="340" font-family="Tahoma, Arial, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">t.me Channel Media</text>
+</svg>
+`.trim())}`,
+
   article: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
   <defs>
@@ -152,6 +168,10 @@ export const getPlatformFallbackImage = (platform?: Platform | string, rawUrl?: 
 
   if (platform === 'aparat' || (rawUrl && rawUrl.includes('aparat.com'))) {
     return FALLBACK_IMAGES.aparat;
+  }
+
+  if (platform === 'telegram' || (rawUrl && (rawUrl.includes('t.me/') || rawUrl.includes('telegram.me/')))) {
+    return FALLBACK_IMAGES.telegram;
   }
 
   return FALLBACK_IMAGES.article;

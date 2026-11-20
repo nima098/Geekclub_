@@ -1,4 +1,20 @@
-export type Platform = 'youtube' | 'instagram' | 'article' | 'aparat';
+export type Platform = 'youtube' | 'instagram' | 'article' | 'aparat' | 'telegram';
+
+export type SiteStyleId = 'classic' | 'daily-dev' | 'emerald-tech' | 'royal-amethyst' | 'warm-graphite';
+
+export interface SiteStyleOption {
+  id: SiteStyleId;
+  label: string;
+  description: string;
+}
+
+export const SITE_STYLES: SiteStyleOption[] = [
+  { id: 'classic', label: 'کلاسیک گیک‌کلاب (فعلی)', description: 'استایل استاندارد آبی و اسلیت' },
+  { id: 'daily-dev', label: 'دیلی مدرن (الهام از daily.dev)', description: 'کارت‌های تمیز و فشرده با کنتراست کربنی و دکمه‌های ظریف' },
+  { id: 'emerald-tech', label: 'زمردی مدرن', description: 'تم سبز زمردی با پس‌زمینه عمیق' },
+  { id: 'royal-amethyst', label: 'کهکشانی بنفش', description: 'تم بنفش ابسیدین با کنتراست بالا' },
+  { id: 'warm-graphite', label: 'گرافیت گرم', description: 'تم گرم کاغذی و ذغالی' }
+];
 
 export type Category = 
   | 'all'
@@ -113,6 +129,64 @@ export interface ContentItem {
   };
 }
 
+export function getContentScore(item: Pick<ContentItem, 'likesCount' | 'dislikesCount'>): number {
+  return (item.likesCount || 0) - (item.dislikesCount || 0);
+}
+
+export function isContentOwnedByUser(item: ContentItem, targetUser: Pick<UserProfile, 'uid' | 'displayName' | 'username'>): boolean {
+  if (!item || !targetUser) return false;
+  if (item.authorUid && targetUser.uid) {
+    return item.authorUid === targetUser.uid;
+  }
+  if (item.sharedBy?.uid && targetUser.uid) {
+    return item.sharedBy.uid === targetUser.uid;
+  }
+  const normalizedTargetUsername = (targetUser.username || '').replace(/^@+/, '').trim().toLowerCase();
+  const normalizedSharerUsername = (item.sharedBy?.username || '').replace(/^@+/, '').trim().toLowerCase();
+  if (normalizedTargetUsername && normalizedSharerUsername && normalizedTargetUsername === normalizedSharerUsername) {
+    return true;
+  }
+  const normalizedTargetName = (targetUser.displayName || '').trim().toLowerCase();
+  const normalizedAuthorName = (item.author?.name || '').trim().toLowerCase();
+  const normalizedSharerName = (item.sharedBy?.name || '').trim().toLowerCase();
+  if (normalizedTargetName && (normalizedAuthorName === normalizedTargetName || normalizedSharerName === normalizedTargetName)) {
+    return true;
+  }
+  const normalizedAuthorHandle = (item.author?.handle || '').replace(/^@+/, '').trim().toLowerCase();
+  if (normalizedTargetUsername && normalizedAuthorHandle && normalizedAuthorHandle === normalizedTargetUsername) {
+    return true;
+  }
+  return false;
+}
+
+export function getUserOwnedContents(
+  contents: ContentItem[],
+  targetUser: Pick<UserProfile, 'uid' | 'displayName' | 'username'>,
+  options: { activeOnly?: boolean } = {}
+): ContentItem[] {
+  return (contents || []).filter((item) => {
+    if (options.activeOnly && (item.isDeleted || item.isArchived || item.approvalStatus === 'rejected')) {
+      return false;
+    }
+    return isContentOwnedByUser(item, targetUser);
+  });
+}
+
+export function getUserReputationStats(
+  contents: ContentItem[],
+  targetUser: Pick<UserProfile, 'uid' | 'displayName' | 'username'>
+): { totalContents: number; totalLikes: number; totalDislikes: number; netScore: number } {
+  const owned = getUserOwnedContents(contents, targetUser, { activeOnly: true });
+  const totalLikes = owned.reduce((sum, c) => sum + (c.likesCount || 0), 0);
+  const totalDislikes = owned.reduce((sum, c) => sum + (c.dislikesCount || 0), 0);
+  return {
+    totalContents: owned.length,
+    totalLikes,
+    totalDislikes,
+    netScore: totalLikes - totalDislikes
+  };
+}
+
 export function shouldDisplayTitle(item: ContentItem): boolean {
   if (item.platform !== 'instagram') return true;
   if (item.hasCustomTitle) return true;
@@ -155,6 +229,7 @@ export interface SiteAdminSettings {
   allowInstagram: boolean;
   allowArticles: boolean;
   allowAparat: boolean;
+  allowTelegram?: boolean;
   enableCaptcha: boolean;
   bannedKeywords?: string[];
   bannedDomains?: string[];
@@ -214,5 +289,5 @@ export interface ProfileComment {
   createdAt: string;
 }
 
-export type SortOption = 'newest' | 'most_liked' | 'most_comments' | 'trending';
+export type SortOption = 'highest_score' | 'newest' | 'most_liked' | 'most_comments' | 'trending';
 export type ViewMode = 'grid6' | 'grid5' | 'grid4' | 'grid3' | 'grid2' | 'compact';

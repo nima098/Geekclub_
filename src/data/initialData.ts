@@ -55,6 +55,7 @@ export const DEFAULT_SITE_SETTINGS: SiteAdminSettings = {
   allowInstagram: true,
   allowArticles: true,
   allowAparat: true,
+  allowTelegram: true,
   enableCaptcha: false,
   enableAutoModeration: true,
   bannedKeywords: [],

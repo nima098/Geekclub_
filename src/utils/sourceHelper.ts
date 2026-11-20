@@ -473,6 +473,40 @@ export function resolveContentSource(
       return { label: '@youtube', isRtl: false };
     }
 
+    // 5. Telegram -> @channel_username
+    if (item.platform === 'telegram') {
+      const explicitHandle = cleanAsciiHandle(item.sourceHandle);
+      if (explicitHandle && !GENERIC_HANDLE_SET.has(explicitHandle.toLowerCase())) {
+        return { label: `@${explicitHandle}`, isRtl: false };
+      }
+
+      if (item.url) {
+        const tgMatch = item.url.match(/(?:t\.me|telegram\.me|telegram\.dog)\/(?:s\/)?([a-zA-Z0-9_]{3,})/i);
+        if (tgMatch?.[1]) {
+          const u = cleanAsciiHandle(tgMatch[1]);
+          if (u && !GENERIC_HANDLE_SET.has(u.toLowerCase())) {
+            return { label: `@${u}`, isRtl: false };
+          }
+        }
+      }
+
+      const authorHandle = cleanAsciiHandle(item.author?.handle);
+      if (authorHandle && !isCollidingSharerHandle(authorHandle)) {
+        return { label: `@${authorHandle}`, isRtl: false };
+      }
+
+      const candidateName = (item.sourceName || item.author?.name || '').trim();
+      if (candidateName && candidateName !== 'کانال تلگرام' && candidateName !== 'تلگرام') {
+        const asciiCandidate = cleanAsciiHandle(candidateName);
+        if (asciiCandidate) {
+          return { label: `@${asciiCandidate}`, isRtl: false };
+        }
+        return { label: candidateName, isRtl: hasPersianCharacters(candidateName) };
+      }
+
+      return { label: '@telegram', isRtl: false };
+    }
+
     return { label: 'منبع وب', isRtl: true };
   };
 
@@ -498,6 +532,12 @@ export function resolveContentSource(
       url = `https://www.youtube.com/@${label.slice(1)}`;
     } else {
       url = item.url || 'https://www.youtube.com/';
+    }
+  } else if (item.platform === 'telegram') {
+    if (label.startsWith('@') && label !== '@telegram') {
+      url = `https://t.me/${label.slice(1)}`;
+    } else {
+      url = item.url || 'https://t.me/';
     }
   }
 
